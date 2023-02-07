@@ -253,7 +253,6 @@ class OdriveEncoderHall(Odrive):
         self._config_brake_resistor()
         self._config_overvoltage()
         self._config_controller(self._vel_limit)
-        self._config_watchdog()
         self.save_configuration()
 
         print("Configuration done")
@@ -276,7 +275,7 @@ class OdriveEncoderHall(Odrive):
         # TODO:To reset this value we could use the Z value from the lm13.
         shadow_count = self.odrv0.axis0.encoder.shadow_count
 
-        print("dif shadow", self._old_shadow - shadow_count)
+        print("dif shadow", self._old_shadow - shadow_count, "velocity", self.odrv0.axis0.encoder.vel_estimate)
         self._old_shadow = shadow_count
 
         self._angle_motor = (((self._shadow_count_init - shadow_count) / 48) * 360) % 360
