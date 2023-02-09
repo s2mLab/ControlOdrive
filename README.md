@@ -1,5 +1,11 @@
 # ControlOdrive
-
+## Firmware/Software
+2022/02/09:
+- Firmware: 0.5.5, *a priori* the last firmware available for the Odrive v3.6 56V (end of life)
+  - /!\ I updated the firmware od only one board
+  - To update the firmware on the Raspberry, use `sudo odrivetool dfu path/to/firmware/file.elf`
+- Software: odrive 0.6.3.post0, the latest version at this time
+  - To update the software on the Raspberry, use `pip install odrive==0.6.3.post0`
 ## Protocol
 ## Troubleshooting
 ### Connection to the Odrive
@@ -9,7 +15,7 @@ echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0d[0-9][0-9]",
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
-To test the connection a simple script is suffisant :
+To test the connection a simple script is sufficient :
 ```
 import odrive
 
