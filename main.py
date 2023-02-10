@@ -21,7 +21,7 @@ monitoring_commands = []
 
 # Set a given speed (turn/s) for the motor
 print("Here")
-consignet = -2
+consignet = 2
 motor.set_speed(consignet)
 
 while t1 - t0 < 7:
@@ -36,8 +36,8 @@ while t1 - t0 < 7:
         monitoring_commands.append(motor.get_monitoring_commands())
         i += 0.05
 
-consignet = 0
-motor.set_speed(consignet)
+consignet = 3
+motor.change_speed(consignet)
 
 while t1 - t0 < 15:
     t1 = time.time()
@@ -51,10 +51,10 @@ while t1 - t0 < 15:
         monitoring_commands.append(motor.get_monitoring_commands())
         i += 0.05
 
-consignet = 2
-motor.set_speed(consignet)
+consignet = -3
+motor.change_speed(consignet)
 
-while t1 - t0 < 25:
+while t1 - t0 < 35:
     t1 = time.time()
     if t1 - t0 > i:
         xt, vt, mt = motor.get_angle_motor()
@@ -69,19 +69,19 @@ while t1 - t0 < 25:
 monitoring_commands = np.asarray(monitoring_commands)
 motor.stop()
 
-fig, axs = plt.subplots(3, 1, sharex=True)
-axs[0].plot(t, v, label="Estimated velocity")
-axs[0].plot(t, consigne, label="Instruction")
-fig.suptitle("Velocity control")
+#fig, axs = plt.subplots(3, 1, sharex=True)
+plt.plot(t, v, label="Estimated velocity")
+plt.plot(t, consigne, label="Instruction")
+plt.title("Ramped velocity control")
 
-axs[0].set_ylabel("Velocity (turn/s)")
-axs[0].legend()
+plt.ylabel("Velocity (turn/s)")
+plt.legend()
 
-axs[1].plot(t,x)
-axs[1].set_ylabel("Angle")
-axs[2].plot(t, mech_p)
-axs[2].set_ylabel("Mechanical power (W)")
-axs[2].set_xlabel("Time (s)")
+#axs[1].plot(t,x)
+#axs[1].set_ylabel("Angle")
+#axs[2].plot(t, mech_p)
+#axs[2].set_ylabel("Mechanical power (W)")
+#axs[2].set_xlabel("Time (s)")
 
 fig2, axs = plt.subplots(3, 1, sharex=True)
 axs[0].plot(monitoring_commands[:, 0], label="pos_estimate")
