@@ -69,3 +69,6 @@ resistance_calib_max_voltage: 10.0 (float)
 torque_constant: 0.20999999344348907 (float)
 torque_lim: inf (float)
 ```
+### Position control and velocity control
+Setting the `odrv0.axis0.controller.config.control_mode`, the `odrv0.axis0.controller.config.input_mode` and the 
+`odrv0.axis0.requested_state` must be done only one and not between each change of position or velocity !
