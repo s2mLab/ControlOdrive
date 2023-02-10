@@ -13,7 +13,7 @@ class Odrive:
     def __init__(self):
         print("Look for an odrive ...")
         self.odrv0 = odrive.find_any()
-        self.velocity_limit = 0
+        self.velocity_limit = 5
         self.torque_limit = 0
         print("Odrive found")
 
@@ -101,7 +101,7 @@ class Odrive:
         self.odrv0.axis0.motor.config.current_control_bandwidth = 100
         self.odrv0.axis0.motor.config.torque_constant = 0.21  # Not sure of this value
 
-        self.odrv0.axis0.motor.config.current_lim = 10
+        self.odrv0.axis0.motor.config.current_lim = 20
 
         # By default torque limit is inf
         # self.odrv0.axis0.motor.config.torque_lim = torque_limit
@@ -174,7 +174,7 @@ class Odrive:
         if turn_s > self.velocity_limit:
             raise ValueError("Error : Velocity max ", self.velocity_limit, ". velocity given : ", turn_s)
         self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
-        self.odrv0.axis0.controller.input_vel = - abs(turn_s)
+        self.odrv0.axis0.controller.input_vel = turn_s
         self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
     def set_torque(self, torque: float):
@@ -219,9 +219,14 @@ class Odrive:
                 actual_torque = self.odrv0.axis0.controller.input_torque = actual_torque - 0.02
             elif up_or_down == "s":
                 stop = True
-                self.odrv0.axis0.requested_state = AxisState.IDLE
+                self.odrv0.axis0.requested_state = AXIS_STATE_IDLE
             else:
                 print("Command not supported")
+
+    def stop(self):
+        self.odrv0.axis0.requested_state = AXIS_STATE_IDLE
+        self.odrv0.axis0.controller.input_vel = 0
+        self.odrv0.axis0.controller.input_torque = 0
 
 
 class OdriveEncoderHall(Odrive):
@@ -263,6 +268,24 @@ class OdriveEncoderHall(Odrive):
         """
         self._set_turn_s(speed)
 
+    def amandine(self, angle: float):
+        """
+        """
+        self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+        self.odrv0.axis0.controller.config.vel_limit = 0.5
+        self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        self.odrv0.axis0.controller.input_pos = angle / 360
+
+    def amandine2(self, turns):
+        print(self.odrv0.axis0.trap_traj.config.vel_limit)
+        print(self.odrv0.axis0.trap_traj.config.accel_limit)
+        print(self.odrv0.axis0.trap_traj.config.decel_limit)
+        self.odrv0.axis0.controller.config.inertia = 1.0
+        print(self.odrv0.axis0.controller.config.inertia)
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+        self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+        self.odrv0.axis0.controller.input_pos = turns
+
     def get_angle_motor(self) -> float:
         """
         Gives the angles corresponding of the crank.
@@ -279,7 +302,7 @@ class OdriveEncoderHall(Odrive):
         self._old_shadow = shadow_count
 
         self._angle_motor = (((self._shadow_count_init - shadow_count) / 48) * 360) % 360
-        return self._angle_motor
+        return self._angle_motor, self.odrv0.axis0.encoder.vel_estimate, self.odrv0.axis0.controller.mechanical_power
 
     def get_angle_crank(self) -> float:
         """
@@ -294,3 +317,11 @@ class OdriveEncoderHall(Odrive):
         shadow_count = self.odrv0.axis0.encoder.shadow_count
         self._angle_crank = ((((self._shadow_count_init - shadow_count) / 48) * 360) / 41.8) % 360
         return self._angle_crank
+
+    def get_monitoring_commands(self):
+        return [
+            self.odrv0.axis0.encoder.pos_estimate,
+            self.odrv0.axis0.encoder.vel_estimate,
+            self.odrv0.axis0.motor.current_control.Iq_setpoint,
+            self.odrv0.axis0.motor.current_control.Iq_measured
+            ]
