@@ -174,6 +174,8 @@ class Odrive:
         if turn_s > self.velocity_limit:
             raise ValueError("Error : Velocity max ", self.velocity_limit, ". velocity given : ", turn_s)
         self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+        self.odrv0.axis0.controller.config.vel_ramp_rate = 0.5
         self.odrv0.axis0.controller.input_vel = turn_s
         self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
@@ -268,23 +270,19 @@ class OdriveEncoderHall(Odrive):
         """
         self._set_turn_s(speed)
 
+    def change_speed(self, speed: float):
+        self.odrv0.axis0.controller.input_vel = speed
+
     def amandine(self, angle: float):
         """
         """
         self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-        self.odrv0.axis0.controller.config.vel_limit = 0.5
         self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
         self.odrv0.axis0.controller.input_pos = angle / 360
 
-    def amandine2(self, turns):
-        print(self.odrv0.axis0.trap_traj.config.vel_limit)
-        print(self.odrv0.axis0.trap_traj.config.accel_limit)
-        print(self.odrv0.axis0.trap_traj.config.decel_limit)
-        self.odrv0.axis0.controller.config.inertia = 1.0
-        print(self.odrv0.axis0.controller.config.inertia)
-        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-        self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-        self.odrv0.axis0.controller.input_pos = turns
+    def amandine2(self, angle):
+        self.odrv0.axis0.controller.input_pos = angle / 360
 
     def get_angle_motor(self) -> float:
         """
@@ -298,10 +296,10 @@ class OdriveEncoderHall(Odrive):
         # TODO:To reset this value we could use the Z value from the lm13.
         shadow_count = self.odrv0.axis0.encoder.shadow_count
 
-        print("dif shadow", self._old_shadow - shadow_count, "velocity", self.odrv0.axis0.encoder.vel_estimate)
+        #print("dif shadow", self._old_shadow - shadow_count, "velocity", self.odrv0.axis0.encoder.vel_estimate)
         self._old_shadow = shadow_count
 
-        self._angle_motor = (((self._shadow_count_init - shadow_count) / 48) * 360) % 360
+        self._angle_motor = (((self._shadow_count_init - shadow_count) / 48) * 360)
         return self._angle_motor, self.odrv0.axis0.encoder.vel_estimate, self.odrv0.axis0.controller.mechanical_power
 
     def get_angle_crank(self) -> float:
