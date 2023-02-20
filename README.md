@@ -1,4 +1,5 @@
 # ControlOdrive
+I'm not sure `odrive` can be used on the last version of Python, so I have not updated it from ``
 ## Firmware/Software
 2022/02/09:
 - Firmware: 0.5.5, *a priori* the last firmware available for the Odrive v3.6 56V (end of life)

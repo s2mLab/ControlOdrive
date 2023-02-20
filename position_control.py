@@ -3,14 +3,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from Motor import *
+from motor import *
 
 # Initialisation
 motor = OdriveEncoderHall()
-#motor.erase_configuration()
-#motor.configuration()
-#motor.save_configuration()
-#motor.calibration()
+# motor.calibration()
 
 # Set the control mode
 motor.position_control(0)
@@ -26,7 +23,7 @@ t1 = time.time()
 t_next = 0
 
 for instruction, delta_t in zip((0, 270, -90), (5, 20, 35)):
-    motor.set_position(instruction)
+    motor.position_control(instruction)
     print(instruction)
 
     while t1 - t0 < delta_t:
@@ -39,6 +36,7 @@ for instruction, delta_t in zip((0, 270, -90), (5, 20, 35)):
 
 motor.stop()
 
+instructions = np.asarray(instructions)
 pos_estimate = np.asarray(pos_estimate)
 
 plt.plot(t, pos_estimate * 360, label="Position")
