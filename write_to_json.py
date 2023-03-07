@@ -11,8 +11,8 @@ dictionary = {
     "gpio11_mode": GPIO_MODE_DIGITAL,
     "enable_brake_resistor": True,
     "brake_resistance": 3.3,  # Ohms
-    "pedals_vel_limit": 0.75,  # turns/s of the pedals
-    "vel_limit_tolerance": 2.0,  # turns/s of the motor
+    "pedals_vel_limit": 120,  # tr/min of the pedals
+    "vel_limit_tolerance": 2.0,  # tr/s of the motor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
     "calib_scan_distance": 150.0,
@@ -29,8 +29,8 @@ dictionary = {
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8/36*10/91,
-    "pedals_accel_lim": 0.3,  # turns/(s^2) of the pedals
-    "maximal_velocity_stop": 0.25,  # turns/s of the pedals
+    "pedals_accel_lim": 1080,  # tr/(min^2) of the pedals
+    "maximal_velocity_stop": 15,  # tr/s of the pedals
 }
 
 # Serializing json

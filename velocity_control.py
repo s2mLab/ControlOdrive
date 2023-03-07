@@ -26,14 +26,14 @@ t0 = time.time()
 t1 = time.time()
 t_next = 0
 
-#for instruction, delta_t, mode in zip((0.25, 0.5, -0.25), (15, 30, 45), ("Eccentric", "Eccentric", "Concentric")):
+#for instruction, delta_t, mode in zip((15, 30, -15), (15, 30, 45), ("Eccentric", "Eccentric", "Concentric")):
 #for i in range(1, 6):
-instruction = -0.2
+instruction = -30
 #motor.set_training_mode("Eccentric")
 motor.velocity_control(instruction)
 print(instruction)
 
-while t1 - t0 < 40:
+while t1 - t0 < 20:
     t1 = time.time()
     if t1 - t0 > t_next:
         t.append(t1 - t0)
@@ -70,7 +70,7 @@ plt.plot(t, vel_estimate, label="Estimated velocity")
 plt.plot(t, instructions, label="Instruction")
 plt.title("Ramped velocity control")
 plt.xlabel("Time (s)")
-plt.ylabel("Velocity (turn/s)")
+plt.ylabel("Velocity (tr/min)")
 plt.legend()
 
 fig2, axs = plt.subplots(2, 1, sharex=True)

@@ -7,14 +7,14 @@
     "gpio11_mode": 0,
     "enable_brake_resistor": true,
     "brake_resistance": 3.3,
-    "pedals_vel_limit": 0.75,
+    "pedals_vel_limit": 120,
     "vel_limit_tolerance": 2.0,
     "mode": 1,
     "cpr": 48,
     "calib_scan_distance": 150.0,
     "motor_type": 0,
     "pole_pairs": 8,
-    "torque_constant": 0.08225583064524448,
+    "torque_constant": 0.1,
     "calibration_current": 7.0,
     "resistance_calib_max_voltage": 20.0,
     "requested_current_range": 25.0,
@@ -24,6 +24,6 @@
     "watchdog_timeout": 0.1,
     "watchdog_feed_time": 0.01,
     "reduction_ratio": 0.02442002442002442,
-    "pedals_accel_lim": 0.3,
-    "maximal_velocity_stop": 0.25
+    "pedals_accel_lim": 1080,
+    "maximal_velocity_stop": 15
 }

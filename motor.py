@@ -25,7 +25,6 @@ from odrive.enums import (
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
 from enums import ControlMode
-import numpy as np
 
 class OdriveEncoderHall:
     """
@@ -51,7 +50,7 @@ class OdriveEncoderHall:
         print("Look for an odrive ...")
         self.odrv0 = odrive.find_any()
         print("Odrive found")
-        self._config_watchdog(enable_watchdog)
+        self._watchdog_is_ready = self._config_watchdog(enable_watchdog)
 
         self._reduction_ratio = self._hardware_and_security["reduction_ratio"]
 
@@ -105,6 +104,11 @@ class OdriveEncoderHall:
         ----------
         enable_watchdog: bool
             Indicates if the user wants to enable the watchdog (True) or not (False)
+
+        Returns
+        -------
+        watchdog_is_ready: bool
+            Indicates if the watchdog is enabled or not
         """
         self.odrv0.axis0.config.enable_watchdog = False
         if self.odrv0.axis0.error == AXIS_ERROR_WATCHDOG_TIMER_EXPIRED:
@@ -124,8 +128,10 @@ class OdriveEncoderHall:
             if self.odrv0.axis0.error == AXIS_ERROR_WATCHDOG_TIMER_EXPIRED:
                 self.odrv0.axis0.error = AXIS_ERROR_NONE
             self.odrv0.clear_errors()
-            self._watchdog_is_ready = True
             print("Watchdog enabled")
+            return True
+        else:
+            return False
 
     def _watchdog_feed(self):
         """
@@ -205,7 +211,7 @@ class OdriveEncoderHall:
         """
         custom: bool
             Indicates if the user wants to use the previously calculated gains saved in the .json (False) or to modify
-            manually the gains (True)
+            manually the gains (True).
         pos_gain: float
         k_vel_gain: float
         k_vel_integrator_gain: float
@@ -264,8 +270,9 @@ class OdriveEncoderHall:
 
         # Controller
         self.odrv0.axis0.controller.config.vel_limit = \
-            self._hardware_and_security["pedals_vel_limit"] / self._reduction_ratio
-        self.odrv0.axis0.controller.config.vel_limit_tolerance = self._hardware_and_security["vel_limit_tolerance"]
+            self._hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60  # tr/s
+        self.odrv0.axis0.controller.config.vel_limit_tolerance = \
+            self._hardware_and_security["vel_limit_tolerance"]  # tr/s
 
         # Encoder
         self.odrv0.axis0.encoder.config.mode = self._hardware_and_security["mode"]  # Mode of the encoder
@@ -277,24 +284,20 @@ class OdriveEncoderHall:
         self.odrv0.axis0.motor.config.pole_pairs = self._hardware_and_security["pole_pairs"]
         self.odrv0.axis0.motor.config.torque_constant = self._hardware_and_security["torque_constant"]
         self.odrv0.axis0.motor.config.calibration_current = self._hardware_and_security["calibration_current"]
-        self.odrv0.axis0.motor.config.resistance_calib_max_voltage = self._hardware_and_security[
-            "resistance_calib_max_voltage"
-        ]
+        self.odrv0.axis0.motor.config.resistance_calib_max_voltage = \
+            self._hardware_and_security["resistance_calib_max_voltage"]
         self.odrv0.axis0.motor.config.requested_current_range = self._hardware_and_security["requested_current_range"]
-        self.odrv0.axis0.motor.config.current_control_bandwidth = self._hardware_and_security[
-            "current_control_bandwidth"
-        ]
+        self.odrv0.axis0.motor.config.current_control_bandwidth = \
+            self._hardware_and_security["current_control_bandwidth"]
         self.odrv0.axis0.motor.config.current_lim = self._hardware_and_security["current_lim"]
         self.odrv0.axis0.motor.config.torque_lim = self._hardware_and_security["torque_lim"] * self._reduction_ratio
 
         # Velocity and acceleration limits
         self.odrv0.axis0.trap_traj.config.vel_limit = self.odrv0.axis0.controller.config.vel_limit
         self.odrv0.axis0.trap_traj.config.accel_limit = \
-            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio
+            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 3600  # tr/s²
         self.odrv0.axis0.trap_traj.config.decel_limit = \
-            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio
-
-        self.odrv0.config.dc_max_negative_current = -0.01
+            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 3600  # tr/s²
 
     def _sign(self):
         """
@@ -325,11 +328,20 @@ class OdriveEncoderHall:
             )
 
     def _check_ramp_rate(self, ramp_rate):
-        if abs(ramp_rate / self._reduction_ratio) > self.odrv0.axis0.trap_traj.config.accel_limit:
+        """
+        Check that the acceleration registered by the user is under the acceleration limit.
+
+        Parameters
+        ----------
+        ramp_rate: float
+            Acceleration of the pedals (tr/min²)
+        """
+        if abs(ramp_rate / self._reduction_ratio / 3600) > self.odrv0.axis0.trap_traj.config.accel_limit:
             raise ValueError(
-                f"The acceleration limit is {self._hardware_and_security['pedals_accel_lim']} "
-                f"tr/(s^2) for the pedals. "
-                f"Acceleration specified: {abs(ramp_rate)} tr/(s^2) for the pedals."
+                f"The acceleration limit is "
+                f"{self.odrv0.axis0.trap_traj.config.accel_limit * self._reduction_ratio * 3600} "
+                f"tr/min² for the pedals. "
+                f"Acceleration specified: {abs(ramp_rate)} tr/min² for the pedals."
             )
 
     def turns_control(self, turns: float = 0.0):
@@ -383,21 +395,22 @@ class OdriveEncoderHall:
 
         self.odrv0.axis0.controller.input_pos = self._relative_pos + angle / 360 / self._reduction_ratio
 
-    def velocity_control(self, velocity: float = 0.0, velocity_ramp_rate: float = 0.2):
+    def velocity_control(self, velocity: float = 0.0, velocity_ramp_rate: float = 400.0):
         """
-        Sets the motor to a given velocity in turn/s of the pedals with velocities ramped at each change.
+        Sets the motor to a given velocity in tr/min of the pedals with velocities ramped at each change.
 
         Parameters
         ----------
         velocity: float
-            Targeted velocity in turn/s of the pedals.
+            Targeted velocity in tr/min of the pedals.
         velocity_ramp_rate: float
-            Velocity ramp rate in turn/(s^2) of the pedals.
+            Velocity ramp rate in tr/min² of the pedals.
         """
-        if abs(velocity / self._reduction_ratio) > self.odrv0.axis0.controller.config.vel_limit:
+        if abs(velocity / self._reduction_ratio / 60) > self.odrv0.axis0.controller.config.vel_limit:
             raise ValueError(
-                f"The velocity limit is {self._hardware_and_security['pedals_vel_limit']} tr/s for the pedals."
-                f"Velocity specified: {abs(velocity)} tr/s for the pedals"
+                f"The velocity limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
+                f"tr/min for the pedals."
+                f"Velocity specified: {abs(velocity)} tr/min for the pedals"
             )
 
         self._check_ramp_rate(velocity_ramp_rate)
@@ -406,9 +419,9 @@ class OdriveEncoderHall:
             self.stop()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-            self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / self._reduction_ratio
+            self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
 
-        self.odrv0.axis0.controller.input_vel = self._sign() * abs(velocity / self._reduction_ratio)
+        self.odrv0.axis0.controller.input_vel = self._sign() * abs(velocity / 60 / self._reduction_ratio)
 
         if self._control_mode != ControlMode.VELOCITY_CONTROL:
             # Starts the motor if the previous control mode was not already `VELOCITY_CONTROL`
@@ -418,6 +431,9 @@ class OdriveEncoderHall:
     def torque_control(self, torque: float = 0.0, torque_ramp_rate: float = 0.5):
         """
         Set the odrive in torque control, choose the torque and start the motor.
+
+        Parameters
+        ----------
         torque: float
             Torque (Nm) at the pedals.
         torque_ramp_rate: float
@@ -425,7 +441,7 @@ class OdriveEncoderHall:
         """
         if abs(torque * self._reduction_ratio) > self.odrv0.axis0.motor.config.torque_lim:
             raise ValueError(
-                f"The torque limit is {self._hardware_and_security['torque_lim']} Nm."
+                f"The torque limit is {self.odrv0.axis0.motor.config.torque_lim / self._reduction_ratio} Nm."
                 f"Torque specified: {torque} Nm"
             )
 
@@ -436,7 +452,6 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
             self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
 
-        # TODO: Check sign on the motor
         self.odrv0.axis0.controller.input_torque = self._sign() * abs(torque * self._reduction_ratio)
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
@@ -444,39 +459,39 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.TORQUE_CONTROL
 
-    def stop(self, vel_stop: float = 0.1, ramp_rate: float = 0.2):
+    def stop(self, vel_stop: float = 6.0, ramp_rate: float = 12.0):
         """
         Stops the motor gently.
 
         Parameters
         ----------
         vel_stop: float
-            The velocity at which the motor will be stopped if it was turning (tr/s of the pedals).
+            The velocity at which the motor will be stopped if it was turning (tr/min of the pedals).
         ramp_rate: float
-            The ramp_rate of the deceleration.
+            The ramp_rate of the deceleration (tr/min² of the pedals).
         """
         if vel_stop > self._hardware_and_security["maximal_velocity_stop"]:
             raise ValueError(
                 f"The maximal velocity at which the motor can be stopped is "
-                f"{self._hardware_and_security['maximal_velocity_stop']} tr/s for the pedals."
-                f"Stop velocity specified: {abs(vel_stop)} tr/s for the pedals"
+                f"{self._hardware_and_security['maximal_velocity_stop']} tr/min for the pedals."
+                f"Stop velocity specified: {abs(vel_stop)} tr/min for the pedals"
             )
 
         self._check_ramp_rate(ramp_rate)
 
-        if abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / self._reduction_ratio:
+        if abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
             # Gently slows down the motor.
             if self._control_mode != ControlMode.VELOCITY_CONTROL:
                 self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
                 self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-                self.odrv0.axis0.controller.config.vel_ramp_rate = ramp_rate
+                self.odrv0.axis0.controller.config.vel_ramp_rate = ramp_rate / 3600 / self._reduction_ratio
 
             self.odrv0.axis0.controller.input_vel = 0.0
 
             if self._control_mode != ControlMode.VELOCITY_CONTROL:
                 self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-            while abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / self._reduction_ratio:
+            while abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
                 pass
 
         # Stops the motor
@@ -492,9 +507,9 @@ class OdriveEncoderHall:
 
     def get_estimated_velocity(self) -> float:
         """
-        Returns the estimated velocity of the pedals in turns/s.
+        Returns the estimated velocity of the pedals in tr/min.
         """
-        return self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio
+        return self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 60
 
     def get_electrical_power(self):
         """

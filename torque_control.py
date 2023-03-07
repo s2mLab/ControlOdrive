@@ -23,26 +23,24 @@ t1 = time.time()
 t_next = 0
 
 l = 0.17
-m = 0.1
+m = 2.004
 g = 9.81
-instruction = l * m * g
+instruction = - l * m * g - 1.0
 print(instruction)
 motor.set_training_mode("Eccentric")
 
-for i, instruction in enumerate((-2, -6)):
-    print(instruction)
-    motor.torque_control(instruction)
+motor.torque_control(instruction)
 
-    while t1 - t0 < 10 * (i + 1):
-        t1 = time.time()
-        if t1 - t0 > t_next:
-            t.append(t1 - t0)
-            instructions.append(instruction)
-            vel_estimate.append(motor.get_estimated_velocity())
-            torque_measured.append(motor.get_torque_measured())
-            positions.append(motor.get_angle())
+while t1 - t0 < 15:
+    t1 = time.time()
+    if t1 - t0 > t_next:
+        t.append(t1 - t0)
+        instructions.append(instruction)
+        vel_estimate.append(motor.get_estimated_velocity())
+        torque_measured.append(motor.get_torque_measured())
+        positions.append(motor.get_angle())
 
-            t_next += 0.05
+        t_next += 0.05
 
 motor.stop()
 
@@ -59,6 +57,7 @@ plt.figure()
 plt.title("Torque")
 plt.plot(t, instructions, label="Instruction")
 plt.plot(t, torque_measured, label="Measured torque")
+plt.plot(t, [- l * m * g] * len(t), label="Torque at 90deg")
 plt.plot(t, - l * m * g * np.sin(positions / 180 * np.pi), label="'Actual' torque")
 plt.xlabel("Time (s)")
 plt.ylabel("Torque (Nm)")

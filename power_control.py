@@ -44,7 +44,7 @@ while t1 - t0 < 40:
         else:
             vel = 0.0
 
-        if abs(vel) < 0.2:
+        if abs(vel) < 12:
             instruction = torque_lim
         else:
             print(abs(power / vel))
