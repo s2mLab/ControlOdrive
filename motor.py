@@ -577,7 +577,7 @@ class OdriveEncoderHall:
         if abs(i_measured) <= resisting_i:
             return 0.0
         else:
-            sign = i_measured / abs(i_measured)
+            sign = - i_measured / abs(i_measured)
             return self.odrv0.axis0.motor.config.torque_constant * i_measured \
                 / self._reduction_ratio + sign * self._hardware_and_security["resisting_torque"]
 

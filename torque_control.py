@@ -25,17 +25,15 @@ t1 = time.time()
 t_next = 0
 
 l = 0.17
-m = 2.004
+m = 4.430
 g = 9.81
-instruction = 1
-torque_ramp_rate = 10
+instruction = - l * m * g
 print(instruction)
-mode = "Eccentric"
-motor.set_training_mode(mode)
+motor.set_training_mode("Eccentric")
 
-motor.torque_control(instruction, torque_ramp_rate/10)
+motor.torque_control(instruction)
 
-while t1 - t0 < 10:
+while t1 - t0 < 30:
     t1 = time.time()
     if t1 - t0 > t_next:
         t.append(t1 - t0)
@@ -54,10 +52,10 @@ motor.stop()
 #     "vel_estimate": vel_estimate,
 #     "torque_measured": torque_measured,
 # }
-#
+
 # # Writing to .json
 # json_object = json.dumps(dictionary, indent=4)
-# with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_1.json", "w") as outfile:
+# with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_3.json", "w") as outfile:
 #     outfile.write(json_object)
 
 vel_estimate = np.asarray(vel_estimate)
@@ -74,7 +72,7 @@ plt.title("Torque")
 plt.plot(t, instructions, label="Instruction")
 plt.plot(t, torque_measured, label="Measured torque")
 plt.plot(t, user_torque, label="User torque")
-plt.plot(t, [- l * m * g] * len(t), label="Torque at 90deg")
+# plt.plot(t, [- l * m * g] * len(t), label="Torque at 90deg")
 plt.plot(t, - l * m * g * np.sin(positions / 180 * np.pi), label="'Actual' user torque")
 plt.xlabel("Time (s)")
 plt.ylabel("Torque (Nm)")
