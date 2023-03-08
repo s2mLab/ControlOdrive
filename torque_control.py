@@ -26,15 +26,15 @@ t_next = 0
 l = 0.17
 m = 2.004
 g = 9.81
-instruction = 2
-torque_ramp_rate = 0.5
+instruction = 1
+torque_ramp_rate = 10
 print(instruction)
 mode = "Eccentric"
 motor.set_training_mode(mode)
 
-motor.torque_control(instruction, torque_ramp_rate)
+motor.torque_control(instruction, torque_ramp_rate/10)
 
-while t1 - t0 < 15:
+while t1 - t0 < 10:
     t1 = time.time()
     if t1 - t0 > t_next:
         t.append(t1 - t0)
@@ -55,7 +55,7 @@ dictionary = {
 
 # Writing to .json
 json_object = json.dumps(dictionary, indent=4)
-with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}", "w") as outfile:
+with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_1.json", "w") as outfile:
     outfile.write(json_object)
 
 vel_estimate = np.asarray(vel_estimate)
