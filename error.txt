@@ -1,0 +1,54 @@
+Traceback (most recent call last):
+  File "/home/pi/ControlOdrive/velocity_control.py", line 39, in <module>
+    vel_estimate.append(motor.get_estimated_velocity())
+  File "/home/pi/ControlOdrive/motor.py", line 486, in get_estimated_velocity
+    return self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 640, in __get__
+    return self._get_obj(instance)
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 610, in _get_obj
+    assert(not instance._obj_handle is None)
+AssertionError
+>>> Exception in thread Watchdog:
+Traceback (most recent call last):
+  File "/usr/lib/python3.9/threading.py", line 954, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.9/threading.py", line 892, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/pi/ControlOdrive/motor.py", line 134, in _watchdog_feed
+    self.odrv0.axis0.watchdog_feed()
+AttributeError: 'EmptyInterface' object has no attribute 'axis0'
+
+
+Traceback (most recent call last):
+  File "/home/pi/ControlOdrive/velocity_control.py", line 39, in <module>
+    vel_estimate.append(motor.get_estimated_velocity())
+  File "/home/pi/ControlOdrive/motor.py", line 486, in get_estimated_velocity
+    return self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 640, in __get__
+    return self._get_obj(instance)
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 610, in _get_obj
+    assert(not instance._obj_handle is None)
+AssertionError
+Exception in thread Watchdog:
+Traceback (most recent call last):
+  File "/usr/lib/python3.9/threading.py", line 954, in _bootstrap_inner
+>>>     self.run()
+  File "/usr/lib/python3.9/threading.py", line 892, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/pi/ControlOdrive/motor.py", line 134, in _watchdog_feed
+    self.odrv0.axis0.watchdog_feed()
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 581, in __call__
+    return run_coroutine_threadsafe(self._libfibre.loop, lambda: self.__call__(*args))
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 296, in run_coroutine_threadsafe
+    return future.result()
+  File "/usr/lib/python3.9/concurrent/futures/_base.py", line 440, in result
+    return self.__get_result()
+  File "/usr/lib/python3.9/concurrent/futures/_base.py", line 389, in __get_result
+    raise self._exception
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 291, in func_async
+    result = await result
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 535, in async_call
+    tx_buf += arg[2].serialize(self._libfibre, args[i])
+  File "/home/pi/.local/lib/python3.9/site-packages/odrive/pyfibre/fibre/libfibre.py", line 247, in serialize
+    raise TypeError("Expected value of type RemoteObject or None but got '{}'. An example for a RemoteObject is this expression: odrv0.axis0.controller._input_pos_property".format(type(value).__name__))
+TypeError: Expected value of type RemoteObject or None but got 'EmptyInterface'. An example for a RemoteObject is this expression: odrv0.axis0.controller._input_pos_property

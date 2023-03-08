@@ -1,5 +1,15 @@
 # ControlOdrive
 I'm not sure `odrive` can be used on the last version of Python, so I have not updated it from ``
+## Hardware
+### Relays
+The relays are not controlled by the Odrive, they are there to ensure that when the power source that powers the Odrive is sut down, the current cannot go into it.
+As soon as the Odrive is powered, the relays are too and the motor is directly controlled by the Odrive.
+To work, if the Odrive is connected to the COM pins and the motor to the NO pins,
+the COM pins need to be connected to the High pins (so the normally open relay closes when alimented).
+### Reduction ratio
+There are two gear stages. The first one has 8 teeth at the entry and 36 (motor) at the exit (blue gear0.
+The second one has supposedly (according to my researches and check on the hardware) 10 teeth at the entry and 91 at the exit. 
+The reduction ratio is then Ze/Zs = ws/we = 8/36*10/91
 ## Firmware/Software
 2022/02/09:
 - Firmware: 0.5.5, *a priori* the last firmware available for the Odrive v3.6 56V (end of life)
@@ -9,6 +19,14 @@ I'm not sure `odrive` can be used on the last version of Python, so I have not u
   - To update the software on the Raspberry, use `pip install odrive==0.6.3.post0`
 ## Protocol
 ## Troubleshooting
+### Calibration
+Every calibration must be done without mechanical load nor watchdog since the motor has to reboot several times.
+#### Complete calibration
+The complete calibration must be done without any mechanical load.
+### Watchdog
+The watchdog timeout can't be as little as the user wants.
+For instance, for a feeding time of `0.01`, the watchdog can't be as small as `0.05`.
+I've set it to `0.1`.
 ### Connection to the Odrive
 I had trouble connecting the Odrive to the Raspberry Pi. The solution that worked for me was to write in a terminal:
 ```
