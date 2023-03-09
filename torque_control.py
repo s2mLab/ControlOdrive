@@ -17,6 +17,7 @@ t = []
 instructions = []
 vel_estimate = []
 torque_measured = []
+user_torque = []
 positions = []
 
 t0 = time.time()
@@ -40,6 +41,7 @@ while t1 - t0 < 10:
         t.append(t1 - t0)
         instructions.append(instruction)
         vel_estimate.append(motor.get_estimated_velocity())
+        user_torque.append(motor.get_user_torque())
         torque_measured.append(motor.get_torque_measured())
         positions.append(motor.get_angle())
 
@@ -47,16 +49,16 @@ while t1 - t0 < 10:
 
 motor.stop()
 
-dictionary = {
-    "time": t,
-    "vel_estimate": vel_estimate,
-    "torque_measured": torque_measured,
-}
-
-# Writing to .json
-json_object = json.dumps(dictionary, indent=4)
-with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_1.json", "w") as outfile:
-    outfile.write(json_object)
+# dictionary = {
+#     "time": t,
+#     "vel_estimate": vel_estimate,
+#     "torque_measured": torque_measured,
+# }
+#
+# # Writing to .json
+# json_object = json.dumps(dictionary, indent=4)
+# with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_1.json", "w") as outfile:
+#     outfile.write(json_object)
 
 vel_estimate = np.asarray(vel_estimate)
 positions = np.asarray(positions)
@@ -71,8 +73,9 @@ plt.figure()
 plt.title("Torque")
 plt.plot(t, instructions, label="Instruction")
 plt.plot(t, torque_measured, label="Measured torque")
+plt.plot(t, user_torque, label="User torque")
 plt.plot(t, [- l * m * g] * len(t), label="Torque at 90deg")
-plt.plot(t, - l * m * g * np.sin(positions / 180 * np.pi), label="'Actual' torque")
+plt.plot(t, - l * m * g * np.sin(positions / 180 * np.pi), label="'Actual' user torque")
 plt.xlabel("Time (s)")
 plt.ylabel("Torque (Nm)")
 plt.legend()
