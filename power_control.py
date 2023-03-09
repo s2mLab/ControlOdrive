@@ -47,8 +47,8 @@ while t1 - t0 < 40:
         if abs(vel) < 12:
             instruction = torque_lim
         else:
-            print(abs(power / vel))
-            instruction = abs(power / vel)
+            print(abs(power / (vel / 60)))
+            instruction = abs(power / (vel / 60))
 
         motor.torque_control(instruction)
         instructions.append(instruction)

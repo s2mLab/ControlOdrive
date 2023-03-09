@@ -1,4 +1,5 @@
 """ Example on how to use the Motor.py code in torque control"""
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,11 +26,13 @@ t_next = 0
 l = 0.17
 m = 2.004
 g = 9.81
-instruction = - l * m * g - 1.0
+instruction = 2
+torque_ramp_rate = 0.5
 print(instruction)
-motor.set_training_mode("Eccentric")
+mode = "Eccentric"
+motor.set_training_mode(mode)
 
-motor.torque_control(instruction)
+motor.torque_control(instruction, torque_ramp_rate)
 
 while t1 - t0 < 15:
     t1 = time.time()
@@ -43,6 +46,17 @@ while t1 - t0 < 15:
         t_next += 0.05
 
 motor.stop()
+
+dictionary = {
+    "time": t,
+    "vel_estimate": vel_estimate,
+    "torque_measured": torque_measured,
+}
+
+# Writing to .json
+json_object = json.dumps(dictionary, indent=4)
+with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}", "w") as outfile:
+    outfile.write(json_object)
 
 vel_estimate = np.asarray(vel_estimate)
 positions = np.asarray(positions)
