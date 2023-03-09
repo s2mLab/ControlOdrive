@@ -38,8 +38,8 @@ class OdriveEncoderHall:
     def __init__(
             self,
             enable_watchdog=True,
-            hardware_and_security_path: str = "hardware_and_security.json",
-            gains_path: str = "gains.json",
+            hardware_and_security_path: str = "parameters/hardware_and_security.json",
+            gains_path: str = "parameters/gains.json",
     ):
 
         with open(hardware_and_security_path, "r") as hardware_and_security_file:

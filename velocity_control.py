@@ -63,7 +63,7 @@ electrical_power = np.asarray(electrical_power)
 # Writing to .json
 
 json_object = json.dumps(dictionary, indent=4)
-with open("monitoring_commands.json", "w") as outfile:
+with open("XP/monitoring_commands.json", "w") as outfile:
     outfile.write(json_object)
 
 plt.plot(t, vel_estimate, label="Estimated velocity")

@@ -62,3 +62,6 @@ for mode in ("Concentric", "Eccentric"):
 
 print(f"Resisting torque: {np.mean(resisting_torques)} (+/- {np.std(resisting_torques)}) Nm")
 print(f"Resisting current: {np.mean(resisting_currents)} (+/- {np.std(resisting_currents)}) A")
+
+# Resisting torque: 1.403089921584192 (+/- 0.31551030723591406) Nm
+# Resisting current: 0.41654785903687247 (+/- 0.09366836790816456) A

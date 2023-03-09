@@ -9,15 +9,20 @@ r = 8/36*10/91
 weight_torque_at_motor = []
 # the setpoint as been chosen instead of the measures because there is a lot of noise on the measures
 i_setpoint = []
+resisting_current = 0.41654785903687247
 
 for side in ("left", "right"):
     for weight, m in zip(("3kg", "10p"), (3, 4.53592)):
-        with open(f"torque_constant_{side}_{weight}.json", "r") as file:
+        with open(f"find_torque_constant/torque_constant_{side}_{weight}.json", "r") as file:
             data = json.load(file)
 
         time = np.asarray(data["time"])
         iq_setpoint = np.asarray(data["iq_setpoint"])
         positions = np.asarray(data["positions"])
+
+        iq_setpoint[abs(iq_setpoint) < resisting_current] = 0.0
+        iq_setpoint[iq_setpoint <= - resisting_current] += resisting_current
+        iq_setpoint[iq_setpoint >= resisting_current] -= resisting_current
 
         positions[positions > 337.0] -= 360.0  # for the means to be accurate
 
@@ -39,7 +44,8 @@ for side in ("left", "right"):
 torque_constant, b = np.polyfit(i_setpoint, weight_torque_at_motor, 1)
 print(torque_constant, b)
 
-# 0.08225583064524448 0.0023268897548210173
+# Before subtracting resisting current: 0.08225583064524448 0.0023268897548210173
+# After subtracting resisting current: 0.10680746759421 0.0054162519079533865
 
 plt.plot(weight_torque_at_motor, label="T")
 plt.plot(torque_constant * np.asarray(i_setpoint), label="Tcalc")
