@@ -28,12 +28,12 @@ dictionary = {
     "resistance_calib_max_voltage": 20.0,  # Not sure of this value
     "requested_current_range": 25.0,  # > current_lim + current_lim_margin nut as little as possible
     "current_control_bandwidth": 100.0,  # Not sure of this value
-    "current_lim": 7.0,  # 350W / 48V # Not sure of this value
+    "current_lim": 500 / 48,  # 500W / 48V # Not sure of this value
     "torque_lim": 100.0,  # torque applied by the user TODO: choose a torque to protect the user.
     "watchdog_timeout": 0.1,  # Chosen arbitrarily
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
-    "reduction_ratio": 8/36*10/91,
+    "reduction_ratio": 8 / 36 * 10 / 91,
     "pedals_accel_lim": 1080,  # tr/(min^2) of the pedals
     "maximal_velocity_stop": 15,  # tr/s of the pedals
 }
