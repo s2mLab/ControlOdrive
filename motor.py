@@ -26,6 +26,7 @@ from odrive.enums import (
 )
 from enums import ControlMode
 
+
 class OdriveEncoderHall:
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
@@ -35,10 +36,10 @@ class OdriveEncoderHall:
     """
 
     def __init__(
-        self,
-        enable_watchdog=True,
-        hardware_and_security_path: str = "hardware_and_security.json",
-        gains_path: str = "gains.json",
+            self,
+            enable_watchdog=True,
+            hardware_and_security_path: str = "hardware_and_security.json",
+            gains_path: str = "gains.json",
     ):
 
         with open(hardware_and_security_path, "r") as hardware_and_security_file:
@@ -179,12 +180,12 @@ class OdriveEncoderHall:
         Indicates if one or several errors has been detected (True) or not (False).
         """
         return not (
-            self.odrv0.error == 0
-            and self.odrv0.axis0.error == AXIS_ERROR_NONE
-            and self.odrv0.axis0.controller.error == CONTROLLER_ERROR_NONE
-            and self.odrv0.axis0.encoder.error == ENCODER_ERROR_NONE
-            and self.odrv0.axis0.motor.error == MOTOR_ERROR_NONE
-            and self.odrv0.axis0.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
+                self.odrv0.error == 0
+                and self.odrv0.axis0.error == AXIS_ERROR_NONE
+                and self.odrv0.axis0.controller.error == CONTROLLER_ERROR_NONE
+                and self.odrv0.axis0.encoder.error == ENCODER_ERROR_NONE
+                and self.odrv0.axis0.motor.error == MOTOR_ERROR_NONE
+                and self.odrv0.axis0.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
         )
 
     def configuration(self):
@@ -199,14 +200,14 @@ class OdriveEncoderHall:
         print("Configuration done")
 
     def gains_configuration(
-        self,
-        custom: bool,
-        pos_gain: float = None,
-        k_vel_gain: float = None,
-        k_vel_integrator_gain: float = None,
-        current_gain: float = None,
-        current_integrator_gain: float = None,
-        bandwidth: float = None,
+            self,
+            custom: bool,
+            pos_gain: float = None,
+            k_vel_gain: float = None,
+            k_vel_integrator_gain: float = None,
+            current_gain: float = None,
+            current_integrator_gain: float = None,
+            bandwidth: float = None,
     ):
         """
         custom: bool
@@ -237,13 +238,13 @@ class OdriveEncoderHall:
         # For position and velocity control
         if k_vel_gain is not None:
             self.odrv0.axis0.controller.config.vel_gain = (
-                k_vel_gain * self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.encoder.config.cpr
+                    k_vel_gain * self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.encoder.config.cpr
             )
         if k_vel_integrator_gain is not None:
             self.odrv0.axis0.controller.config.vel_integrator_gain = (
-                k_vel_integrator_gain
-                * self.odrv0.axis0.motor.config.torque_constant
-                * self.odrv0.axis0.encoder.config.cpr
+                    k_vel_integrator_gain
+                    * self.odrv0.axis0.motor.config.torque_constant
+                    * self.odrv0.axis0.encoder.config.cpr
             )
         # For position, velocity and torque control
         if current_gain is not None:
@@ -428,7 +429,11 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
-    def torque_control(self, torque: float = 0.0, torque_ramp_rate: float = 0.5):
+    def torque_control(
+            self,
+            torque: float = 0.0,
+            torque_ramp_rate: float = 0.5,
+            resisting_torque: float = None):
         """
         Set the odrive in torque control, choose the torque and start the motor.
 
@@ -438,12 +443,19 @@ class OdriveEncoderHall:
             Torque (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        resisting_torque: float
+            Resisting torque at the pedals (Nm), if the variable torque is absolute, set resisting_torque to 0.0.
         """
         if abs(torque * self._reduction_ratio) > self.odrv0.axis0.motor.config.torque_lim:
             raise ValueError(
                 f"The torque limit is {self.odrv0.axis0.motor.config.torque_lim / self._reduction_ratio} Nm."
                 f"Torque specified: {torque} Nm"
             )
+
+        if resisting_torque is None:
+            resisting_torque = self._hardware_and_security["resisting_torque"]
+
+        torque = abs(torque) + resisting_torque
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
             self.stop()
@@ -546,14 +558,28 @@ class OdriveEncoderHall:
         if vel == 0.0:
             return 0.0
         else:
-            return - a * vel / abs(vel) * abs(vel)**(1/c) + b
+            return - a * vel / abs(vel) * abs(vel) ** (1 / c) + b
 
     def get_torque_measured(self):
         """
-        Returns the measured user torque.
+        Returns the measured torque.
         """
-        return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured\
+        return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
             / self._reduction_ratio
+
+    def get_user_torque(self):
+        """
+        Returns the measured user torque (the resisting torque has been subtracted).
+        """
+        i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
+        resisting_i = self._hardware_and_security["resisting_torque"] / self.odrv0.axis0.motor.config.torque_constant \
+            * self._reduction_ratio
+        if abs(i_measured) <= resisting_i:
+            return 0.0
+        else:
+            sign = i_measured / abs(i_measured)
+            return self.odrv0.axis0.motor.config.torque_constant * i_measured \
+                / self._reduction_ratio + sign * self._hardware_and_security["resisting_torque"]
 
     # def check_torque_measured(self):
     #    vel = self.odrv0.axis0.encoder.vel_estimate
