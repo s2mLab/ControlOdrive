@@ -34,7 +34,7 @@ with open(f'XP/power_control_{motor.get_training_mode()}_{power}_{random.randint
         t1 = time.time()
         if t1 - t0 > t_next:
             motor.torque_control(instruction)
-            motor.save_data(power)
+            motor.save_data(instruction)
             json.dump(motor.data, f)
             print(f"Vel: {motor.data['velocity'][-1]}, "
                   f"Instruction: {motor.data['user_torque'][-1]}, "

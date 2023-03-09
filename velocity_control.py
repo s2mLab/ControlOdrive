@@ -1,6 +1,7 @@
 """ Example on how to use the Motor.py code in velocity control"""
 import json
 import random
+import numpy as np
 import matplotlib.pyplot as plt
 
 from motor import *
@@ -15,14 +16,14 @@ t0 = time.time()
 t1 = time.time()
 t_next = 0
 
-instruction = 60
+instruction = 30
 motor.set_training_mode("Eccentric")
-motor.velocity_control(instruction)
+motor.velocity_control(instruction, velocity_ramp_rate = 100)
 print(instruction)
 
 with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}', 'w') as f:
 
-    while t1 - t0 < 30:
+    while t1 - t0 < 10:
         t1 = time.time()
         if t1 - t0 > t_next:
             motor.save_data(instruction)
@@ -34,8 +35,12 @@ with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{
 
 motor.stop()
 
+t = np.asarray(motor.data['time'])
+t = 100 * t / 60
+t = list(t)
+
 plt.plot(motor.data['time'], motor.data['velocity'], label="Estimated velocity")
-plt.plot(motor.data['time'], motor.data['instruction'], label="Instruction")
+plt.plot(motor.data['time'], np.min([t, motor.data['instruction']], axis=0), label="Instruction")
 plt.title("Ramped velocity control")
 plt.xlabel("Time (s)")
 plt.ylabel("Velocity (tr/min)")

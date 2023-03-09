@@ -24,7 +24,7 @@ instruction = length * m * g
 power = 20
 torque_lim = 6.67
 print(instruction)
-motor.set_training_mode("Eccentric")
+motor.set_training_mode("Concentric")
 motor.torque_control(instruction)
 vel = 0.0
 
@@ -33,7 +33,7 @@ with open(f'XP/power_control_linear_{motor.get_training_mode()}_{power}_{random.
     while t1 - t0 < 40:
         t1 = time.time()
         if t1 - t0 > t_next:
-            motor.torque_control(instruction)
+            motor.torque_control(instruction, torque_ramp_rate=4.0)
             motor.save_data(instruction)
             json.dump(motor.data, f)
             print(f"Vel: {vel}, {motor.data['velocity'][-1]}, "
@@ -45,7 +45,7 @@ with open(f'XP/power_control_linear_{motor.get_training_mode()}_{power}_{random.
                 vel = 0.0
 
             if abs(vel) < 12:
-                instruction = power / (12 * 2 * np.pi / 60)
+                instruction = 5 * power / (12 * 2 * np.pi / 60)
             else:
                 instruction = abs(vel)
 
