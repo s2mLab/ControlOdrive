@@ -7,7 +7,7 @@ As soon as the Odrive is powered, the relays are too and the motor is directly c
 To work, if the Odrive is connected to the COM pins and the motor to the NO pins,
 the COM pins need to be connected to the High pins (so the normally open relay closes when alimented).
 ### Reduction ratio
-There are two gear stages. The first one has 8 teeth at the entry and 36 (motor) at the exit (blue gear0.
+There are two gear stages. The first one has 8 teeth at the entry and 36 (motor) at the exit (blue gear).
 The second one has supposedly (according to my researches and check on the hardware) 10 teeth at the entry and 91 at the exit. 
 The reduction ratio is then Ze/Zs = ws/we = 8/36*10/91
 ## Firmware/Software
@@ -18,6 +18,24 @@ The reduction ratio is then Ze/Zs = ws/we = 8/36*10/91
 - Software: odrive 0.6.3.post0, the latest version at this time
   - To update the software on the Raspberry, use `pip install odrive==0.6.3.post0`
 ## Protocol
+### Torque constant and resisting torque
+#### Resisting torque
+The first step is to determine the resisting torque of the motr. The resisting torque is the minimum torque that the
+motor has to apply to make the pedals move.
+To do so, you must use the torque control on the system with the neutral load (just the pedals, not any additional
+load). The torque profile must be a ramp and the torque at which the motor is moving is the resisting torque. You 
+should do it several times in order to have a precise value. It is advised to do it for each rotation direction and with
+different `torqu_ramps`.
+At this point, we don't know the torque constant, so we can only have the corresponding current.
+The script `find_resisting_torque/resisting/torque.py` allows to compute the current corresponding to the resisting
+torque. _A priori_ the motor won't turn if it as less current than this `resisting_current`.
+#### Torque constant
+Supposedly, 
+$$$
+\Tau_{motor} = K_I * `Iq_measured`
+\Tau_{out} = \mu \Tau_motor / `reduction_ratio`
+
+$$$
 ## Troubleshooting
 ### Calibration
 Every calibration must be done without mechanical load nor watchdog since the motor has to reboot several times.
