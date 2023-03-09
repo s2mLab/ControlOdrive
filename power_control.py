@@ -12,9 +12,6 @@ motor = OdriveEncoderHall()
 # Set the control mode
 motor.torque_control()
 
-# Variables to plot
-instructions = []
-
 t0 = time.time()
 t1 = time.time()
 t_next = 0
@@ -24,22 +21,23 @@ m = 4
 g = 9.81
 instruction = length * m * g
 
-power = 1.0
+power = 20
 torque_lim = 6.67
-print(instruction)
-motor.set_training_mode("Eccentric")
-motor.torque_control(instruction)
+print(power)
+motor.set_training_mode("Concentric")
+motor.torque_control(power / (12 * 2 * np.pi / 60))
+vel = 0.0
 
-with open(f'XP/power_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}', 'w') as f:
+with open(f'XP/power_control_{motor.get_training_mode()}_{power}_{random.randint(0,1000)}', 'w') as f:
 
     while t1 - t0 < 40:
         t1 = time.time()
         if t1 - t0 > t_next:
-            instructions.append(instruction)
-            motor.save_data()
+            motor.torque_control(instruction)
+            motor.save_data(power)
             json.dump(motor.data, f)
             print(f"Vel: {motor.data['velocity'][-1]}, "
-                  f"Torque: {motor.data['torque'][-1]}, "
+                  f"Instruction: {motor.data['user_torque'][-1]}, "
                   f"Power: {motor.data['mechanical_power'][-1]}")
             if len(motor.data['velocity']) > 1.0:
                 vel = np.mean(motor.data['velocity'][max(0, len(motor.data['velocity'])-20): -1])
@@ -47,10 +45,10 @@ with open(f'XP/power_control_{motor.get_training_mode()}_{abs(instruction)}_{ran
                 vel = 0.0
 
             if abs(vel) < 12:
-                instruction = torque_lim
+                instruction = power / (12 * 2 * np.pi / 60)
             else:
-                print(abs(power / (vel / 60)))
-                instruction = abs(power / (vel / 60))
+                print(abs(power / (vel * 2 * np.pi / 60)))
+                instruction = abs(power / (vel * 2 * np.pi / 60))
 
             t_next += 0.05
 
@@ -66,7 +64,7 @@ plt.legend()
 
 plt.figure()
 plt.title("Torque")
-plt.plot(motor.data['time'], instructions, label="Instruction")
+plt.plot(motor.data['time'], motor.data['instruction'], label="Instruction")
 plt.plot(motor.data['time'], motor.data["user_torque"], label="User torque")
 plt.plot(motor.data['time'], motor.data["measured_torque"], label="Measured torque")
 plt.plot(motor.data['time'], - length * m * g * np.sin(angles / 180 * np.pi), label="'Actual' torque")
@@ -79,5 +77,6 @@ plt.title("Mechanical power")
 plt.plot(motor.data['time'], motor.data["mechanical_power"])
 plt.xlabel("Time (s)")
 plt.ylabel("Power (W)")
+
 
 plt.show()

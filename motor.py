@@ -64,14 +64,18 @@ class OdriveEncoderHall:
         self.first_save = True
         self.t0 = 0.0
         self.data = {
+            "instruction": [],
             "time": [],
             "iq_setpoint": [],
             "iq_measured": [],
-            "torque": [],
+            "measured_torque": [],
+            "user_torque": [],
             "velocity": [],
             "angle": [],
             "mechanical_power": [],
             "electrical_power": [],
+            "i_res": [],
+            "vbus": []
         }
 
     def erase_configuration(self):
@@ -493,7 +497,7 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
             self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
 
-        self.odrv0.axis0.controller.input_torque = self._sign() * abs(torque * self._reduction_ratio)
+        self.odrv0.axis0.controller.input_torque = - self._sign() * abs(torque * self._reduction_ratio)
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
             # Starts the motor if the previous control mode was not already `TORQUE_CONTROL`
@@ -615,13 +619,16 @@ class OdriveEncoderHall:
     #    else:
     #        return self.odrv0.axis0.controller.mechanical_power / (vel * 2 * np.pi) / self._reduction_ratio
 
-    def save_data(self):
+    def save_data(self, instruction: float = None):
         """
         Saves data.
         """
         if self.first_save:
             self.t0 = time.time()
             self.first_save = False
+
+        if instruction:
+            self.data["instruction"].append(instruction)
 
         self.data["time"].append(time.time() - self.t0)
         self.data["iq_setpoint"].append(self.get_iq_setpoint())
