@@ -1,4 +1,6 @@
-""" Example on how to use the Motor.py code in velocity control"""
+"""
+This script was used to find the torque constant.
+"""
 import json
 import matplotlib.pyplot as plt
 

@@ -433,7 +433,7 @@ class OdriveEncoderHall:
             self,
             torque: float = 0.0,
             torque_ramp_rate: float = 0.5,
-            resisting_torque: float = None):
+            resisting_torque_current: float = None):
         """
         Set the odrive in torque control, choose the torque and start the motor.
 
@@ -443,8 +443,9 @@ class OdriveEncoderHall:
             Torque (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
-        resisting_torque: float
-            Resisting torque at the pedals (Nm), if the variable torque is absolute, set resisting_torque to 0.0.
+        resisting_torque_current: float
+            Current corresponding to the resisting torque at the pedals (A).
+            If the variable `torque` is absolute, set resisting_torque to 0.0.
         """
         if abs(torque * self._reduction_ratio) > self.odrv0.axis0.motor.config.torque_lim:
             raise ValueError(
@@ -452,10 +453,11 @@ class OdriveEncoderHall:
                 f"Torque specified: {torque} Nm"
             )
 
-        if resisting_torque is None:
-            resisting_torque = self._hardware_and_security["resisting_torque"]
+        if resisting_torque_current is None:
+            resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
 
-        torque = abs(torque) + resisting_torque
+        torque = abs(torque) + self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
+            / self._reduction_ratio
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
             self.stop()
@@ -572,14 +574,12 @@ class OdriveEncoderHall:
         Returns the measured user torque (the resisting torque has been subtracted).
         """
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        resisting_i = self._hardware_and_security["resisting_torque"] / self.odrv0.axis0.motor.config.torque_constant \
-            * self._reduction_ratio
-        if abs(i_measured) <= resisting_i:
+        if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
             return 0.0
         else:
             sign = - i_measured / abs(i_measured)
-            return self.odrv0.axis0.motor.config.torque_constant * i_measured \
-                / self._reduction_ratio + sign * self._hardware_and_security["resisting_torque"]
+            return self.odrv0.axis0.motor.config.torque_constant * \
+                (i_measured + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
 
     # def check_torque_measured(self):
     #    vel = self.odrv0.axis0.encoder.vel_estimate

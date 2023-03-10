@@ -25,16 +25,27 @@ motor has to apply to make the pedals move.
 To do so, you must use the torque control on the system with the neutral load (just the pedals, not any additional
 load). The torque profile must be a ramp and the torque at which the motor is moving is the resisting torque. You 
 should do it several times in order to have a precise value. It is advised to do it for each rotation direction and with
-different `torqu_ramps`.
+different `torque_ramps`.
 At this point, we don't know the torque constant, so we can only have the corresponding current.
 The script `find_resisting_torque/resisting/torque.py` allows to compute the current corresponding to the resisting
-torque. _A priori_ the motor won't turn if it as less current than this `resisting_current`.
+torque from `.json` files obtained with the `find_resisting_torque/find_resisting_torque.py` on the motor. _A priori_
+the motor won't turn if it as less current than this `resisting_current`.
 #### Torque constant
-Supposedly, 
-$$
-\Tau_{motor} = K_I * `Iq_measured`
-\Tau_{out} = \mu \Tau_motor / `reduction_ratio`
-$$
+Supposedly,
+
+$\tau_{motor}$ = `torque_constant * iq_setpoint`
+
+`weight_torque_at_motor = torque_constant * iq_util`
+
+`iq_setpoint = iq_util + resisting_current`
+
+`weight_torque_at_motor = - length *  m * g *` $\sin (\theta)$ `* reduction_ratio`
+
+`torque_constant = - length *  m * g *` $\sin (\theta)$ `* reduction_ratio / iq_util`
+
+Now that we know the current corresponding to the resisting torque, we can calculate the `torque constant`. The script 
+`find_torque_constant/compute_torque_constant.py` allows to compute `torque constant` from `.json` files obtained with
+the `find_torque_constant/find_torque_constant.py` on the motor.
 ## Troubleshooting
 ### Calibration
 Every calibration must be done without mechanical load nor watchdog since the motor has to reboot several times.

@@ -19,11 +19,11 @@ dictionary = {
     "motor_type": MOTOR_TYPE_HIGH_CURRENT,
     "pole_pairs": 8,
     # Calculated after subtracting the current corresponding to the resisting torque
-    "torque_constant": 0.10680746759421,
+    "torque_constant": 0.1053225104205947,
     # `resisting_torque` was calculated with the torque of the first velocity not null
     # (mean of 19 torques in eccentric and concentric modes)
     # The day of the calcul `torque_constant` 0.082 so the corresponding resisting current is 0.416 A
-    "resisting_torque": 1.40,  # (+/- 0.32) Nm
+    "resisting_torque_current": 0.42,  # (+/- 0.06) A
     "calibration_current": 7.0,  # Not sure of this value
     "resistance_calib_max_voltage": 20.0,  # Not sure of this value
     "requested_current_range": 25.0,  # > current_lim + current_lim_margin nut as little as possible
