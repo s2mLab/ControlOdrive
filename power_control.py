@@ -15,9 +15,10 @@ motor.set_training_mode("Concentric")
 rd = random.randint(0, 1000)
 
 motor.power_control(
+    duration=10.0,
     power=power,
     power_mode=PowerMode.LINEAR,
-    file=f'XP/power_control_{motor.get_training_mode()}_{power}_{rd}.json')
+    file_path=f'XP/power_control_{motor.get_training_mode()}_{power}_{rd}.json')
 
 motor.stop()
 

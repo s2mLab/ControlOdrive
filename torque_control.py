@@ -30,7 +30,7 @@ rd = random.randint(0,1000)
 motor.torque_control(instruction, torque_ramp_rate=2)
 print("Go")
 
-while t1 - t0 < 20:
+while t1 - t0 < 10:
     motor.save_data(instruction)
     with open(f'XP/torque_control_{motor.get_training_mode()}_{abs(instruction)}_{rd}.json', 'w') as f:
         json.dump(motor.data, f)
@@ -62,8 +62,8 @@ plt.legend()
 
 plt.figure()
 plt.title("Mechanical power")
-plt.plot(data['time'], data["mechanical_power"], label="Mechanical power")
-plt.plot(data['time'], data["user_power"], label="User power")
+plt.plot(motor.data['time'], motor.data["mechanical_power"], label="Mechanical power")
+plt.plot(motor.data['time'], motor.data["user_power"], label="User power")
 plt.xlabel("Time (s)")
 plt.ylabel("Power (W)")
 

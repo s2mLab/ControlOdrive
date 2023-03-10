@@ -77,7 +77,8 @@ class OdriveEncoderHall:
             "electrical_power": [],
             "user_power": [],
             "i_res": [],
-            "vbus": []
+            "vbus": [],
+            "ibus": [],
         }
 
     def erase_configuration(self):
@@ -462,12 +463,22 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
-    def torque_control_init(self):
+    def torque_control_init(self, input_torque_motor, torque_ramp_rate_motor, control_mode):
         """
 
         :return:
         """
-        pass
+        self.stop()
+        self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
+        self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
+
+        self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
+        self.odrv0.axis0.controller.input_torque = input_torque_motor
+
+        # Starts the motor
+        self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        self._control_mode = control_mode
 
     def torque_control(
             self,
@@ -499,19 +510,14 @@ class OdriveEncoderHall:
         torque = abs(torque) + self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
             / self._reduction_ratio
 
-        if self._control_mode != ControlMode.TORQUE_CONTROL:
-            self.stop()
-            self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
-            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-            self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
-
-        self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
-        self.odrv0.axis0.controller.input_torque = - self._sign() * abs(torque * self._reduction_ratio)
+        torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
+        input_torque_motor = - self._sign() * abs(torque * self._reduction_ratio)
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
-            # Starts the motor if the previous control mode was not already `TORQUE_CONTROL`
-            self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.TORQUE_CONTROL
+            self.torque_control_init(input_torque_motor, torque_ramp_rate_motor, ControlMode.TORQUE_CONTROL)
+        else:
+            self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
+            self.odrv0.axis0.controller.input_torque = input_torque_motor
 
     def power_control(
         self,
@@ -521,7 +527,8 @@ class OdriveEncoderHall:
         linear_coeff: float = 1.0,
         torque_ramp_rate: float = 1.0,
         resisting_torque_current: float = None,
-        file=None,
+        file_path: str = None,
+        vel_min: float = 12.0,
     ):
         """
         Parameters
@@ -535,10 +542,9 @@ class OdriveEncoderHall:
         resisting_torque_current: float
         linear_coeff: float
             (tr/min/(Nm))
-        file:
+        file_path: str
+        vel_min: float
         """
-        vel_min = 12.0
-
         if resisting_torque_current is None:
             resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
 
@@ -546,20 +552,11 @@ class OdriveEncoderHall:
             / self._reduction_ratio
 
         if self._control_mode != ControlMode.POWER_CONTROL:
-            self.stop()
-            self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
-            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-            self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
-
-        self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
-        self.odrv0.axis0.controller.input_torque = 0.0
-
-        if self._control_mode != ControlMode.POWER_CONTROL:
-            # Starts the motor if the previous control mode was not already `POWER_CONTROL`
-            self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.POWER_CONTROL
-
-        self.odrv0.axis0.controller.input_torque = vel_min * 2 * np.pi / 60
+            self.torque_control_init(
+                vel_min * 2 * np.pi / 60,
+                torque_ramp_rate * self._reduction_ratio,
+                ControlMode.POWER_CONTROL
+            )
 
         t0 = time.time()
         t1 = time.time()
@@ -574,8 +571,8 @@ class OdriveEncoderHall:
                     - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
 
                 self.save_data(torque)
-                if file:
-                    with open(file, 'w') as f:
+                if file_path:
+                    with open(file_path, 'w') as f:
                         json.dump(self.data, f)
 
                 print(f"Vel: {self.data['velocity'][-1]}, "
@@ -604,7 +601,13 @@ class OdriveEncoderHall:
 
                 t_next += 0.05
 
-    def stop(self, vel_stop: float = 6.0, ramp_rate: float = 400.0):
+    def stop(
+            self,
+            vel_stop: float = 6.0,
+            velocity_ramp_rate: float = 400.0,
+            torque_stop: float = 2.0,
+            torque_ramp_rate: float = 0.5
+    ):
         """
         Stops the motor gently.
 
@@ -612,8 +615,12 @@ class OdriveEncoderHall:
         ----------
         vel_stop: float
             The velocity at which the motor will be stopped if it was turning (tr/min of the pedals).
-        ramp_rate: float
+        velocity_ramp_rate: float
             The ramp_rate of the deceleration (tr/min² of the pedals).
+        torque_stop: float
+            The torque at which the motor will be stopped if it was turning (Nm of the pedals).
+        torque_ramp_rate: float
+            The ramp_rate of the deceleration (Nm/s of the pedals).
         """
         if vel_stop > self._hardware_and_security["maximal_velocity_stop"]:
             raise ValueError(
@@ -622,25 +629,29 @@ class OdriveEncoderHall:
                 f"Stop velocity specified: {abs(vel_stop)} tr/min for the pedals"
             )
 
-        self._check_ramp_rate(ramp_rate)
+        self._check_ramp_rate(velocity_ramp_rate)
 
-        if abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
+        if (self._control_mode == ControlMode.VELOCITY_CONTROL or self._control_mode == ControlMode.POSITION_CONTROL) \
+                and abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
             # Gently slows down the motor.
-            if self._control_mode != ControlMode.VELOCITY_CONTROL:
-                self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
-                self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-
-            self.odrv0.axis0.controller.config.vel_ramp_rate = ramp_rate / 3600 / self._reduction_ratio
+            self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
             self.odrv0.axis0.controller.input_vel = 0.0
-
-            if self._control_mode != ControlMode.VELOCITY_CONTROL:
-                self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
             while abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
                 pass
 
+        if (self._control_mode == ControlMode.TORQUE_CONTROL or self._control_mode == ControlMode.POWER_CONTROL) \
+                and abs(self.get_measured_torque()) > torque_stop:
+            # Gently slows down the motor.
+            self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
+            self.odrv0.axis0.controller.input_torque = 0.0
+
+            while abs(self.get_measured_torque()) > torque_stop:
+                pass
+
         # Stops the motor
         self.odrv0.axis0.requested_state = AXIS_STATE_IDLE
+        self.odrv0.axis0.controller.input_vel = 0.0
         self.odrv0.axis0.controller.input_torque = 0.0
         self._control_mode = ControlMode.STOP
 
