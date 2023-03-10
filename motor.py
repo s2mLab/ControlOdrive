@@ -568,7 +568,8 @@ class OdriveEncoderHall:
 
                 self.save_data(torque)
                 if file:
-                    json.dump(self.data, file)
+                    with open(file, 'w') as f:
+                        json.dump(self.data, f)
 
                 print(f"Vel: {self.data['velocity'][-1]}, "
                       f"Instruction: {self.data['user_torque'][-1]}, "

@@ -8,16 +8,16 @@ from motor import *
 # Initialisation
 motor = OdriveEncoderHall()
 
-power = 20
+power = 35
 print(power)
 motor.set_training_mode("Concentric")
 
-with open(f'XP/power_control_{motor.get_training_mode()}_{power}_{random.randint(0,1000)}.json', 'w') as f:
+rd = random.randint(0,1000)
 
-    motor.power_control(
-        power=power,
-        power_mode=PowerMode.LINEAR,
-        file=f)
+motor.power_control(
+    power=power,
+    power_mode=PowerMode.LINEAR,
+    file=f'XP/power_control_{motor.get_training_mode()}_{power}_{rd}.json')
 
 motor.stop()
 
