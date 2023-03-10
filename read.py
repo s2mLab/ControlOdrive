@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("velocity_control_Eccentric_30_392.bio")
+data = load("XP/velocity_control_Eccentric_30_450.bio")
 
 iq = np.asarray(data['iq_measured'])
 i_pb = np.where(iq == iq[-1])[0][0]
