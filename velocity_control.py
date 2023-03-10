@@ -17,7 +17,7 @@ t1 = time.time()
 t_next = 0
 ramp_rate = 360
 
-instruction = 60
+instruction = 30
 motor.set_training_mode("Eccentric")
 motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
 print(instruction)

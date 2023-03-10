@@ -30,7 +30,7 @@ rd = random.randint(0,1000)
 motor.torque_control(instruction, torque_ramp_rate=2)
 print("Go")
 
-while t1 - t0 < 10:
+while t1 - t0 < 30:
     motor.save_data(instruction)
     with open(f'XP/torque_control_{motor.get_training_mode()}_{abs(instruction)}_{rd}.json', 'w') as f:
         json.dump(motor.data, f)
