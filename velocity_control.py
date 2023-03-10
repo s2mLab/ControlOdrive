@@ -15,10 +15,11 @@ motor.velocity_control(0)
 t0 = time.time()
 t1 = time.time()
 t_next = 0
+ramp_rate = 360
 
 instruction = 30
 motor.set_training_mode("Eccentric")
-motor.velocity_control(instruction, velocity_ramp_rate = 100)
+motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
 print(instruction)
 
 with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}', 'w') as f:
@@ -36,8 +37,10 @@ with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{
 motor.stop()
 
 t = np.asarray(motor.data['time'])
-t = 100 * t / 60
+t = ramp_rate * t / 60
 t = list(t)
+
+print(instruction / ramp_rate * 60)
 
 plt.plot(motor.data['time'], motor.data['velocity'], label="Estimated velocity")
 plt.plot(motor.data['time'], np.min([t, motor.data['instruction']], axis=0), label="Instruction")

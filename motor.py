@@ -452,8 +452,8 @@ class OdriveEncoderHall:
             self.stop()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-            self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
 
+        self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
         self.odrv0.axis0.controller.input_vel = self._sign() * abs(velocity / 60 / self._reduction_ratio)
 
         if self._control_mode != ControlMode.VELOCITY_CONTROL:
@@ -495,9 +495,9 @@ class OdriveEncoderHall:
             self.stop()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-            self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
             self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
 
+        self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
         self.odrv0.axis0.controller.input_torque = - self._sign() * abs(torque * self._reduction_ratio)
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
@@ -511,7 +511,7 @@ class OdriveEncoderHall:
         power: float = 0.0,
         power_mode: PowerMode = PowerMode.CONSTANT,
         linear_coeff: float = 1.0,
-        torque_ramp_rate: float = 10.0,
+        torque_ramp_rate: float = 1.0,
         resisting_torque_current: float = None,
         file=None,
     ):
@@ -541,9 +541,9 @@ class OdriveEncoderHall:
             self.stop()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-            self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
             self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
 
+        self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
         self.odrv0.axis0.controller.input_torque = 0.0
 
         if self._control_mode != ControlMode.POWER_CONTROL:
@@ -569,9 +569,9 @@ class OdriveEncoderHall:
                 if file:
                     json.dump(self.data, file)
 
-                # print(f"Vel: {self.data['velocity'][-1]}, "
-                #       f"Instruction: {self.data['user_torque'][-1]}, "
-                #       f"Power: {self.data['mechanical_power'][-1]}")
+                print(f"Vel: {self.data['velocity'][-1]}, "
+                      f"Instruction: {self.data['user_torque'][-1]}, "
+                      f"Power: {self.data['mechanical_power'][-1]}")
 
                 if len(self.data['velocity']) > 1:
                     vel = np.mean(self.data['velocity'][max(0, len(self.data['velocity']) - 20): -1])
@@ -580,8 +580,10 @@ class OdriveEncoderHall:
 
                 if power_mode == PowerMode.CONSTANT:
                     if abs(vel) < vel_min:
+                        self.odrv0.axis0.controller.config.torque_ramp_rate = 1.0 * self._reduction_ratio
                         torque = power / (vel_min * 2 * np.pi / 60)
                     else:
+                        self.odrv0.axis0.controller.config.torque_ramp_rate = 1.0 * self._reduction_ratio
                         torque = power / (abs(vel) * 2 * np.pi / 60)
                 elif power_mode == PowerMode.LINEAR:
                     if abs(vel) < vel_min:
@@ -589,11 +591,11 @@ class OdriveEncoderHall:
                     else:
                         torque = linear_coeff * abs(vel)
                 else:
-                    NotImplementedError(f"{power_mode} is not implemented.")
+                    raise NotImplementedError(f"{power_mode} is not implemented.")
 
                 t_next += 0.05
 
-    def stop(self, vel_stop: float = 6.0, ramp_rate: float = 12.0):
+    def stop(self, vel_stop: float = 6.0, ramp_rate: float = 400.0):
         """
         Stops the motor gently.
 
@@ -618,8 +620,8 @@ class OdriveEncoderHall:
             if self._control_mode != ControlMode.VELOCITY_CONTROL:
                 self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
                 self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-                self.odrv0.axis0.controller.config.vel_ramp_rate = ramp_rate / 3600 / self._reduction_ratio
 
+            self.odrv0.axis0.controller.config.vel_ramp_rate = ramp_rate / 3600 / self._reduction_ratio
             self.odrv0.axis0.controller.input_vel = 0.0
 
             if self._control_mode != ControlMode.VELOCITY_CONTROL:
