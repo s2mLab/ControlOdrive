@@ -170,7 +170,7 @@ class OdriveEncoderHall:
         """
         while True:
             self.odrv0.axis0.watchdog_feed()
-            self.save_data_to_file(self.file_path)
+            # self.save_data_to_file(self.file_path)
             time.sleep(self._watchdog_feed_time)
 
     def calibration(self, mechanical_load: bool = True):

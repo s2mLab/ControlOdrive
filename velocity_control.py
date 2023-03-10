@@ -11,7 +11,7 @@ from motor import *
 motor = OdriveEncoderHall()
 
 # Set the control mode
-motor.velocity_control(0)
+motor.velocity_control(30)
 
 t0 = time.time()
 t1 = time.time()
@@ -31,9 +31,9 @@ while t1 - t0 < 10:
     if t1 - t0 > t_next:
         motor.save_data(instruction)
 
-        print(f"Vel: {motor.data['velocity'][-1]}, "
-              f"Torque: {motor.data['user_torque'][-1]}, "
-              f"Power: {motor.data['mechanical_power'][-1]}")
+        #print(f"Vel: {motor.data['velocity'][-1]}, "
+        #      f"Torque: {motor.data['user_torque'][-1]}, "
+        #      f"Power: {motor.data['mechanical_power'][-1]}")
         t_next += 0.05
 
 motor.stop()

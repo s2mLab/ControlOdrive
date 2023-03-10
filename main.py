@@ -12,14 +12,15 @@ class App(QtWidgets.QMainWindow):
         super(App, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.Power_pushButton.clicked.connect(self.vel())
         self.motor = motor
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
-        self._config_watchdog(True)
+        self.motor._config_watchdog(True)
+        self.motor.velocity_control(30)
+        # self.ui.Power_pushButton.clicked.connect()
 
     def vel(self):
-        self.motor.torque_control(0.0, resisting_torque_current=0.0)
+        print("Coucou")
 
     def _data(self):
         """
@@ -30,14 +31,14 @@ class App(QtWidgets.QMainWindow):
         while True:
             self.motor.odrv0.axis0.watchdog_feed()
             self.motor.save_data()
-            print(
-                self.motor.odrv0.error,
-                self.motor.odrv0.axis0.error,
-                self.motor.odrv0.axis0.controller.error,
-                self.motor.odrv0.axis0.encoder.error,
-                self.motor.odrv0.axis0.motor.error,
-                self.motor.odrv0.axis0.sensorless_estimator.error
-            )
+            #print(
+            #    self.motor.odrv0.error,
+            #    self.motor.odrv0.axis0.error,
+            #    self.motor.odrv0.axis0.controller.error,
+            #    self.motor.odrv0.axis0.encoder.error,
+            #    self.motor.odrv0.axis0.motor.error,
+            #    self.motor.odrv0.axis0.sensorless_estimator.error
+            #)
             with open(f'XP/gui_{rd}.json', 'w') as f:
                 json.dump(self.motor.data, f)
             self.ui.power_lineEdit.setText(f"{self.motor.data['user_power'][-1]:.0f}")
