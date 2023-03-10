@@ -21,7 +21,7 @@ t_next = 0
 length = 0.17
 m = 4.430
 g = 9.81
-instruction = -15
+instruction = 0
 print(instruction)
 motor.set_training_mode("Concentric")
 
@@ -30,7 +30,7 @@ rd = random.randint(0,1000)
 motor.torque_control(instruction, torque_ramp_rate=2)
 print("Go")
 
-while t1 - t0 < 30:
+while t1 - t0 < 10:
     motor.save_data(instruction)
     with open(f'XP/torque_control_{motor.get_training_mode()}_{abs(instruction)}_{rd}.json', 'w') as f:
         json.dump(motor.data, f)

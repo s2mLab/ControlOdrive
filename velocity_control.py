@@ -20,11 +20,12 @@ ramp_rate = 360
 instruction = 30
 motor.set_training_mode("Eccentric")
 motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
+print(motor.odrv0.axis0.controller.input_vel)
 print(instruction)
 
 rd = random.randint(0,1000)
 
-while t1 - t0 < 30:
+while t1 - t0 < 10:
     t1 = time.time()
     if t1 - t0 > t_next:
         motor.save_data(instruction)

@@ -2,7 +2,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open("torque_control_Concentric_15_740.json", "r") as file:
+with open("gui_88.json", "r") as file:
     data = json.load(file)
 
 iq = np.asarray(data['iq_measured'])
