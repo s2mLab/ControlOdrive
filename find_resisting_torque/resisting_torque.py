@@ -37,28 +37,25 @@ reduction_ratio = 8 / 36 * 10 / 91
 for mode in ("Concentric", "Eccentric"):
     for ramp in (5, 10):
         for i in range(1, 6):
-            if i == 3 and ramp == 10 and mode == "Eccentric":
-                pass
-            else:
-                with open(f"find_resisting_torque/find_resisting_torque_{mode}_2_{ramp}_{i}.json", "r") as file:
-                    monitoring_commands = json.load(file)
+            with open(f"find_resisting_torque_{mode}_2_{ramp}_{i}.json", "r") as file:
+                monitoring_commands = json.load(file)
 
-                time = np.asarray(monitoring_commands["time"])
-                torque = np.asarray(monitoring_commands["torque_measured"])
-                vel_estimate = np.asarray(monitoring_commands["vel_estimate"])
-                last_zero = time[np.where(vel_estimate == 0)[0][-1]]
+            time = np.asarray(monitoring_commands["time"])
+            torque = np.asarray(monitoring_commands["Iq_measured"])
+            vel_estimate = np.asarray(monitoring_commands["vel_estimate"])
+            last_zero = time[np.where(vel_estimate == 0)[0][-1]]
 
-                popt, pcov = curve_fit(aff_cst, time, torque, p0=[-0.5, 3.001])
+            popt, pcov = curve_fit(aff_cst, time, torque, p0=[-0.5, 3.001])
 
-                # plt.plot(time, aff_cst(time, *popt))
-                # plt.plot(time, torque)
-                # plt.show()
+            plt.plot(time, aff_cst(time, *popt))
+            plt.plot(time, torque)
+            plt.show()
 
-                resisting_torques.append(abs(aff_cst([last_zero], *popt)))
-                resisting_currents.append(
-                    abs(aff_cst([last_zero], *popt)) / torque_constant_the_day_of_the_XP * reduction_ratio
-                )
-                # print(mode, ramp, resisting_torques[-1])
+            resisting_torques.append(abs(aff_cst([last_zero], *popt)))
+            resisting_currents.append(
+                abs(aff_cst([last_zero], *popt)) / torque_constant_the_day_of_the_XP * reduction_ratio
+            )
+            # print(mode, ramp, resisting_torques[-1])
 
 print(f"Resisting torque: {np.mean(resisting_torques)} (+/- {np.std(resisting_torques)}) Nm")
 print(f"Resisting current: {np.mean(resisting_currents)} (+/- {np.std(resisting_currents)}) A")

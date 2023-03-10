@@ -16,7 +16,7 @@ motor.torque_control()
 t = []
 instructions = []
 vel_estimate = []
-torque_measured = []
+i_m = []
 user_torque = []
 positions = []
 
@@ -27,36 +27,38 @@ t_next = 0
 l = 0.17
 m = 4.430
 g = 9.81
-instruction = - l * m * g
+instruction = 2
 print(instruction)
-motor.set_training_mode("Eccentric")
+torque_ramp_rate = 5
+mode = "Concentric"
+motor.set_training_mode(mode)
 
-motor.torque_control(instruction)
+motor.torque_control(instruction, torque_ramp_rate/10)
 
-while t1 - t0 < 30:
+while t1 - t0 < 10:
     t1 = time.time()
     if t1 - t0 > t_next:
         t.append(t1 - t0)
         instructions.append(instruction)
         vel_estimate.append(motor.get_estimated_velocity())
         user_torque.append(motor.get_user_torque())
-        torque_measured.append(motor.get_torque_measured())
+        i_m.append(motor.get_iq_measured())
         positions.append(motor.get_angle())
 
         t_next += 0.05
 
 motor.stop()
 
-# dictionary = {
-#     "time": t,
-#     "vel_estimate": vel_estimate,
-#     "torque_measured": torque_measured,
-# }
+dictionary = {
+    "time": t,
+    "vel_estimate": vel_estimate,
+    "Iq_measured": i_m,
+}
 
-# # Writing to .json
-# json_object = json.dumps(dictionary, indent=4)
-# with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_3.json", "w") as outfile:
-#     outfile.write(json_object)
+# Writing to .json
+json_object = json.dumps(dictionary, indent=4)
+with open(f"find_resisting_torque_{mode}_{instruction}_{torque_ramp_rate}_5.json", "w") as outfile:
+    outfile.write(json_object)
 
 vel_estimate = np.asarray(vel_estimate)
 positions = np.asarray(positions)
@@ -70,7 +72,7 @@ plt.legend()
 plt.figure()
 plt.title("Torque")
 plt.plot(t, instructions, label="Instruction")
-plt.plot(t, torque_measured, label="Measured torque")
+plt.plot(t, i_m, label="Measured torque")
 plt.plot(t, user_torque, label="User torque")
 # plt.plot(t, [- l * m * g] * len(t), label="Torque at 90deg")
 plt.plot(t, - l * m * g * np.sin(positions / 180 * np.pi), label="'Actual' user torque")
