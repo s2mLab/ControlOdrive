@@ -3,6 +3,7 @@
 import time
 import json
 import threading
+import numpy as np
 
 import odrive
 import fibre.libfibre
@@ -24,7 +25,7 @@ from odrive.enums import (
     SENSORLESS_ESTIMATOR_ERROR_NONE,
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
-from enums import ControlMode
+from enums import ControlMode, PowerMode
 
 
 class OdriveEncoderHall:
@@ -503,6 +504,94 @@ class OdriveEncoderHall:
             # Starts the motor if the previous control mode was not already `TORQUE_CONTROL`
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.TORQUE_CONTROL
+
+    def power_control(
+        self,
+        duration: float = 20.0,
+        power: float = 0.0,
+        power_mode: PowerMode = PowerMode.CONSTANT,
+        linear_coeff: float = 1.0,
+        torque_ramp_rate: float = 10.0,
+        resisting_torque_current: float = None,
+        file=None,
+    ):
+        """
+        Parameters
+        ----------
+        duration: float
+        # TODO: Put the power control in a thread instead of using duration
+        power: float
+        power_mode: str
+        torque_ramp_rate: float
+            Torque ramp rate (Nm/s) at the pedals.
+        resisting_torque_current: float
+        linear_coeff: float
+            (tr/min/(Nm))
+        file:
+        """
+        vel_min = 12.0
+
+        if resisting_torque_current is None:
+            resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
+
+        resisting_torque = self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
+            / self._reduction_ratio
+
+        if self._control_mode != ControlMode.POWER_CONTROL:
+            self.stop()
+            self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
+            self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
+            self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
+
+        self.odrv0.axis0.controller.input_torque = 0.0
+
+        if self._control_mode != ControlMode.POWER_CONTROL:
+            # Starts the motor if the previous control mode was not already `POWER_CONTROL`
+            self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+            self._control_mode = ControlMode.POWER_CONTROL
+
+        self.odrv0.axis0.controller.input_torque = vel_min * 2 * np.pi / 60
+
+        t0 = time.time()
+        t1 = time.time()
+        t_next = 0
+
+        torque = 0.0
+
+        while t1 - t0 < duration:
+            t1 = time.time()
+            if t1 - t0 > t_next:
+                self.odrv0.axis0.controller.input_torque = \
+                    - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
+
+                self.save_data(torque)
+                if file:
+                    json.dump(self.data, file)
+
+                # print(f"Vel: {self.data['velocity'][-1]}, "
+                #       f"Instruction: {self.data['user_torque'][-1]}, "
+                #       f"Power: {self.data['mechanical_power'][-1]}")
+
+                if len(self.data['velocity']) > 1:
+                    vel = np.mean(self.data['velocity'][max(0, len(self.data['velocity']) - 20): -1])
+                else:
+                    vel = 0.0
+
+                if power_mode == PowerMode.CONSTANT:
+                    if abs(vel) < vel_min:
+                        torque = power / (vel_min * 2 * np.pi / 60)
+                    else:
+                        torque = power / (abs(vel) * 2 * np.pi / 60)
+                elif power_mode == PowerMode.LINEAR:
+                    if abs(vel) < vel_min:
+                        torque = linear_coeff * vel_min
+                    else:
+                        torque = linear_coeff * abs(vel)
+                else:
+                    NotImplementedError(f"{power_mode} is not implemented.")
+
+                t_next += 0.05
 
     def stop(self, vel_stop: float = 6.0, ramp_rate: float = 12.0):
         """
