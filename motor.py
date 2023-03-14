@@ -61,6 +61,19 @@ class OdriveEncoderHall:
 
         self._gains_path = gains_path
 
+        self.first_save = True
+        self.t0 = 0.0
+        self.data = {
+            "time": [],
+            "iq_setpoint": [],
+            "iq_measured": [],
+            "torque": [],
+            "velocity": [],
+            "angle": [],
+            "mechanical_power": [],
+            "electrical_power": [],
+        }
+
     def erase_configuration(self):
         """
         Resets all config variables to their default values and reboots the controller.
@@ -328,6 +341,20 @@ class OdriveEncoderHall:
                 "The training mode can be 'Concentric' or 'Eccentric'"
             )
 
+    def get_training_mode(self):
+        """
+        Get the training mode.
+
+        Returns
+        -------
+        mode: str
+            'Concentric' or 'Eccentric'
+        """
+        if self.concentric:
+            return "Concentric"
+        else:
+            return "Eccentric"
+
     def _check_ramp_rate(self, ramp_rate):
         """
         Check that the acceleration registered by the user is under the acceleration limit.
@@ -588,12 +615,22 @@ class OdriveEncoderHall:
     #    else:
     #        return self.odrv0.axis0.controller.mechanical_power / (vel * 2 * np.pi) / self._reduction_ratio
 
-    def get_monitoring_commands(self):
+    def save_data(self):
         """
-        Get other information that are not yet checked (which ratio on the mechanical_power ?, for instance)
+        Saves data.
         """
-        return [
-            self.odrv0.axis0.encoder.pos_estimate * self._reduction_ratio,
-            self.odrv0.vbus_voltage,
-            self.odrv0.vbus_voltage,
-        ]
+        if self.first_save:
+            self.t0 = time.time()
+            self.first_save = False
+
+        self.data["time"].append(time.time() - self.t0)
+        self.data["iq_setpoint"].append(self.get_iq_setpoint())
+        self.data["iq_measured"].append(self.get_iq_measured())
+        self.data["i_res"].append(self.get_i_res())
+        self.data["measured_torque"].append(self.get_torque_measured())
+        self.data["user_torque"].append(self.get_user_torque())
+        self.data["velocity"].append(self.get_estimated_velocity())
+        self.data["angle"].append(self.get_angle())
+        self.data["mechanical_power"].append(self.get_mechanical_power())
+        self.data["electrical_power"].append(self.get_electrical_power())
+        self.data["vbus"].append(self.odrv0.vbus_voltage)
