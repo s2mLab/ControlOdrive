@@ -2,26 +2,39 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open("120_ecc.json", "r") as file:
+with open("velocity_control_Eccentric_30_425.json", "r") as file:
     data = json.load(file)
 
-vel_estimate = np.asarray(data["vel_estimate"])
-iq_setpoint = np.asarray(data["iq_setpoint"])
-iq_measured = np.asarray(data["iq_measured"])
-torque = np.asarray(data["torque"])
-mechanical_power = np.asarray(data["mechanical_power"])
-
-plt.plot(iq_measured)
-plt.plot(iq_setpoint)
+plt.figure()
+plt.plot(data['time'], data['iq_measured'], label="Iq measured")
+plt.plot(data['time'], data['iq_setpoint'], label="Iq setpoint")
+plt.plot(data['time'], data['i_res'], label="Resisting torque")
+plt.xlabel("Time (s)")
+plt.ylabel("Current (A)")
+plt.legend()
 
 plt.figure()
-plt.plot(torque)
+plt.title("Velocity")
+plt.plot(data['time'], data['velocity'], label="Estimated velocity")
+# plt.plot(data['time'], data['instruction'], label="Instruction")
+plt.xlabel("Time (s)")
+plt.ylabel("Velocity (tr/min)")
+plt.legend()
 
 plt.figure()
-plt.plot(vel_estimate)
+plt.title("Torque")
+# plt.plot(data['time'], data['instruction'], label="Instruction")
+plt.plot(data['time'], data["user_torque"], label="User torque")
+plt.plot(data['time'], data["measured_torque"], label="Measured torque")
+plt.xlabel("Time (s)")
+plt.ylabel("Torque (Nm)")
+plt.legend()
 
 plt.figure()
-plt.plot(mechanical_power)
-plt.plot(-torque * vel_estimate * 2 * np.pi / 60)
+plt.title("Mechanical power")
+plt.plot(data['time'], data["mechanical_power"], label="Mechanical power")
+# plt.plot(data['time'], data["user_power"], label="User power")
+plt.xlabel("Time (s)")
+plt.ylabel("Power (W)")
 
 plt.show()

@@ -27,7 +27,7 @@ motor.set_training_mode("Concentric")
 
 motor.torque_control(instruction, torque_ramp_rate=8)
 print("Go")
-with open(f'XP/torque_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}', 'w') as f:
+with open(f'XP/torque_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}.json', 'w') as f:
 
     while t1 - t0 < 10:
         motor.save_data(instruction)

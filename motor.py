@@ -75,6 +75,7 @@ class OdriveEncoderHall:
             "angle": [],
             "mechanical_power": [],
             "electrical_power": [],
+            "user_power": [],
             "i_res": [],
             "vbus": []
         }
@@ -641,7 +642,7 @@ class OdriveEncoderHall:
         """
         return ((self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio * 360) % 360
 
-    def get_estimated_velocity(self) -> float:
+    def get_velocity(self) -> float:
         """
         Returns the estimated velocity of the pedals in tr/min.
         """
@@ -658,6 +659,12 @@ class OdriveEncoderHall:
         Returns the mechanical power in W.
         """
         return self.odrv0.axis0.controller.mechanical_power
+
+    def get_user_power(self):
+        """
+        Returns the user mechanical power in W.
+        """
+        return self.get_user_torque() * self.get_velocity()
 
     def get_iq_setpoint(self):
         """
@@ -684,7 +691,7 @@ class OdriveEncoderHall:
         else:
             return - a * vel / abs(vel) * abs(vel) ** (1 / c) + b
 
-    def get_torque_measured(self):
+    def get_measured_torque(self):
         """
         Returns the measured torque.
         """
@@ -703,7 +710,7 @@ class OdriveEncoderHall:
             return self.odrv0.axis0.motor.config.torque_constant * \
                 (i_measured + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
 
-    # def check_torque_measured(self):
+    # def check_measured_torque(self):
     #    vel = self.odrv0.axis0.encoder.vel_estimate
     #    if vel == 0:
     #        return 0.0
@@ -725,10 +732,11 @@ class OdriveEncoderHall:
         self.data["iq_setpoint"].append(self.get_iq_setpoint())
         self.data["iq_measured"].append(self.get_iq_measured())
         self.data["i_res"].append(self.get_i_res())
-        self.data["measured_torque"].append(self.get_torque_measured())
+        self.data["measured_torque"].append(self.get_measured_torque())
         self.data["user_torque"].append(self.get_user_torque())
-        self.data["velocity"].append(self.get_estimated_velocity())
+        self.data["velocity"].append(self.get_velocity())
         self.data["angle"].append(self.get_angle())
         self.data["mechanical_power"].append(self.get_mechanical_power())
         self.data["electrical_power"].append(self.get_electrical_power())
+        self.data["user_power"].append(self.get_user_power())
         self.data["vbus"].append(self.odrv0.vbus_voltage)

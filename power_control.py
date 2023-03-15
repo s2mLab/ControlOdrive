@@ -12,7 +12,7 @@ power = 20
 print(power)
 motor.set_training_mode("Concentric")
 
-with open(f'XP/power_control_{motor.get_training_mode()}_{power}_{random.randint(0,1000)}', 'w') as f:
+with open(f'XP/power_control_{motor.get_training_mode()}_{power}_{random.randint(0,1000)}.json', 'w') as f:
 
     motor.power_control(
         power=power,

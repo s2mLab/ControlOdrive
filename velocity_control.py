@@ -22,7 +22,7 @@ motor.set_training_mode("Eccentric")
 motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
 print(instruction)
 
-with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}', 'w') as f:
+with open(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{random.randint(0,1000)}.json', 'w') as f:
 
     while t1 - t0 < 10:
         t1 = time.time()
