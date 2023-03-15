@@ -12,7 +12,7 @@ power = 35
 print(power)
 motor.set_training_mode("Concentric")
 
-rd = random.randint(0,1000)
+rd = random.randint(0, 1000)
 
 motor.power_control(
     power=power,

@@ -726,8 +726,10 @@ class OdriveEncoderHall:
             self.t0 = time.time()
             self.first_save = False
 
-        if instruction:
+        if instruction is float:
             self.data["instruction"].append(instruction)
+        else:
+            self.data["instruction"].append(np.inf)
 
         self.data["time"].append(time.time() - self.t0)
         self.data["iq_setpoint"].append(self.get_iq_setpoint())
