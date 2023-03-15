@@ -462,6 +462,13 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
+    def torque_control_init(self):
+        """
+
+        :return:
+        """
+        pass
+
     def torque_control(
             self,
             torque: float = 0.0,
@@ -665,7 +672,7 @@ class OdriveEncoderHall:
         """
         Returns the user mechanical power in W.
         """
-        return self.get_user_torque() * self.get_velocity()
+        return self.get_user_torque() * self.get_velocity() * 2 * np.pi / 60
 
     def get_iq_setpoint(self):
         """
@@ -743,3 +750,4 @@ class OdriveEncoderHall:
         self.data["electrical_power"].append(self.get_electrical_power())
         self.data["user_power"].append(self.get_user_power())
         self.data["vbus"].append(self.odrv0.vbus_voltage)
+        self.data["ibus"].append(self.odrv0.ibus)
