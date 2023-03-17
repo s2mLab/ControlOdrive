@@ -25,7 +25,9 @@ from odrive.enums import (
     SENSORLESS_ESTIMATOR_ERROR_NONE,
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
+
 from enums import ControlMode, PowerMode
+from save_and_load import save
 
 
 class OdriveEncoderHall:
@@ -571,9 +573,9 @@ class OdriveEncoderHall:
                     - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
 
                 self.save_data(torque)
+
                 if file_path:
-                    with open(file_path, 'w') as f:
-                        json.dump(self.data, f)
+                    self.save_data_to_file(file_path, torque)
 
                 print(f"Vel: {self.data['velocity'][-1]}, "
                       f"Instruction: {self.data['user_torque'][-1]}, "
@@ -729,13 +731,6 @@ class OdriveEncoderHall:
             return self.odrv0.axis0.motor.config.torque_constant * \
                 (i_measured + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
 
-    # def check_measured_torque(self):
-    #    vel = self.odrv0.axis0.encoder.vel_estimate
-    #    if vel == 0:
-    #        return 0.0
-    #    else:
-    #        return self.odrv0.axis0.controller.mechanical_power / (vel * 2 * np.pi) / self._reduction_ratio
-
     def save_data(self, instruction: float = None):
         """
         Saves data.
@@ -762,3 +757,33 @@ class OdriveEncoderHall:
         self.data["user_power"].append(self.get_user_power())
         self.data["vbus"].append(self.odrv0.vbus_voltage)
         self.data["ibus"].append(self.odrv0.ibus)
+
+    def save_data_to_file(self, file_path: float, instruction: float = None):
+        """
+        Saves data.
+        """
+        if self.first_save:
+            self.t0 = time.time()
+            self.first_save = False
+
+        if instruction is not float:
+            instruction = np.inf
+
+        data = {
+            "instruction": instruction,
+            "time": time.time() - self.t0,
+            "iq_setpoint": self.get_iq_setpoint(),
+            "iq_measured": self.get_iq_measured(),
+            "measured_torque": self.get_measured_torque(),
+            "user_torque": self.get_user_torque(),
+            "velocity": self.get_velocity(),
+            "angle": self.get_angle(),
+            "mechanical_power": self.get_mechanical_power(),
+            "electrical_power": self.get_electrical_power(),
+            "user_power": self.get_user_power(),
+            "i_res": self.get_i_res(),
+            "vbus": self.odrv0.vbus_voltage,
+            "ibus": self.odrv0.ibus,
+        }
+
+        save(data, file_path)

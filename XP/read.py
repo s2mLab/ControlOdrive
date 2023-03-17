@@ -1,9 +1,9 @@
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open("gui_88.json", "r") as file:
-    data = json.load(file)
+from save_and_load import load
+
+data = load("velocity_control_Eccentric_30_392.bio")
 
 iq = np.asarray(data['iq_measured'])
 i_pb = np.where(iq == iq[-1])[0][0]
