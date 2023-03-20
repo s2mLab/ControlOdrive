@@ -29,7 +29,6 @@ rd = random.randint(0,1000)
 while t1 - t0 < 10:
     t1 = time.time()
     if t1 - t0 > t_next:
-        motor.save_data_to_file(f'XP/velocity_control_{motor.get_training_mode()}_{abs(instruction)}_{rd}', instruction)
         motor.save_data(instruction)
 
         print(f"Vel: {motor.data['velocity'][-1]}, "

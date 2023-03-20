@@ -41,14 +41,17 @@ class OdriveEncoderHall:
     def __init__(
             self,
             enable_watchdog=True,
+            external_watchdog: bool = False,
             hardware_and_security_path: str = "parameters/hardware_and_security.json",
             gains_path: str = "parameters/gains.json",
+            file_path: str = None,
     ):
 
         with open(hardware_and_security_path, "r") as hardware_and_security_file:
             self._hardware_and_security = json.load(hardware_and_security_file)
 
         self._watchdog_is_ready = False
+        self._external_watchdog = external_watchdog
         self._watchdog_timeout = self._hardware_and_security["watchdog_timeout"]
         self._watchdog_feed_time = self._hardware_and_security["watchdog_feed_time"]
         print("Look for an odrive ...")
@@ -64,6 +67,10 @@ class OdriveEncoderHall:
 
         self._gains_path = gains_path
 
+        if file_path:
+            self.file_path = file_path
+        else:
+            self.file_path = "XP/last_XP"
         self.first_save = True
         self.t0 = 0.0
         self.data = {
@@ -137,8 +144,9 @@ class OdriveEncoderHall:
         if self.odrv0.axis0.error == AXIS_ERROR_WATCHDOG_TIMER_EXPIRED:
             self.odrv0.axis0.error = AXIS_ERROR_NONE
         if enable_watchdog:
-            watchdog = threading.Thread(target=self._watchdog_feed, name="Watchdog", daemon=True)
-            watchdog.start()
+            if not self._external_watchdog:
+                watchdog = threading.Thread(target=self._watchdog_feed, name="Watchdog", daemon=True)
+                watchdog.start()
             print("Waiting to enable the watchdog...")
             self.odrv0.axis0.config.watchdog_timeout = self._watchdog_timeout
             self.odrv0.axis0.config.enable_watchdog = True
@@ -162,6 +170,7 @@ class OdriveEncoderHall:
         """
         while True:
             self.odrv0.axis0.watchdog_feed()
+            self.save_data_to_file(self.file_path)
             time.sleep(self._watchdog_feed_time)
 
     def calibration(self, mechanical_load: bool = True):
@@ -784,6 +793,13 @@ class OdriveEncoderHall:
             "i_res": self.get_i_res(),
             "vbus": self.odrv0.vbus_voltage,
             "ibus": self.odrv0.ibus,
+            "error": self.odrv0.error,
+            "axis_error": self.odrv0.axis0.error,
+            "controller_error": self.odrv0.axis0.controller.error,
+            "encoder_error": self.odrv0.axis0.encoder.error,
+            "motor_error": self.odrv0.axis0.motor.error,
+            "sensorless_estimator_error": self.odrv0.axis0.sensorless_estimator.error,
+            "state": self.odrv0.axis0.current_state,
         }
 
         save(data, file_path)
