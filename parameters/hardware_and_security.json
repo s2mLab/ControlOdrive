@@ -22,7 +22,7 @@
     "current_control_bandwidth": 100.0,
     "current_lim": 10.416666666666666,
     "torque_lim": 100.0,
-    "watchdog_timeout": 0.1,
+    "watchdog_timeout": 0.5,
     "watchdog_feed_time": 0.01,
     "reduction_ratio": 0.02442002442002442,
     "pedals_accel_lim": 1080,

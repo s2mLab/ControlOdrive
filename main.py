@@ -45,7 +45,7 @@ class App(QtWidgets.QMainWindow):
             self.ui.velocity_lineEdit.setText(f"{self.motor.data['velocity'][-1]:.0f}")
             self.ui.torque_lineEdit.setText(f"{self.motor.data['user_torque'][-1]:.2f}")
 
-            time.sleep(0.05)
+            time.sleep(0.01)
 
     def states_and_errors(self):
         pass
