@@ -16,7 +16,7 @@ class App(QtWidgets.QMainWindow):
 
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
-        self.motor.config_watchdog(True, 0.5)
+        self.motor.config_watchdog(True, 1.0)
 
         # Control modes
         self.ui.STOP_pushButton.clicked.connect(self.stop)
@@ -28,10 +28,15 @@ class App(QtWidgets.QMainWindow):
         self.ui.instruction_spinBox.valueChanged.connect(self.change_instruction)
 
     def stop(self):
-        self.ui.instruction_spinBox.setValue(0)
-        self.ui.units_label.setText("The motor is stopping")
+        print("ya")
+        self.ui.units_label.setText(self.test())
         self.motor.stop()
+        self.ui.instruction_spinBox.setValue(0)
         self.ui.units_label.setText("The motor is stopped")
+
+    def test(self):
+        print("Test")
+        return "Test"
 
     def power_mode(self):
         self.ui.instruction_spinBox.setValue(0)
@@ -50,9 +55,11 @@ class App(QtWidgets.QMainWindow):
 
     def change_instruction(self):
         control_mode = self.motor.get_control_mode()
+        print(control_mode)
         if control_mode == ControlMode.POWER_CONTROL:
             self.motor.power_control(self.ui.instruction_spinBox.value())
         elif control_mode == ControlMode.VELOCITY_CONTROL:
+            print(self.ui.instruction_spinBox.value())
             self.motor.velocity_control(self.ui.instruction_spinBox.value())
         elif control_mode == ControlMode.TORQUE_CONTROL:
             self.motor.torque_control(self.ui.instruction_spinBox.value())
@@ -66,14 +73,14 @@ class App(QtWidgets.QMainWindow):
         while True:
             self.motor.odrv0.axis0.watchdog_feed()
             self.motor.save_data()
-            # print(
-            #    self.motor.odrv0.error,
-            #    self.motor.odrv0.axis0.error,
-            #    self.motor.odrv0.axis0.controller.error,
-            #    self.motor.odrv0.axis0.encoder.error,
-            #    self.motor.odrv0.axis0.motor.error,
-            #    self.motor.odrv0.axis0.sensorless_estimator.error
-            # )
+            #print(
+             #  self.motor.odrv0.error,
+              # self.motor.odrv0.axis0.error,
+               #self.motor.odrv0.axis0.controller.error,
+            #   self.motor.odrv0.axis0.encoder.error,
+             #  self.motor.odrv0.axis0.motor.error,
+              # self.motor.odrv0.axis0.sensorless_estimator.error
+            #)
             with open(f'XP/gui_{rd}.json', 'w') as f:
                 json.dump(self.motor.data, f)
             self.ui.power_lineEdit.setText(f"{self.motor.data['user_power'][-1]:.0f}")

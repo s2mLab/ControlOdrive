@@ -454,6 +454,7 @@ class OdriveEncoderHall:
         velocity_ramp_rate: float
             Velocity ramp rate in tr/min² of the pedals.
         """
+        print(velocity)
         if abs(velocity / self._reduction_ratio / 60) > self.odrv0.axis0.controller.config.vel_limit:
             raise ValueError(
                 f"The velocity limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
