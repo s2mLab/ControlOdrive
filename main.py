@@ -13,14 +13,14 @@ class App(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.motor = motor
+        self.velocity = 30
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
-        self.motor._config_watchdog(True)
-        self.motor.velocity_control(30)
-        # self.ui.Power_pushButton.clicked.connect()
+        self.motor.config_watchdog(True, 0.5)
+        self.ui.Power_pushButton.clicked.connect(self.vel)
 
     def vel(self):
-        print("Coucou")
+        self.motor.velocity_control(self.velocity)
 
     def _data(self):
         """

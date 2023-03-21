@@ -57,7 +57,7 @@ class OdriveEncoderHall:
         print("Look for an odrive ...")
         self.odrv0 = odrive.find_any()
         print("Odrive found")
-        self._watchdog_is_ready = self._config_watchdog(enable_watchdog)
+        self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
         self._reduction_ratio = self._hardware_and_security["reduction_ratio"]
 
@@ -125,7 +125,7 @@ class OdriveEncoderHall:
             pass
         self.odrv0 = odrive.find_any()
 
-    def _config_watchdog(self, enable_watchdog: bool):
+    def config_watchdog(self, enable_watchdog: bool, watchdog_timeout: float = None):
         """
         Configures a watchdog. If the odrive does not receive a watchdog before the time given in watchdog_timeout, it
         will disconnect.
@@ -144,6 +144,8 @@ class OdriveEncoderHall:
         if self.odrv0.axis0.error == AXIS_ERROR_WATCHDOG_TIMER_EXPIRED:
             self.odrv0.axis0.error = AXIS_ERROR_NONE
         if enable_watchdog:
+            if watchdog_timeout:
+                self._watchdog_timeout = watchdog_timeout
             if not self._external_watchdog:
                 watchdog = threading.Thread(target=self._watchdog_feed, name="Watchdog", daemon=True)
                 watchdog.start()
