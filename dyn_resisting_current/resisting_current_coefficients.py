@@ -4,7 +4,7 @@ Calculates the coefficients to calculate the resisting current.
 
 import json
 import numpy as np
-from scipy.optimize import curve_fit
+# from scipy.optimize import curve_fit
 from scipy import signal
 import matplotlib.pyplot as plt
 
@@ -78,4 +78,3 @@ plt.show()
 # [0.80907057 0.0064548  3.47616679]
 # 0.00033077764018978615
 # -0.0037730936150933026
-

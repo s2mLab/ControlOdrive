@@ -693,8 +693,11 @@ class OdriveEncoderHall:
         """
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
         velocity = self.odrv0.axis0.encoder.vel_estimate
-        dyn_resisting_current = - 0.8 * velocity / abs(velocity) * abs(velocity)**(1/3.2)
-        i_user = i_measured - dyn_resisting_current
+        if velocity != 0.0:
+            dyn_resisting_current = - 0.8 * velocity / abs(velocity) * abs(velocity)**(1/3.2)
+            i_user = i_measured - dyn_resisting_current
+        else:
+            i_user = i_measured
         if abs(i_user) <= self._hardware_and_security["resisting_torque_current"]:
             return 0.0
         else:

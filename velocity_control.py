@@ -22,12 +22,12 @@ motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
 while t1 - t0 < 10:
     t1 = time.time()
     if t1 - t0 > t_next:
-        motor.save_data_to_file("velocity_control_example", instruction=instruction)
+        motor.save_data_to_file("velocity_control_example", spin_box=1.0, instruction=instruction)
         t_next += 1 / f_sample
 
 motor.stop()
 
-data = load("velocity_control_example")
+data = load("velocity_control_example.bio")
 
 t = np.asarray(data['time'])
 
