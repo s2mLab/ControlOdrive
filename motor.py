@@ -668,6 +668,9 @@ class OdriveEncoderHall:
         self.odrv0.axis0.controller.input_torque = 0.0
         self._control_mode = ControlMode.STOP
 
+    def get_control_mode(self):
+        return self._control_mode
+
     def get_angle(self):
         """
         Returns the estimated angle in degrees. A calibration is needed to know the 0.

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>667</width>
-    <height>600</height>
+    <width>745</width>
+    <height>648</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -30,23 +30,30 @@
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <layout class="QVBoxLayout" name="verticalLayout">
+       <layout class="QVBoxLayout" name="modes_verticalLayout">
         <item>
-         <widget class="QPushButton" name="Power_pushButton">
+         <widget class="QPushButton" name="STOP_pushButton">
+          <property name="text">
+           <string>STOP</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="power_pushButton">
           <property name="text">
            <string>Power</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="velocity_pushButton">
           <property name="text">
-           <string>Vitesse</string>
+           <string>Velocity</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="torque_pushButton">
           <property name="text">
            <string>Torque</string>
           </property>
@@ -55,30 +62,23 @@
        </layout>
       </item>
       <item row="0" column="1">
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="instructions_verticalLayout">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QHBoxLayout" name="instructions_horizontalLayout_2">
           <item>
-           <widget class="QSpinBox" name="spinBox"/>
+           <widget class="QSpinBox" name="instruction_spinBox"/>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox">
-            <property name="editable">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_4">
+           <widget class="QLabel" name="units_label">
             <property name="text">
-             <string>PushButton</string>
+             <string/>
             </property>
            </widget>
           </item>
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QHBoxLayout" name="graph_horizontalLayout">
           <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
@@ -193,7 +193,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>667</width>
+     <width>745</width>
      <height>22</height>
     </rect>
    </property>

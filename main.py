@@ -13,14 +13,49 @@ class App(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.motor = motor
-        self.velocity = 30
+
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
         self.motor.config_watchdog(True, 0.5)
-        self.ui.Power_pushButton.clicked.connect(self.vel)
 
-    def vel(self):
-        self.motor.velocity_control(self.velocity)
+        # Control modes
+        self.ui.STOP_pushButton.clicked.connect(self.stop)
+        self.ui.power_pushButton.clicked.connect(self.power_mode)
+        self.ui.velocity_pushButton.clicked.connect(self.velocity_mode)
+        self.ui.torque_pushButton.clicked.connect(self.torque_mode)
+
+        # Instruction
+        self.ui.instruction_spinBox.valueChanged.connect(self.change_instruction)
+
+    def stop(self):
+        self.ui.instruction_spinBox.setValue(0)
+        self.ui.units_label.setText("The motor is stopping")
+        self.motor.stop()
+        self.ui.units_label.setText("The motor is stopped")
+
+    def power_mode(self):
+        self.ui.instruction_spinBox.setValue(0)
+        self.ui.units_label.setText("(W)")
+        self.motor.power_control(0.0)
+
+    def velocity_mode(self):
+        self.ui.instruction_spinBox.setValue(0)
+        self.ui.units_label.setText("(tr/min)")
+        self.motor.velocity_control(0.0)
+
+    def torque_mode(self):
+        self.ui.instruction_spinBox.setValue(0)
+        self.ui.units_label.setText("(Nm)")
+        self.motor.velocity_control(0.0)
+
+    def change_instruction(self):
+        control_mode = self.motor.get_control_mode()
+        if control_mode == ControlMode.POWER_CONTROL:
+            self.motor.power_control(self.ui.instruction_spinBox.value())
+        elif control_mode == ControlMode.VELOCITY_CONTROL:
+            self.motor.velocity_control(self.ui.instruction_spinBox.value())
+        elif control_mode == ControlMode.TORQUE_CONTROL:
+            self.motor.torque_control(self.ui.instruction_spinBox.value())
 
     def _data(self):
         """
@@ -31,14 +66,14 @@ class App(QtWidgets.QMainWindow):
         while True:
             self.motor.odrv0.axis0.watchdog_feed()
             self.motor.save_data()
-            #print(
+            # print(
             #    self.motor.odrv0.error,
             #    self.motor.odrv0.axis0.error,
             #    self.motor.odrv0.axis0.controller.error,
             #    self.motor.odrv0.axis0.encoder.error,
             #    self.motor.odrv0.axis0.motor.error,
             #    self.motor.odrv0.axis0.sensorless_estimator.error
-            #)
+            # )
             with open(f'XP/gui_{rd}.json', 'w') as f:
                 json.dump(self.motor.data, f)
             self.ui.power_lineEdit.setText(f"{self.motor.data['user_power'][-1]:.0f}")
@@ -46,9 +81,6 @@ class App(QtWidgets.QMainWindow):
             self.ui.torque_lineEdit.setText(f"{self.motor.data['user_torque'][-1]:.2f}")
 
             time.sleep(0.01)
-
-    def states_and_errors(self):
-        pass
 
 
 if __name__ == "__main__":
