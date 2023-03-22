@@ -24,7 +24,7 @@ motor.velocity_control(instruction, velocity_ramp_rate=ramp_rate)
 print(motor.odrv0.axis0.controller.input_vel)
 print(instruction)
 
-rd = random.randint(0,1000)
+rd = random.randint(0, 1000)
 
 while t1 - t0 < 10:
     t1 = time.time()

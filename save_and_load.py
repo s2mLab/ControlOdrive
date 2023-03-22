@@ -1,4 +1,5 @@
 import pickle
+import numpy as np
 from pathlib import Path
 
 def save(data_dict, data_path):

@@ -26,7 +26,7 @@ from odrive.enums import (
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
 
-from enums import ControlMode, PowerMode
+from enums import ControlMode, TrainingMode, control_modes_based_on_torque
 from save_and_load import save
 
 
@@ -63,7 +63,8 @@ class OdriveEncoderHall:
 
         self._control_mode = ControlMode.STOP
         self._relative_pos = 0
-        self.concentric = True
+        self._training_mode = TrainingMode.CONCENTRIC
+        self.previous_control_mode = ControlMode.STOP
 
         self._gains_path = gains_path
 
@@ -337,7 +338,7 @@ class OdriveEncoderHall:
         """
         Set the sign of the rotation depending on the mode (eccentric or concentric).
         """
-        if self.concentric:
+        if self._training_mode == TrainingMode.CONCENTRIC:
             return -1
         else:
             return 1
@@ -349,17 +350,9 @@ class OdriveEncoderHall:
         Parameters
         ----------
 
-        mode: str
-            'Concentric' or 'Eccentric'
+        mode: TrainingMode
         """
-        if mode == "Concentric":
-            self.concentric = True
-        elif mode == "Eccentric":
-            self.concentric = False
-        else:
-            raise ValueError(
-                "The training mode can be 'Concentric' or 'Eccentric'"
-            )
+        self._training_mode = TrainingMode(mode)
 
     def get_training_mode(self):
         """
@@ -367,13 +360,9 @@ class OdriveEncoderHall:
 
         Returns
         -------
-        mode: str
-            'Concentric' or 'Eccentric'
+        mode: TrainingMode
         """
-        if self.concentric:
-            return "Concentric"
-        else:
-            return "Eccentric"
+        return self._training_mode
 
     def _check_ramp_rate(self, ramp_rate):
         """
@@ -454,7 +443,6 @@ class OdriveEncoderHall:
         velocity_ramp_rate: float
             Velocity ramp rate in tr/min² of the pedals.
         """
-        print(velocity)
         if abs(velocity / self._reduction_ratio / 60) > self.odrv0.axis0.controller.config.vel_limit:
             raise ValueError(
                 f"The velocity limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
@@ -465,7 +453,8 @@ class OdriveEncoderHall:
         self._check_ramp_rate(velocity_ramp_rate)
 
         if self._control_mode != ControlMode.VELOCITY_CONTROL:
-            self.stop()
+            self.stopping()
+            self.stopped()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
@@ -482,7 +471,8 @@ class OdriveEncoderHall:
 
         :return:
         """
-        self.stop()
+        self.stopping()
+        self.stopped()
         self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
         self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
         self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
@@ -521,8 +511,11 @@ class OdriveEncoderHall:
         if resisting_torque_current is None:
             resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
 
-        torque = abs(torque) + self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
-            / self._reduction_ratio
+        if torque != 0.0:
+            torque = abs(torque) + self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
+                / self._reduction_ratio
+        else:
+            torque = 0.0
 
         torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
         input_torque_motor = - self._sign() * abs(torque * self._reduction_ratio)
@@ -533,11 +526,13 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
             self.odrv0.axis0.controller.input_torque = input_torque_motor
 
+    def power_init(self):
+        self._power_mode = ControlMode.POWER_CONTROL
+
     def power_control(
         self,
         duration: float = 20.0,
         power: float = 0.0,
-        power_mode: PowerMode = PowerMode.CONSTANT,
         linear_coeff: float = 1.0,
         torque_ramp_rate: float = 1.0,
         resisting_torque_current: float = None,
@@ -555,10 +550,12 @@ class OdriveEncoderHall:
             Torque ramp rate (Nm/s) at the pedals.
         resisting_torque_current: float
         linear_coeff: float
-            (tr/min/(Nm))
+            (Nm/(tr/min))
         file_path: str
         vel_min: float
         """
+        self._power_mode = power_mode
+
         if resisting_torque_current is None:
             resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
 
@@ -566,8 +563,12 @@ class OdriveEncoderHall:
             / self._reduction_ratio
 
         if self._control_mode != ControlMode.POWER_CONTROL:
+            if power == 0.0:
+                    torque = 0.0
+            else:
+                torque = vel_min * 2 * np.pi / 60
             self.torque_control_init(
-                vel_min * 2 * np.pi / 60,
+                torque,
                 torque_ramp_rate * self._reduction_ratio,
                 ControlMode.POWER_CONTROL
             )
@@ -581,17 +582,16 @@ class OdriveEncoderHall:
         while t1 - t0 < duration:
             t1 = time.time()
             if t1 - t0 > t_next:
-                self.odrv0.axis0.controller.input_torque = \
-                    - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
+                if power == 0.0:
+                    self.odrv0.axis0.controller.input_torque = 0.0
+                else:
+                    self.odrv0.axis0.controller.input_torque = \
+                        - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
 
                 self.save_data(torque)
 
                 if file_path:
                     self.save_data_to_file(file_path, torque)
-
-                print(f"Vel: {self.data['velocity'][-1]}, "
-                      f"Instruction: {self.data['user_torque'][-1]}, "
-                      f"Power: {self.data['mechanical_power'][-1]}")
 
                 if len(self.data['velocity']) > 1:
                     vel = np.mean(self.data['velocity'][max(0, len(self.data['velocity']) - 20): -1])
@@ -615,7 +615,7 @@ class OdriveEncoderHall:
 
                 t_next += 0.05
 
-    def stop(
+    def stopping(
             self,
             vel_stop: float = 6.0,
             velocity_ramp_rate: float = 400.0,
@@ -636,6 +636,8 @@ class OdriveEncoderHall:
         torque_ramp_rate: float
             The ramp_rate of the deceleration (Nm/s of the pedals).
         """
+        self._control_mode = ControlMode.STOPPING
+
         if vel_stop > self._hardware_and_security["maximal_velocity_stop"]:
             raise ValueError(
                 f"The maximal velocity at which the motor can be stopped is "
@@ -651,16 +653,18 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
             self.odrv0.axis0.controller.input_vel = 0.0
 
-            while abs(self.odrv0.axis0.encoder.vel_estimate) > vel_stop / 60 / self._reduction_ratio:
-                pass
-
-        if (self._control_mode == ControlMode.TORQUE_CONTROL or self._control_mode == ControlMode.POWER_CONTROL) \
+        if (self._control_mode in control_modes_based_on_torque) \
                 and abs(self.get_measured_torque()) > torque_stop:
             # Gently slows down the motor.
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate * self._reduction_ratio
             self.odrv0.axis0.controller.input_torque = 0.0
 
-            while abs(self.get_measured_torque()) > torque_stop:
+    def stopped(self):
+        if self.previous_control_mode == ControlMode.VELOCITY_CONTROL:
+            while abs(self.get_velocity()) > 6.0:
+                pass
+        elif self.previous_control_mode in control_modes_based_on_torque:
+            while abs(self.get_measured_torque()) > 0.5:
                 pass
 
         # Stops the motor
@@ -671,6 +675,9 @@ class OdriveEncoderHall:
 
     def get_control_mode(self):
         return self._control_mode
+
+    def get_power_mode(self):
+        return self._power_mode
 
     def get_angle(self):
         """
@@ -773,7 +780,7 @@ class OdriveEncoderHall:
         self.data["vbus"].append(self.odrv0.vbus_voltage)
         self.data["ibus"].append(self.odrv0.ibus)
 
-    def save_data_to_file(self, file_path: float, instruction: float = None):
+    def save_data_to_file(self, file_path: str, instruction: float = None):
         """
         Saves data.
         """
@@ -806,6 +813,8 @@ class OdriveEncoderHall:
             "motor_error": self.odrv0.axis0.motor.error,
             "sensorless_estimator_error": self.odrv0.axis0.sensorless_estimator.error,
             "state": self.odrv0.axis0.current_state,
+            "control_mode": self._control_mode.value,
+            "training_mode": self._training_mode.value,
         }
 
         save(data, file_path)

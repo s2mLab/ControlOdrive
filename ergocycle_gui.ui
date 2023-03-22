@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>745</width>
-    <height>648</height>
+    <width>744</width>
+    <height>566</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -29,40 +29,97 @@
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <layout class="QVBoxLayout" name="modes_verticalLayout">
+      <item row="4" column="0">
+       <widget class="QPushButton" name="linear_pushButton">
+        <property name="text">
+         <string>Linear control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <layout class="QHBoxLayout" name="velocity_horizontalLayout">
         <item>
-         <widget class="QPushButton" name="STOP_pushButton">
+         <widget class="QLabel" name="velocity_label">
           <property name="text">
-           <string>STOP</string>
+           <string>Velocity (tr/min)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="power_pushButton">
-          <property name="text">
-           <string>Power</string>
+         <widget class="QLineEdit" name="velocity_lineEdit">
+          <property name="enabled">
+           <bool>false</bool>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="velocity_pushButton">
-          <property name="text">
-           <string>Velocity</string>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="torque_pushButton">
           <property name="text">
-           <string>Torque</string>
+           <string/>
           </property>
          </widget>
         </item>
        </layout>
       </item>
-      <item row="0" column="1">
+      <item row="3" column="0">
+       <widget class="QPushButton" name="velocity_pushButton">
+        <property name="text">
+         <string>Velocity control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="BAU_pushButton">
+        <property name="text">
+         <string>BAU</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QPushButton" name="power_pushButton">
+        <property name="text">
+         <string>Power control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="torque_pushButton">
+        <property name="text">
+         <string>Torque control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
        <layout class="QVBoxLayout" name="instructions_verticalLayout">
+        <item>
+         <widget class="QLabel" name="control_label">
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a control mode (power, velocity, torque),&lt;/p&gt;&lt;p&gt;a training mode and an instruction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="training_comboBox">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <item>
+           <property name="text">
+            <string>Eccentric</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Concentric</string>
+           </property>
+          </item>
+         </widget>
+        </item>
         <item>
          <layout class="QHBoxLayout" name="instructions_horizontalLayout_2">
           <item>
@@ -80,107 +137,74 @@
         <item>
          <layout class="QHBoxLayout" name="graph_horizontalLayout">
           <item>
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
+           <widget class="QLabel" name="errors_label">
+            <property name="text">
+             <string>TextLabel</string>
             </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Fixed</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>300</height>
-             </size>
-            </property>
-           </spacer>
+           </widget>
           </item>
          </layout>
         </item>
        </layout>
       </item>
-      <item row="0" column="2">
-       <layout class="QVBoxLayout" name="data_verticalLayout">
+      <item row="2" column="3">
+       <layout class="QHBoxLayout" name="power_horizontalLayout">
         <item>
-         <layout class="QHBoxLayout" name="power_horizontalLayout">
-          <item>
-           <widget class="QLabel" name="power_label">
-            <property name="text">
-             <string>Power (W)</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="power_lineEdit">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QLabel" name="power_label">
+          <property name="text">
+           <string>Power (W)</string>
+          </property>
+         </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="velocity_horizontalLayout">
-          <item>
-           <widget class="QLabel" name="velocity_label">
-            <property name="text">
-             <string>Velocity (tr/min)</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="velocity_lineEdit">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QLineEdit" name="power_lineEdit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="STOP_pushButton">
+        <property name="text">
+         <string>STOP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <layout class="QHBoxLayout" name="torque_horizontalLayout">
+        <item>
+         <widget class="QLabel" name="torque_label">
+          <property name="text">
+           <string>Torque (Nm)</string>
+          </property>
+         </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="torque_horizontalLayout">
-          <item>
-           <widget class="QLabel" name="torque_label">
-            <property name="text">
-             <string>Torque (Nm)</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="torque_lineEdit">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QLineEdit" name="torque_lineEdit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -193,7 +217,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>745</width>
+     <width>744</width>
      <height>22</height>
     </rect>
    </property>

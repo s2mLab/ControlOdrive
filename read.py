@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/velocity_control_Eccentric_30_450.bio")
+data = load("XP/gui_778.bio")
 
 iq = np.asarray(data['iq_measured'])
 i_pb = np.where(iq == iq[-1])[0][0]
 
+breakpoint()
 print(
     data['velocity'][i_pb],
     data['iq_measured'][i_pb],
