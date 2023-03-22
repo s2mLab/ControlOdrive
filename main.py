@@ -13,7 +13,7 @@ with open("parameters/hardware_and_security.json", "r") as hardware_and_security
 
 class App(QtWidgets.QMainWindow):
     def __init__(self, odrive_motor: OdriveEncoderHall):
-        super(App, self).__init__(QtWidgets.QMainWindow)
+        super(App, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/gui_887.bio")
+data = load("XP/gui_963.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
@@ -85,7 +85,7 @@ plt.title("Torques")
 ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
 ax1.plot(data['time'][9: -10], smoothed_measured_torque, label="Smoothed measured torque")
 ax1.plot(data['time'][9: -10], smoothed_user_torque, label="Smoothed user torque")
-ax1.plot(data['time'], data["instruction"], label="Instruction")
+ax2.plot(data['time'], data["instruction"], label="Instruction")
 fig.legend(loc="upper right")
 
 # plt.figure()
