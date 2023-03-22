@@ -300,6 +300,9 @@ class OdriveEncoderHall:
         self.odrv0.config.gpio9_mode = self._hardware_and_security["gpio9_mode"]
         self.odrv0.config.gpio10_mode = self._hardware_and_security["gpio10_mode"]
         self.odrv0.config.gpio11_mode = self._hardware_and_security["gpio11_mode"]
+        self.odrv0.config.max_regen_current = self._hardware_and_security["max_regen_current"]
+        self.odrv0.config.dc_max_positive_current = self._hardware_and_security["dc_max_positive_current"]
+        self.odrv0.config.dc_max_negative_current = self._hardware_and_security["dc_max_negative_current"]
         self.odrv0.config.enable_brake_resistor = self._hardware_and_security["enable_brake_resistor"]
         self.odrv0.config.brake_resistance = self._hardware_and_security["brake_resistance"]
 
@@ -780,7 +783,7 @@ class OdriveEncoderHall:
         self.data["vbus"].append(self.odrv0.vbus_voltage)
         self.data["ibus"].append(self.odrv0.ibus)
 
-    def save_data_to_file(self, file_path: str, instruction: float = None):
+    def save_data_to_file(self, file_path: str, spin_box: float = None, instruction: float = None):
         """
         Saves data.
         """
@@ -788,10 +791,14 @@ class OdriveEncoderHall:
             self.t0 = time.time()
             self.first_save = False
 
+        if spin_box is not float:
+            spin_box = np.inf
+
         if instruction is not float:
             instruction = np.inf
 
         data = {
+            "spin_box": spin_box,
             "instruction": instruction,
             "time": time.time() - self.t0,
             "iq_setpoint": self.get_iq_setpoint(),
@@ -815,6 +822,7 @@ class OdriveEncoderHall:
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
             "training_mode": self._training_mode.value,
+            "resistor_current": self.odrv0.brake_resistor_current,
         }
 
         save(data, file_path)

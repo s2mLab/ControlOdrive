@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>744</width>
-    <height>566</height>
+    <width>1022</width>
+    <height>398</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -29,65 +29,10 @@
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
-      <item row="4" column="0">
-       <widget class="QPushButton" name="linear_pushButton">
-        <property name="text">
-         <string>Linear control</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="3">
-       <layout class="QHBoxLayout" name="velocity_horizontalLayout">
-        <item>
-         <widget class="QLabel" name="velocity_label">
-          <property name="text">
-           <string>Velocity (tr/min)</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="velocity_lineEdit">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="3" column="0">
-       <widget class="QPushButton" name="velocity_pushButton">
-        <property name="text">
-         <string>Velocity control</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="QPushButton" name="BAU_pushButton">
-        <property name="text">
-         <string>BAU</string>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="0">
        <widget class="QPushButton" name="power_pushButton">
         <property name="text">
          <string>Power control</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QPushButton" name="torque_pushButton">
-        <property name="text">
-         <string>Torque control</string>
         </property>
        </widget>
       </item>
@@ -174,10 +119,24 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="0">
-       <widget class="QPushButton" name="STOP_pushButton">
+      <item row="0" column="3">
+       <widget class="QPushButton" name="BAU_pushButton">
         <property name="text">
-         <string>STOP</string>
+         <string>BAU</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QPushButton" name="velocity_pushButton">
+        <property name="text">
+         <string>Velocity control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="torque_pushButton">
+        <property name="text">
+         <string>Torque control</string>
         </property>
        </widget>
       </item>
@@ -208,6 +167,89 @@
         </item>
        </layout>
       </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="linear_pushButton">
+        <property name="text">
+         <string>Linear control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="STOP_pushButton">
+        <property name="text">
+         <string>STOP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <layout class="QHBoxLayout" name="velocity_horizontalLayout">
+        <item>
+         <widget class="QLabel" name="velocity_label">
+          <property name="text">
+           <string>Velocity (tr/min)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="velocity_lineEdit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="3">
+       <layout class="QVBoxLayout" name="save_verticalLayout">
+        <item>
+         <widget class="QLineEdit" name="save_lineEdit">
+          <property name="text">
+           <string>XP_participantX</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="save_horizontalLayout">
+          <item>
+           <widget class="QPushButton" name="save_start_pushButton">
+            <property name="text">
+             <string>Start</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="save_stop_pushButton">
+            <property name="text">
+             <string>Stop</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="2">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
      </layout>
     </item>
    </layout>
@@ -217,7 +259,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>744</width>
+     <width>1022</width>
      <height>22</height>
     </rect>
    </property>

@@ -9,8 +9,19 @@ dictionary = {
     "gpio9_mode": GPIO_MODE_DIGITAL,  # The pins the encoder is connected to
     "gpio10_mode": GPIO_MODE_DIGITAL,
     "gpio11_mode": GPIO_MODE_DIGITAL,
+    # The bus current allowed to flow back to the power supply before the brake resistor module will start shunting
+    # current.
+    "max_regen_current": 0.0,
+    # This should be greater in magnitude than max_regen_current
+    "dc_max_negative_current": -0.01,
+    "dc_max_positive_current": 600 / 48,
     "enable_brake_resistor": True,
-    "brake_resistance": 3.3,  # Ohms
+    # If you set this to a lower value than the true brake resistance then the ODrive will not meed the
+    # max_regen_current constraint during braking, that is it will sink more than max_regen_current into the power
+    # supply. Some power supplies don’t like this.
+    # If you set this to a higher value than the true brake resistance then the ODrive will unnecessarily burn more
+    # power than required during braking.
+    "brake_resistance": 4.0,  # Ohms
     "pedals_vel_limit": 120,  # tr/min of the pedals
     "vel_limit_tolerance": 2.0,  # tr/s of the motor
     "mode": ENCODER_MODE_HALL,
