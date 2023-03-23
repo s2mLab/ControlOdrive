@@ -379,17 +379,16 @@ class App(QtWidgets.QMainWindow):
                     and abs(self.motor.get_velocity()) < 5.0
             ):
                 self.motor.odrv0.axis0.watchdog_feed()
-                self.motor.odrv0.requested_state = AXIS_STATE_IDLE
+                # self.motor.odrv0.requested_state = AXIS_STATE_IDLE
 
-                # self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
-                # self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-                # self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
-                #
-                # self.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
-                # self.odrv0.axis0.controller.input_torque = 0.0
-                #
-                # # Starts the motor
-                # self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+                self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
+                self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
+
+                self.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
+                self.odrv0.axis0.controller.input_torque = 0.0
+
+                self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
             self.motor.odrv0.axis0.watchdog_feed()
 
