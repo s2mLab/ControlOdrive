@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/gui_737.bio")
+data = load("XP/gui_74.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
