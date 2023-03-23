@@ -23,7 +23,7 @@ dictionary = {
     # supply. Some power supplies don’t like this.
     # If you set this to a higher value than the true brake resistance then the ODrive will unnecessarily burn more
     # power than required during braking.
-    "brake_resistance": 4.0,  # Ohms
+    "brake_resistance": 3.5,  # Ohms
     "pedals_vel_limit": 120,  # tr/min of the pedals
     "vel_limit_tolerance": 2.0,  # tr/s of the motor
     "mode": ENCODER_MODE_HALL,
