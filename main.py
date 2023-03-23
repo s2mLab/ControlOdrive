@@ -174,11 +174,11 @@ class App(QtWidgets.QMainWindow):
 
     def _test_thread(
         self,
-        torque_ramp_rate: float = 1.0,
+        torque_ramp_rate: float = 2.0,
         vel_min: float = 12.0,
     ):
         self.velocities = np.zeros(20)
-        instruction_velocity = 30
+        instruction_velocity = 10
 
         reduction_ratio = self.motor.get_reduction_ratio()
 
@@ -186,10 +186,7 @@ class App(QtWidgets.QMainWindow):
             hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         if self.motor.get_control_mode() != ControlMode.TEST:
-            if self.power == 0.0:
-                self.instruction = 0.0
-            else:
-                self.instruction = vel_min * 2 * np.pi / 60
+            self.instruction = 5
             self.motor.torque_control_init(
                 self.instruction,
                 torque_ramp_rate * reduction_ratio,
@@ -206,20 +203,17 @@ class App(QtWidgets.QMainWindow):
             t1 = time.time()
             if t1 - t0 > i / f:
 
-                if self.power == 0.0:
-                    self.motor.odrv0.axis0.controller.input_torque = 0.0
-                else:
-                    self.motor.odrv0.axis0.controller.input_torque = \
-                        - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
+                self.motor.odrv0.axis0.controller.input_torque = \
+                    - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
 
                 self.velocities[i % 20] = self.motor.get_velocity()
 
                 vel = np.mean(self.velocities[:min(i + 1, 20)])
 
                 if abs(vel) < instruction_velocity - 5:
-                    self.instruction += 100
+                    self.instruction = 5
                 elif abs(vel) > instruction_velocity + 5:
-                    self.instruction -= 0
+                    self.instruction = 0
 
                 i += 1
         print("Out of the test thread")
