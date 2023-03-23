@@ -28,7 +28,7 @@ class App(QtWidgets.QMainWindow):
         self.instruction = np.inf
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
-        self.motor.config_watchdog(True, 0.7)
+        self.motor.config_watchdog(True, 1.5)
 
         self.ui.BAU_pushButton.clicked.connect(self.bau)
 
@@ -194,7 +194,6 @@ class App(QtWidgets.QMainWindow):
         vel_min: float = 12.0,
     ):
         self.linear = 0.0
-        self.motor.power_init()  # power_mode
         self.velocities = np.zeros(20)
 
         reduction_ratio = self.motor.get_reduction_ratio()

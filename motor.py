@@ -493,7 +493,7 @@ class OdriveEncoderHall:
     def torque_control(
             self,
             torque: float = 0.0,
-            torque_ramp_rate: float = 0.5,
+            torque_ramp_rate: float = 2.0,
             resisting_torque_current: float = None):
         """
         Set the odrive in torque control, choose the torque and start the motor.

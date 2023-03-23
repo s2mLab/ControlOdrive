@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("velocity_control_example.bio")
+data = load("XP/gui_737.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
@@ -57,6 +57,7 @@ ax2.plot(data['time'], - np.asarray(data["velocity"]), label="- Smoothed velocit
 plt.title("Currents and velocity")
 
 ax1.plot(data['time'], data["iq_measured"], label="Smoothed Iq measured")
+# ax1.plot(data['time'], data["motor_error"])
 ax1.plot(data['time'], data["iq_setpoint"], label="Smoothed Iq setpoint")
 # ax1.plot(data['time'], data["instruction"], label="Instruction")
 # ax1.plot(data['time'], data["spin_box"], label="Spin box")
@@ -140,6 +141,7 @@ ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
 ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
 ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
 # ax2.plot(data['time'], data['spin_box'], label="Spin box", color='tab:green')
+fig.legend(loc="upper right")
 
 # Issue 16
 fig, ax1 = plt.subplots()
@@ -153,7 +155,7 @@ ax1.plot(data["brake_resistor_saturated"], label="Saturated")
 ax2.plot(data["velocity"], label="Velocity", color='tab:red')
 
 print(min(data["ibus"]))
-plt.title("ibus and velocity")
+plt.title("brake_resistor_saturated and velocity")
 fig.legend(loc="upper right")
 
 # Errors
@@ -165,13 +167,13 @@ plt.plot(data["controller_error"])
 plt.plot(data["encoder_error"])
 plt.plot(data["motor_error"])
 plt.plot(data["sensorless_estimator_error"])
-print(data["error"][489], data["error"][490],
+print(data["error"][-1],
       data["axis_error"][-1],
       data["controller_error"][-1],
       data["encoder_error"][-1],
       data["motor_error"][-1],
       data["sensorless_estimator_error"][-1],
-      data["brake_resistor_saturated"][480], data["brake_resistor_saturated"][481],
+      data["brake_resistor_saturated"][-1], data["brake_resistor_saturated"][-1],
       # data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
       )
 plt.legend()
