@@ -473,7 +473,7 @@ class OdriveEncoderHall:
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
     def vel_ecc_secu(self):
-        self._control_mode = ControlMode.
+        self._control_mode = ControlMode.ECC_VEL_SECU
         self.odrv0.axis0.watchdog_feed()
 
         self.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
@@ -493,7 +493,7 @@ class OdriveEncoderHall:
         t0 = time.time()
 
         while time.time() - t0 < 1.0:
-            self.motor.odrv0.axis0.watchdog_feed()
+            self.odrv0.axis0.watchdog_feed()
 
     def torque_control_init(self, input_torque_motor, torque_ramp_rate_motor, control_mode):
         """
