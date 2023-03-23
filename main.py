@@ -395,7 +395,7 @@ class App(QtWidgets.QMainWindow):
                     self.motor.get_control_mode() == ControlMode.VELOCITY_CONTROL
                     and self.motor.get_training_mode() == TrainingMode.ECCENTRIC
                     and abs(self.motor.get_iq_setpoint()) > 10.0
-                    and abs(self.motor.get_velocity()) < 5.0
+                    and abs(self.motor.get_velocity()) < 10.0
             ):
                 self.motor.odrv0.axis0.watchdog_feed()
 
