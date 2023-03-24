@@ -692,19 +692,6 @@ class OdriveEncoderHall:
         """
         return self.odrv0.axis0.motor.current_control.Iq_measured
 
-    def get_i_res(self, a: float = 0.83504094, b: float = 0.00483589, c: float = 3.25038644):
-        """
-        Returns the motor current in A corresponding to the effort produced by the user.
-        a, b and c are coefficient that have been obtained by a curve fitting done scipy.
-        The angle should have been taken into account but since there is a lot of noise on the estimated velocity, the
-        influence of the angle was deemed negligible.
-        """
-        vel = self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio
-        if vel == 0.0:
-            return 0.0
-        else:
-            return - a * vel / abs(vel) * abs(vel) ** (1 / c) + b
-
     def get_measured_torque(self):
         """
         Returns the measured torque.
@@ -722,13 +709,11 @@ class OdriveEncoderHall:
             dyn_resisting_current = - 0.8 * velocity / abs(velocity) * abs(velocity)**(1/3.2)
             i_user = i_measured - dyn_resisting_current
         else:
-            i_user = i_measured
-        if abs(i_user) <= self._hardware_and_security["resisting_torque_current"]:
-            return 0.0
-        else:
-            sign = - i_user / abs(i_user)
-            return self.odrv0.axis0.motor.config.torque_constant * \
-                (i_user + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
+            if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
+                i_user = 0.0
+            else:
+                i_user = i_measured
+        return self.odrv0.axis0.motor.config.torque_constant * i_user / self._reduction_ratio
 
     def save_data_to_file(self, file_path: str, spin_box: float = None, instruction: float = None):
         """
@@ -751,7 +736,6 @@ class OdriveEncoderHall:
             "mechanical_power": self.get_mechanical_power(),
             "electrical_power": self.get_electrical_power(),
             "user_power": self.get_user_power(),
-            "i_res": self.get_i_res(),
             "vbus": self.odrv0.vbus_voltage,
             "ibus": self.odrv0.ibus,
             "error": self.odrv0.error,
