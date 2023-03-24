@@ -12,7 +12,7 @@ from enums import(
     ODriveControllerError,
 )
 
-data = load("XP/vel_ecc_crash_3.bio")
+data = load("XP/gui_732.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
@@ -153,19 +153,19 @@ ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue
 fig.legend(loc="upper right")
 
 # # Issue 16
-# fig, ax1 = plt.subplots()
+fig, ax1 = plt.subplots()
 #
 # ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 # ax1.set_xlabel('Time (s)')
 # ax1.set_ylabel('Saturated (True/False)')
 # ax2.set_ylabel('Velocity (tr/min)')
 #
-# ax1.plot(data["brake_resistor_saturated"], label="Saturated")
+ax1.plot(data["brake_resistor_saturated"], label="Saturated")
 # ax2.plot(data["velocity"], label="Velocity", color='tab:red')
 #
 # print(min(data["ibus"]))
 # plt.title("brake_resistor_saturated and velocity")
-# fig.legend(loc="upper right")
+fig.legend(loc="upper right")
 
 # Errors
 plt.figure()
