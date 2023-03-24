@@ -376,7 +376,7 @@ class App(QtWidgets.QMainWindow):
             self.motor.odrv0.axis0.watchdog_feed()
             self.ui.velocity_lineEdit.setText(f"{self.motor.get_velocity():.0f}")
             self.motor.odrv0.axis0.watchdog_feed()
-            self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.2f}")
+            self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.0f}")
             self.motor.odrv0.axis0.watchdog_feed()
             self.ui.errors_label.setText(
                 f"{traduce_error(self.motor.odrv0.error, ODriveError)}"

@@ -472,6 +472,8 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
+        print(self.odrv0.axis0.controller.input_vel)
+
     def vel_ecc_secu(self):
         self._control_mode = ControlMode.ECC_VEL_SECU
         self.odrv0.axis0.watchdog_feed()
