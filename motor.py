@@ -791,12 +791,6 @@ class OdriveEncoderHall:
             self.t0 = time.time()
             self.first_save = False
 
-        if spin_box is not float:
-            spin_box = np.inf
-
-        if instruction is not float:
-            instruction = np.inf
-
         data = {
             "spin_box": spin_box,
             "instruction": instruction,
@@ -823,6 +817,7 @@ class OdriveEncoderHall:
             "control_mode": self._control_mode.value,
             "training_mode": self._training_mode.value,
             "resistor_current": self.odrv0.brake_resistor_current,
+            "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
         }
 
         save(data, file_path)

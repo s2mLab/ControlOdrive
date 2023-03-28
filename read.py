@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/gui_143.bio")
+data = load("XP/Antoine_torque1_0328_1.bio")
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
 
@@ -57,6 +57,8 @@ plt.title("Currents and velocity")
 
 ax1.plot(data['time'], data["iq_measured"], label="Smoothed Iq measured")
 ax1.plot(data['time'], data["iq_setpoint"], label="Smoothed Iq setpoint")
+# ax1.plot(data['time'], data["instruction"], label="Instruction")
+# ax1.plot(data['time'], data["spin_box"], label="Spin box")
 ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
 fig.legend(loc="upper right")
 
@@ -79,7 +81,7 @@ ax2.set_ylabel('Velocity (tr/min)')
 
 plt.title("Torques")
 
-ax2.plot(data['time'][9: -10], - smoothed_velocity, label="- Smoothed velocity", color='tab:red')
+ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
 ax1.plot(data['time'][9: -10], smoothed_measured_torque, label="Smoothed measured torque")
 ax1.plot(data['time'][9: -10], smoothed_user_torque, label="Smoothed user torque")
 fig.legend(loc="upper right")
@@ -127,14 +129,13 @@ fig, ax1 = plt.subplots()
 
 ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('ibus')
+ax1.set_ylabel('Current (A)')
 ax2.set_ylabel('Velocity (tr/min)')
 
 dibusdt = (np.asarray(data["ibus"])[1:] - np.asarray(data["ibus"])[:-1])/(np.asarray(data["time"])[1:] - np.asarray(data["time"])[:-1])
 ax1.plot(data['time'], data["ibus"], label="ibus")
-# ax1.plot(data['time'][:-1], dibusdt, label="dibus/dt")
+ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
 ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
-# ax2.plot([t_pb, t_pb], [min(smoothed_velocity), max(smoothed_velocity)], color='tab:red')
 
 print(min(data["ibus"]))
 plt.title("ibus and velocity")
@@ -143,12 +144,12 @@ fig.legend(loc="upper right")
 # Errors
 plt.figure()
 plt.title("Errors")
-plt.plot(data['time'], data["error"])
-plt.plot(data['time'], data["axis_error"])
-plt.plot(data['time'], data["controller_error"])
-plt.plot(data['time'], data["encoder_error"])
-plt.plot(data['time'], data["motor_error"])
-plt.plot(data['time'], data["sensorless_estimator_error"])
+plt.plot(data["error"])
+plt.plot(data["axis_error"])
+plt.plot(data["controller_error"])
+plt.plot(data["encoder_error"])
+plt.plot(data["motor_error"])
+plt.plot(data["sensorless_estimator_error"])
 print(data["error"][-1],
       data["axis_error"][-1],
       data["controller_error"][-1],

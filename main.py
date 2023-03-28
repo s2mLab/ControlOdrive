@@ -25,7 +25,7 @@ class App(QtWidgets.QMainWindow):
         self.motor = motor
 
         self.run = True
-        self.instruction = 0.0
+        self.instruction = np.inf
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
         self.motor.config_watchdog(True, 0.7)
