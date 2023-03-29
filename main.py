@@ -284,8 +284,6 @@ class App(QtWidgets.QMainWindow):
             )
             self.motor.odrv0.axis0.watchdog_feed()
 
-            time.sleep(0.01)
-
     def save_start(self):
         # ToDo: Implement this for real.
         self._file_path = self.ui.save_lineEdit.text()

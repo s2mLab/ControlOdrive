@@ -135,6 +135,9 @@ class OdriveEncoderHall:
         ----------
         enable_watchdog: bool
             Indicates if the user wants to enable the watchdog (True) or not (False)
+        watchdog_timeout: float
+            Maximum duration since the last feeding in s. If the watchdog has not been fed for more than
+            `watchdog_timeout` the Odrive unable the motor.
 
         Returns
         -------
@@ -529,95 +532,6 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
             self.odrv0.axis0.controller.input_torque = input_torque_motor
 
-    def power_init(self):
-        self._power_mode = ControlMode.POWER_CONTROL
-
-    def power_control(
-        self,
-        duration: float = 20.0,
-        power: float = 0.0,
-        linear_coeff: float = 1.0,
-        torque_ramp_rate: float = 1.0,
-        resisting_torque_current: float = None,
-        file_path: str = None,
-        vel_min: float = 12.0,
-    ):
-        """
-        Parameters
-        ----------
-        duration: float
-        # TODO: Put the power control in a thread instead of using duration
-        power: float
-        power_mode: str
-        torque_ramp_rate: float
-            Torque ramp rate (Nm/s) at the pedals.
-        resisting_torque_current: float
-        linear_coeff: float
-            (Nm/(tr/min))
-        file_path: str
-        vel_min: float
-        """
-        self._power_mode = power_mode
-
-        if resisting_torque_current is None:
-            resisting_torque_current = self._hardware_and_security["resisting_torque_current"]
-
-        resisting_torque = self.odrv0.axis0.motor.config.torque_constant * resisting_torque_current \
-            / self._reduction_ratio
-
-        if self._control_mode != ControlMode.POWER_CONTROL:
-            if power == 0.0:
-                    torque = 0.0
-            else:
-                torque = vel_min * 2 * np.pi / 60
-            self.torque_control_init(
-                torque,
-                torque_ramp_rate * self._reduction_ratio,
-                ControlMode.POWER_CONTROL
-            )
-
-        t0 = time.time()
-        t1 = time.time()
-        t_next = 0
-
-        torque = 0.0
-
-        while t1 - t0 < duration:
-            t1 = time.time()
-            if t1 - t0 > t_next:
-                if power == 0.0:
-                    self.odrv0.axis0.controller.input_torque = 0.0
-                else:
-                    self.odrv0.axis0.controller.input_torque = \
-                        - self.get_sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
-
-                self.save_data(torque)
-
-                if file_path:
-                    self.save_data_to_file(file_path, torque)
-
-                if len(self.data['velocity']) > 1:
-                    vel = np.mean(self.data['velocity'][max(0, len(self.data['velocity']) - 20): -1])
-                else:
-                    vel = 0.0
-
-                if power_mode == PowerMode.CONSTANT:
-                    if abs(vel) < vel_min:
-                        self.odrv0.axis0.controller.config.torque_ramp_rate = 1.0 * self._reduction_ratio
-                        torque = power / (vel_min * 2 * np.pi / 60)
-                    else:
-                        self.odrv0.axis0.controller.config.torque_ramp_rate = 1.0 * self._reduction_ratio
-                        torque = power / (abs(vel) * 2 * np.pi / 60)
-                elif power_mode == PowerMode.LINEAR:
-                    if abs(vel) < vel_min:
-                        torque = linear_coeff * vel_min
-                    else:
-                        torque = linear_coeff * abs(vel)
-                else:
-                    raise NotImplementedError(f"{power_mode} is not implemented.")
-
-                t_next += 0.05
-
     def stopping(
             self,
             vel_stop: float = 6.0,
@@ -626,7 +540,7 @@ class OdriveEncoderHall:
             torque_ramp_rate: float = 0.5
     ):
         """
-        Stops the motor gently.
+        Starts the stopping sequence of the motor.
 
         Parameters
         ----------
@@ -663,6 +577,9 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.input_torque = 0.0
 
     def stopped(self):
+        """
+        Running until the motor is fully stopped. Can be executed in another thread or process.
+        """
         if self.previous_control_mode == ControlMode.VELOCITY_CONTROL:
             while abs(self.get_velocity()) > 6.0:
                 pass
@@ -676,14 +593,37 @@ class OdriveEncoderHall:
         self.odrv0.axis0.controller.input_torque = 0.0
         self._control_mode = ControlMode.STOP
 
+        return True
+
+    def stop(
+        self,
+        vel_stop: float = 6.0,
+        velocity_ramp_rate: float = 400.0,
+        torque_stop: float = 2.0,
+        torque_ramp_rate: float = 0.5
+    ):
+        """
+        Stops the motor gently.
+
+        Parameters
+        ----------
+        vel_stop: float
+            The velocity at which the motor will be stopped if it was turning (tr/min of the pedals).
+        velocity_ramp_rate: float
+            The ramp_rate of the deceleration (tr/min² of the pedals).
+        torque_stop: float
+            The torque at which the motor will be stopped if it was turning (Nm of the pedals).
+        torque_ramp_rate: float
+            The ramp_rate of the deceleration (Nm/s of the pedals).
+        """
+        self.stopping(vel_stop, velocity_ramp_rate, torque_stop, torque_ramp_rate)
+        self.stopped()
+
     def get_reduction_ratio(self):
         return self._reduction_ratio
 
     def get_control_mode(self):
         return self._control_mode
-
-    def get_power_mode(self):
-        return self._power_mode
 
     def get_angle(self):
         """
@@ -758,33 +698,6 @@ class OdriveEncoderHall:
             sign = - i_measured / abs(i_measured)
             return self.odrv0.axis0.motor.config.torque_constant * \
                 (i_measured + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
-
-    def save_data(self, instruction: float = None):
-        """
-        Saves data.
-        """
-        if self.first_save:
-            self.t0 = time.time()
-            self.first_save = False
-
-        if instruction is float:
-            self.data["instruction"].append(instruction)
-        else:
-            self.data["instruction"].append(np.inf)
-
-        self.data["time"].append(time.time() - self.t0)
-        self.data["iq_setpoint"].append(self.get_iq_setpoint())
-        self.data["iq_measured"].append(self.get_iq_measured())
-        self.data["i_res"].append(self.get_i_res())
-        self.data["measured_torque"].append(self.get_measured_torque())
-        self.data["user_torque"].append(self.get_user_torque())
-        self.data["velocity"].append(self.get_velocity())
-        self.data["angle"].append(self.get_angle())
-        self.data["mechanical_power"].append(self.get_mechanical_power())
-        self.data["electrical_power"].append(self.get_electrical_power())
-        self.data["user_power"].append(self.get_user_power())
-        self.data["vbus"].append(self.odrv0.vbus_voltage)
-        self.data["ibus"].append(self.odrv0.ibus)
 
     def save_data_to_file(self, file_path: str, spin_box: float = None, instruction: float = None):
         """
