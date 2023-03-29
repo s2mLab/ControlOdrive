@@ -7,7 +7,7 @@
     "gpio11_mode": 0,
     "max_regen_current": 0.0,
     "dc_max_negative_current": -0.01,
-    "dc_max_positive_current": 12.5,
+    "dc_max_positive_current": 15,
     "enable_brake_resistor": true,
     "brake_resistance": 4.0,
     "pedals_vel_limit": 120,

@@ -14,7 +14,9 @@ dictionary = {
     "max_regen_current": 0.0,
     # This should be greater in magnitude than max_regen_current
     "dc_max_negative_current": -0.01,
-    "dc_max_positive_current": 600 / 48,
+    # Theoretically Imax = 12.5 A, but there are peaks above in normal functioning and I don't think it is problematic
+    # to increase this limit
+    "dc_max_positive_current": 15,
     "enable_brake_resistor": True,
     # If you set this to a lower value than the true brake resistance then the ODrive will not meed the
     # max_regen_current constraint during braking, that is it will sink more than max_regen_current into the power

@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/gui_371.bio")
+data = load("XP/gui_887.bio")
+#577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
 
@@ -140,6 +141,17 @@ ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", col
 ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
 # ax2.plot(data['time'], data['spin_box'], label="Spin box", color='tab:green')
 
+# Issue 16
+fig, ax1 = plt.subplots()
+
+ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+ax1.set_xlabel('Time (s)')
+ax1.set_ylabel('Saturated (True/False)')
+ax2.set_ylabel('Velocity (tr/min)')
+
+ax1.plot(data["brake_resistor_saturated"], label="Saturated")
+ax2.plot(data["velocity"], label="Velocity", color='tab:red')
+
 print(min(data["ibus"]))
 plt.title("ibus and velocity")
 fig.legend(loc="upper right")
@@ -153,12 +165,13 @@ plt.plot(data["controller_error"])
 plt.plot(data["encoder_error"])
 plt.plot(data["motor_error"])
 plt.plot(data["sensorless_estimator_error"])
-print(data["error"][-1],
+print(data["error"][489], data["error"][490],
       data["axis_error"][-1],
       data["controller_error"][-1],
       data["encoder_error"][-1],
       data["motor_error"][-1],
       data["sensorless_estimator_error"][-1],
+      data["brake_resistor_saturated"][480], data["brake_resistor_saturated"][481],
       # data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
       )
 plt.legend()

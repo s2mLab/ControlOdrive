@@ -12,8 +12,8 @@ with open("parameters/hardware_and_security.json", "r") as hardware_and_security
 
 
 class App(QtWidgets.QMainWindow):
-    def __init__(self, motor):
-        super(App, self).__init__()
+    def __init__(self, odrive_motor: OdriveEncoderHall):
+        super(App, self).__init__(QtWidgets.QMainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -22,7 +22,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.velocity_lineEdit.setStyleSheet("background-color: white; color: black;")
         self.ui.torque_lineEdit.setStyleSheet("background-color: white; color: black;")
 
-        self.motor = motor
+        self.motor = odrive_motor
 
         self.run = True
         self.instruction = np.inf
@@ -69,6 +69,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.STOP_pushButton.setEnabled(False)
         self.change_mode()
         self.ui.instruction_spinBox.setValue(0)
+        self.instruction = np.inf
         self.ui.instruction_spinBox.setEnabled(False)
         self.ui.units_label.setText("")
 
@@ -119,8 +120,10 @@ class App(QtWidgets.QMainWindow):
         self.motor.power_init()  # power_mode
         self.velocities = np.zeros(20)
 
+        reduction_ratio = self.motor.get_reduction_ratio()
+
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-            hardware_and_security["resisting_torque_current"] / self.motor._reduction_ratio
+            hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         if self.motor.get_control_mode() != ControlMode.POWER_CONTROL:
             if self.power == 0.0:
@@ -129,7 +132,7 @@ class App(QtWidgets.QMainWindow):
                 self.instruction = vel_min * 2 * np.pi / 60
             self.motor.torque_control_init(
                 self.instruction,
-                torque_ramp_rate * self.motor._reduction_ratio,
+                torque_ramp_rate * reduction_ratio,
                 ControlMode.POWER_CONTROL
             )
 
@@ -147,7 +150,7 @@ class App(QtWidgets.QMainWindow):
                     self.motor.odrv0.axis0.controller.input_torque = 0.0
                 else:
                     self.motor.odrv0.axis0.controller.input_torque = \
-                        - self.motor._sign() * (abs(self.instruction) + resisting_torque) * self.motor._reduction_ratio
+                        - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
 
                 self.velocities[i % 20] = self.motor.get_velocity()
 
@@ -194,8 +197,12 @@ class App(QtWidgets.QMainWindow):
         self.motor.power_init()  # power_mode
         self.velocities = np.zeros(20)
 
+        reduction_ratio = self.motor.get_reduction_ratio()
+
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-            hardware_and_security["resisting_torque_current"] / self.motor._reduction_ratio
+            hardware_and_security["resisting_torque_current"] / reduction_ratio
+
+        torque = 0.0
 
         if self.motor.get_control_mode() != ControlMode.LINEAR_CONTROL:
             if self.linear == 0.0:
@@ -204,7 +211,7 @@ class App(QtWidgets.QMainWindow):
                 torque = self.linear * self.motor.get_velocity()
             self.motor.torque_control_init(
                 torque,
-                torque_ramp_rate * self.motor._reduction_ratio,
+                torque_ramp_rate * reduction_ratio,
                 ControlMode.LINEAR_CONTROL
             )
 
@@ -217,7 +224,7 @@ class App(QtWidgets.QMainWindow):
         while self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
             t1 = time.time()
             if t1 - t0 > i / f:
-                self.instruction = - self.motor._sign() * (abs(torque) + resisting_torque) * self.motor._reduction_ratio
+                self.instruction = - self.motor.get_sign() * (abs(torque) + resisting_torque) * reduction_ratio
                 self.motor.odrv0.axis0.controller.input_torque = self.instruction
 
                 self.velocities[i % 20] = self.motor.get_velocity()

@@ -337,7 +337,7 @@ class OdriveEncoderHall:
         self.odrv0.axis0.trap_traj.config.decel_limit = \
             self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 3600  # tr/s²
 
-    def _sign(self):
+    def get_sign(self):
         """
         Set the sign of the rotation depending on the mode (eccentric or concentric).
         """
@@ -462,7 +462,7 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
         self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 3600 / self._reduction_ratio
-        self.odrv0.axis0.controller.input_vel = self._sign() * abs(velocity / 60 / self._reduction_ratio)
+        self.odrv0.axis0.controller.input_vel = self.get_sign() * abs(velocity / 60 / self._reduction_ratio)
 
         if self._control_mode != ControlMode.VELOCITY_CONTROL:
             # Starts the motor if the previous control mode was not already `VELOCITY_CONTROL`
@@ -521,7 +521,7 @@ class OdriveEncoderHall:
             torque = 0.0
 
         torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
-        input_torque_motor = - self._sign() * abs(torque * self._reduction_ratio)
+        input_torque_motor = - self.get_sign() * abs(torque * self._reduction_ratio)
 
         if self._control_mode != ControlMode.TORQUE_CONTROL:
             self.torque_control_init(input_torque_motor, torque_ramp_rate_motor, ControlMode.TORQUE_CONTROL)
@@ -589,7 +589,7 @@ class OdriveEncoderHall:
                     self.odrv0.axis0.controller.input_torque = 0.0
                 else:
                     self.odrv0.axis0.controller.input_torque = \
-                        - self._sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
+                        - self.get_sign() * (abs(torque) + resisting_torque) * self._reduction_ratio
 
                 self.save_data(torque)
 
@@ -675,6 +675,9 @@ class OdriveEncoderHall:
         self.odrv0.axis0.controller.input_vel = 0.0
         self.odrv0.axis0.controller.input_torque = 0.0
         self._control_mode = ControlMode.STOP
+
+    def get_reduction_ratio(self):
+        return self._reduction_ratio
 
     def get_control_mode(self):
         return self._control_mode
@@ -818,6 +821,7 @@ class OdriveEncoderHall:
             "training_mode": self._training_mode.value,
             "resistor_current": self.odrv0.brake_resistor_current,
             "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
+            "brake_resistor_armed": self.odrv0.brake_resistor_armed,
         }
 
         save(data, file_path)
