@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/Antoine_torque1_0328_1.bio")
+data = load("XP/test_lin.bio")
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
 
@@ -84,6 +84,7 @@ plt.title("Torques")
 ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
 ax1.plot(data['time'][9: -10], smoothed_measured_torque, label="Smoothed measured torque")
 ax1.plot(data['time'][9: -10], smoothed_user_torque, label="Smoothed user torque")
+ax1.plot(data['time'], data["instruction"], label="Instruction")
 fig.legend(loc="upper right")
 
 # plt.figure()
@@ -136,6 +137,8 @@ dibusdt = (np.asarray(data["ibus"])[1:] - np.asarray(data["ibus"])[:-1])/(np.asa
 ax1.plot(data['time'], data["ibus"], label="ibus")
 ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
 ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
+ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
+# ax2.plot(data['time'], data['spin_box'], label="Spin box", color='tab:green')
 
 print(min(data["ibus"]))
 plt.title("ibus and velocity")

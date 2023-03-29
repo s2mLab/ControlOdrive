@@ -198,10 +198,10 @@ class App(QtWidgets.QMainWindow):
             hardware_and_security["resisting_torque_current"] / self.motor._reduction_ratio
 
         if self.motor.get_control_mode() != ControlMode.LINEAR_CONTROL:
-            if self.power == 0.0:
+            if self.linear == 0.0:
                 torque = 0.0
             else:
-                torque = vel_min * 2 * np.pi / 60
+                torque = self.linear * self.motor.get_velocity()
             self.motor.torque_control_init(
                 torque,
                 torque_ramp_rate * self.motor._reduction_ratio,
