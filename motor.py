@@ -692,12 +692,15 @@ class OdriveEncoderHall:
         Returns the measured user torque (the resisting torque has been subtracted).
         """
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
+        velocity = self.odrv0.axis0.encoder.vel_estimate
+        dyn_resisting_current = - 0.8 * velocity / abs(velocity) * abs(velocity)**(1/3.2)
+        i_user = i_measured - dyn_resisting_current
+        if abs(i_user) <= self._hardware_and_security["resisting_torque_current"]:
             return 0.0
         else:
-            sign = - i_measured / abs(i_measured)
+            sign = - i_user / abs(i_user)
             return self.odrv0.axis0.motor.config.torque_constant * \
-                (i_measured + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
+                (i_user + sign * self._hardware_and_security["resisting_torque_current"]) / self._reduction_ratio
 
     def save_data_to_file(self, file_path: str, spin_box: float = None, instruction: float = None):
         """
