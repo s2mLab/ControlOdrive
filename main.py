@@ -47,6 +47,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.velocity_pushButton.clicked.connect(self.velocity_mode)
         self.ui.torque_pushButton.clicked.connect(self.torque_mode)
         self.ui.linear_pushButton.clicked.connect(self.linear_mode)
+        self.ui.test_pushButton.clicked.connect(self.test_mode)
 
         # Instruction
         self.ui.instruction_spinBox.valueChanged.connect(self.change_instruction)
@@ -117,7 +118,6 @@ class App(QtWidgets.QMainWindow):
         torque_ramp_rate: float = 1.0,
         vel_min: float = 12.0,
     ):
-        self.motor.power_init()  # power_mode
         self.velocities = np.zeros(20)
 
         reduction_ratio = self.motor.get_reduction_ratio()
@@ -163,6 +163,66 @@ class App(QtWidgets.QMainWindow):
 
                 i += 1
         print("Out of the power thread")
+
+    def test_mode(self):
+        self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"])
+        self.ui.instruction_spinBox.setSingleStep(10)
+        self.ui.units_label.setText("(tr/min)")
+
+        test_thread = threading.Thread(target=self._test_thread, name="Test", daemon=True)
+        test_thread.start()
+
+    def _test_thread(
+        self,
+        torque_ramp_rate: float = 1.0,
+        vel_min: float = 12.0,
+    ):
+        self.velocities = np.zeros(20)
+        instruction_velocity = 30
+
+        reduction_ratio = self.motor.get_reduction_ratio()
+
+        resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
+            hardware_and_security["resisting_torque_current"] / reduction_ratio
+
+        if self.motor.get_control_mode() != ControlMode.TEST:
+            if self.power == 0.0:
+                self.instruction = 0.0
+            else:
+                self.instruction = vel_min * 2 * np.pi / 60
+            self.motor.torque_control_init(
+                self.instruction,
+                torque_ramp_rate * reduction_ratio,
+                ControlMode.TEST
+            )
+
+        self.change_mode()
+
+        t0 = time.time()
+        f = 10
+        i = 0
+
+        while self.motor.get_control_mode() == ControlMode.TEST:
+            t1 = time.time()
+            if t1 - t0 > i / f:
+
+                if self.power == 0.0:
+                    self.motor.odrv0.axis0.controller.input_torque = 0.0
+                else:
+                    self.motor.odrv0.axis0.controller.input_torque = \
+                        - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
+
+                self.velocities[i % 20] = self.motor.get_velocity()
+
+                vel = np.mean(self.velocities[:min(i + 1, 20)])
+
+                if abs(vel) < instruction_velocity - 5:
+                    self.instruction += 100
+                elif abs(vel) > instruction_velocity + 5:
+                    self.instruction -= 0
+
+                i += 1
+        print("Out of the test thread")
 
     def velocity_mode(self):
         self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"])

@@ -45,6 +45,7 @@ class ControlMode(StrEnum):
     VELOCITY_CONTROL = "Velocity control"
     TORQUE_CONTROL = "Torque control"
     POWER_CONTROL = "Power control"
+    TEST = "Test"
 
 
 control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.POWER_CONTROL + ControlMode.LINEAR_CONTROL

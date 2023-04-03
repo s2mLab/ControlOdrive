@@ -135,6 +135,9 @@ class Ui_MainWindow(object):
         self.gridLayout.addLayout(self.save_verticalLayout, 1, 3, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout.addItem(spacerItem, 1, 2, 1, 1)
+        self.test_pushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.test_pushButton.setObjectName("test_pushButton")
+        self.gridLayout.addWidget(self.test_pushButton, 1, 0, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -167,6 +170,7 @@ class Ui_MainWindow(object):
         self.save_lineEdit.setText(_translate("MainWindow", "XP_participantX"))
         self.save_start_pushButton.setText(_translate("MainWindow", "Start"))
         self.save_stop_pushButton.setText(_translate("MainWindow", "Stop"))
+        self.test_pushButton.setText(_translate("MainWindow", "Test"))
 
 
 if __name__ == "__main__":
