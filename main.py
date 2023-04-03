@@ -30,9 +30,10 @@ class App(QtWidgets.QMainWindow):
 
         self.run = True
         self.instruction = np.inf
+        self.rd = random.randint(0, 1000)
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
-        self.motor.config_watchdog(True, 1.5)
+        self.motor.config_watchdog(True, 0.5)
 
         self.ui.BAU_pushButton.clicked.connect(self.bau)
 
@@ -123,24 +124,34 @@ class App(QtWidgets.QMainWindow):
             vel_min: float = 12.0,
     ):
         self.velocities = np.zeros(20)
+        self.motor.odrv0.axis0.watchdog_feed()
 
         reduction_ratio = self.motor.get_reduction_ratio()
+        self.motor.odrv0.axis0.watchdog_feed()
 
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
                            hardware_and_security["resisting_torque_current"] / reduction_ratio
+        self.motor.odrv0.axis0.watchdog_feed()
 
         if self.motor.get_control_mode() != ControlMode.POWER_CONTROL:
+            self.motor.odrv0.axis0.watchdog_feed()
             if self.power == 0.0:
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.instruction = 0.0
             else:
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.instruction = vel_min * 2 * np.pi / 60
+            self.motor.odrv0.axis0.watchdog_feed()
             self.motor.torque_control_init(
                 self.instruction,
                 torque_ramp_rate * reduction_ratio,
                 ControlMode.POWER_CONTROL
             )
+            self.motor.odrv0.axis0.watchdog_feed()
 
+        self.motor.odrv0.axis0.watchdog_feed()
         self.change_mode()
+        self.motor.odrv0.axis0.watchdog_feed()
 
         t0 = time.time()
         f = 10
@@ -149,20 +160,30 @@ class App(QtWidgets.QMainWindow):
         while self.motor.get_control_mode() == ControlMode.POWER_CONTROL:
             t1 = time.time()
             if t1 - t0 > i / f:
+                self.motor.save_data_to_file(f'XP/gui_{self.rd}',
+                                             spin_box=self.ui.instruction_spinBox.value(),
+                                             instruction=self.instruction)
+                self.motor.odrv0.axis0.watchdog_feed()
 
                 if self.power == 0.0:
+                    self.motor.odrv0.axis0.watchdog_feed()
                     self.motor.odrv0.axis0.controller.input_torque = 0.0
                 else:
+                    self.motor.odrv0.axis0.watchdog_feed()
                     self.motor.odrv0.axis0.controller.input_torque = \
                         - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
 
                 self.velocities[i % 20] = self.motor.get_velocity()
+                self.motor.odrv0.axis0.watchdog_feed()
 
                 vel = np.mean(self.velocities[:min(i + 1, 20)])
+                self.motor.odrv0.axis0.watchdog_feed()
 
                 if abs(vel) < vel_min:
+                    self.motor.odrv0.axis0.watchdog_feed()
                     self.instruction = self.power / (vel_min * 2 * np.pi / 60)
                 else:
+                    self.motor.odrv0.axis0.watchdog_feed()
                     self.instruction = self.power / (abs(vel) * 2 * np.pi / 60)
 
                 i += 1
@@ -179,15 +200,16 @@ class App(QtWidgets.QMainWindow):
     def _test_thread(
             self,
             torque_ramp_rate: float = 2.0,
-            vel_min: float = 12.0,
     ):
+        self.motor.odrv0.axis0.watchdog_feed()
         self.velocities = np.zeros(20)
         instruction_velocity = 10
-
+        self.motor.odrv0.axis0.watchdog_feed()
         reduction_ratio = self.motor.get_reduction_ratio()
-
+        self.motor.odrv0.axis0.watchdog_feed()
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
                            hardware_and_security["resisting_torque_current"] / reduction_ratio
+        self.motor.odrv0.axis0.watchdog_feed()
 
         if self.motor.get_control_mode() != ControlMode.TEST:
             self.instruction = 5
@@ -196,9 +218,9 @@ class App(QtWidgets.QMainWindow):
                 torque_ramp_rate * reduction_ratio,
                 ControlMode.TEST
             )
-
+        self.motor.odrv0.axis0.watchdog_feed()
         self.change_mode()
-
+        self.motor.odrv0.axis0.watchdog_feed()
         t0 = time.time()
         f = 10
         i = 0
@@ -206,19 +228,23 @@ class App(QtWidgets.QMainWindow):
         while self.motor.get_control_mode() == ControlMode.TEST:
             t1 = time.time()
             if t1 - t0 > i / f:
-
+                self.motor.odrv0.axis0.watchdog_feed()
+                self.motor.save_data_to_file(f'XP/gui_{self.rd}',
+                                             spin_box=self.ui.instruction_spinBox.value(),
+                                             instruction=self.instruction)
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.motor.odrv0.axis0.controller.input_torque = \
                     - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.velocities[i % 20] = self.motor.get_velocity()
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 vel = np.mean(self.velocities[:min(i + 1, 20)])
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 if abs(vel) < instruction_velocity - 5:
                     self.instruction = 5
                 elif abs(vel) > instruction_velocity + 5:
                     self.instruction = 0
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 i += 1
         print("Out of the test thread")
 
@@ -253,27 +279,31 @@ class App(QtWidgets.QMainWindow):
     ):
         self.linear = 0.0
         self.velocities = np.zeros(20)
-
+        self.motor.odrv0.axis0.watchdog_feed()
         reduction_ratio = self.motor.get_reduction_ratio()
-
+        self.motor.odrv0.axis0.watchdog_feed()
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
                            hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         torque = 0.0
-
+        self.motor.odrv0.axis0.watchdog_feed()
         if self.motor.get_control_mode() != ControlMode.LINEAR_CONTROL:
             if self.linear == 0.0:
+                self.motor.odrv0.axis0.watchdog_feed()
                 torque = 0.0
             else:
+                self.motor.odrv0.axis0.watchdog_feed()
                 torque = self.linear * self.motor.get_velocity()
+            self.motor.odrv0.axis0.watchdog_feed()
             self.motor.torque_control_init(
                 torque,
                 torque_ramp_rate * reduction_ratio,
                 ControlMode.LINEAR_CONTROL
             )
+            self.motor.odrv0.axis0.watchdog_feed()
 
         self.change_mode()
-
+        self.motor.odrv0.axis0.watchdog_feed()
         t0 = time.time()
         f = 10
         i = 0
@@ -281,18 +311,22 @@ class App(QtWidgets.QMainWindow):
         while self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
             t1 = time.time()
             if t1 - t0 > i / f:
+                self.motor.save_data_to_file(f'XP/gui_{self.rd}',
+                                             spin_box=self.ui.instruction_spinBox.value(),
+                                             instruction=self.instruction)
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.instruction = - self.motor.get_sign() * (abs(torque) + resisting_torque) * reduction_ratio
                 self.motor.odrv0.axis0.controller.input_torque = self.instruction
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 self.velocities[i % 20] = self.motor.get_velocity()
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 vel = np.mean(self.velocities[:min(i + 1, 20)])
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 if abs(vel) < vel_min:
                     torque = self.linear_coeff * vel_min
                 else:
                     torque = self.linear_coeff * abs(vel)
-
+                self.motor.odrv0.axis0.watchdog_feed()
                 i += 1
         print("Out of the linear thread")
 
@@ -313,11 +347,9 @@ class App(QtWidgets.QMainWindow):
         """
         To be called by a daemon thread.
         """
-        rd = random.randint(0, 1000)
-
         while self.run:
             self.motor.odrv0.axis0.watchdog_feed()
-            self.motor.save_data_to_file(f'XP/gui_{rd}',
+            self.motor.save_data_to_file(f'XP/gui_{self.rd}',
                                          spin_box=self.ui.instruction_spinBox.value(),
                                          instruction=self.instruction)
             self.motor.odrv0.axis0.watchdog_feed()
@@ -334,9 +366,9 @@ class App(QtWidgets.QMainWindow):
                 f"{self.motor.odrv0.axis0.controller.error},"
                 f"{self.motor.odrv0.axis0.encoder.error},"
                 f"{self.motor.odrv0.axis0.motor.error},"
-                f"{self.motor.odrv0.axis0.sensorless_estimator.error} |"
-                f"{self.motor.odrv0.brake_resistor_armed},"
-                f"{self.motor.odrv0.brake_resistor_saturated}"
+                f"{self.motor.odrv0.axis0.sensorless_estimator.error} | "
+                f"{self.motor.odrv0.brake_resistor_armed}, "
+                f"{self.motor.odrv0.brake_resistor_saturated} "
                 f"{self.motor.odrv0.brake_resistor_current:.2f}"
             )
             self.motor.odrv0.axis0.watchdog_feed()
