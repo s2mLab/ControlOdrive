@@ -3,9 +3,13 @@ import sys
 import random
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import *
-
+from odrive.enums import (
+    AXIS_STATE_IDLE,
+    AXIS_STATE_CLOSED_LOOP_CONTROL,
+    CONTROL_MODE_TORQUE_CONTROL,
+    INPUT_MODE_TORQUE_RAMP,
+)
 from motor import *
-
 
 with open("parameters/hardware_and_security.json", "r") as hardware_and_security_file:
     hardware_and_security = json.load(hardware_and_security_file)
@@ -114,16 +118,16 @@ class App(QtWidgets.QMainWindow):
         power_control_thread.start()
 
     def _power_thread(
-        self,
-        torque_ramp_rate: float = 1.0,
-        vel_min: float = 12.0,
+            self,
+            torque_ramp_rate: float = 1.0,
+            vel_min: float = 12.0,
     ):
         self.velocities = np.zeros(20)
 
         reduction_ratio = self.motor.get_reduction_ratio()
 
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-            hardware_and_security["resisting_torque_current"] / reduction_ratio
+                           hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         if self.motor.get_control_mode() != ControlMode.POWER_CONTROL:
             if self.power == 0.0:
@@ -173,9 +177,9 @@ class App(QtWidgets.QMainWindow):
         test_thread.start()
 
     def _test_thread(
-        self,
-        torque_ramp_rate: float = 2.0,
-        vel_min: float = 12.0,
+            self,
+            torque_ramp_rate: float = 2.0,
+            vel_min: float = 12.0,
     ):
         self.velocities = np.zeros(20)
         instruction_velocity = 10
@@ -183,7 +187,7 @@ class App(QtWidgets.QMainWindow):
         reduction_ratio = self.motor.get_reduction_ratio()
 
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-            hardware_and_security["resisting_torque_current"] / reduction_ratio
+                           hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         if self.motor.get_control_mode() != ControlMode.TEST:
             self.instruction = 5
@@ -243,9 +247,9 @@ class App(QtWidgets.QMainWindow):
         linear_control_thread.start()
 
     def _linear_thread(
-        self,
-        torque_ramp_rate: float = 1.0,
-        vel_min: float = 12.0,
+            self,
+            torque_ramp_rate: float = 1.0,
+            vel_min: float = 12.0,
     ):
         self.linear = 0.0
         self.velocities = np.zeros(20)
@@ -253,7 +257,7 @@ class App(QtWidgets.QMainWindow):
         reduction_ratio = self.motor.get_reduction_ratio()
 
         resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-            hardware_and_security["resisting_torque_current"] / reduction_ratio
+                           hardware_and_security["resisting_torque_current"] / reduction_ratio
 
         torque = 0.0
 
@@ -335,6 +339,26 @@ class App(QtWidgets.QMainWindow):
                 f"{self.motor.odrv0.brake_resistor_saturated}"
                 f"{self.motor.odrv0.brake_resistor_current:.2f}"
             )
+            self.motor.odrv0.axis0.watchdog_feed()
+            if (
+                    self.motor.get_control_mode() == ControlMode.VELOCITY_CONTROL
+                    and self.motor.get_training_mode() == TrainingMode.ECCENTRIC
+                    and abs(self.motor.get_iq_setpoint()) > 10.0
+                    and abs(self.motor.get_velocity()) < 5.0
+            ):
+                self.motor.odrv0.axis0.watchdog_feed()
+                self.motor.odrv0.requested_state = AXIS_STATE_IDLE
+
+                # self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+                # self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
+                # self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
+                #
+                # self.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
+                # self.odrv0.axis0.controller.input_torque = 0.0
+                #
+                # # Starts the motor
+                # self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
             self.motor.odrv0.axis0.watchdog_feed()
 
     def save_start(self):
