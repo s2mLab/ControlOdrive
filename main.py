@@ -5,13 +5,16 @@ import sys
 import random
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import *
-from odrive.enums import (
-    AXIS_STATE_IDLE,
-    AXIS_STATE_CLOSED_LOOP_CONTROL,
-    CONTROL_MODE_TORQUE_CONTROL,
-    INPUT_MODE_TORQUE_RAMP,
-)
+
 from motor import *
+from enums import(
+    ODriveMotorError,
+    ODriveSensorlessEstimatorError,
+    ODriveError,
+    ODriveAxisError,
+    ODriveEncoderError,
+    ODriveControllerError,
+)
 
 with open("parameters/hardware_and_security.json", "r") as hardware_and_security_file:
     hardware_and_security = json.load(hardware_and_security_file)
@@ -345,6 +348,17 @@ class App(QtWidgets.QMainWindow):
         elif control_mode == ControlMode.LINEAR_CONTROL:
             self.linear_coeff = self.ui.instruction_spinBox.value()
 
+    def _traduce_error(self, decim_number, odrive_enum):
+        hex_number = "{0:x}".format(decim_number)
+        res = ""
+        for i, j in enumerate(hex_number[::-1]):
+            if j != '0':
+                for member in odrive_enum.__members__.values():
+                    if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
+                        res += member.name
+                        res += ", "
+        return res
+
     def _data(self):
         """
         To be called by a daemon thread.
@@ -363,12 +377,12 @@ class App(QtWidgets.QMainWindow):
             self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.2f}")
             self.motor.odrv0.axis0.watchdog_feed()
             self.ui.errors_label.setText(
-                f"{self.motor.odrv0.error},"
-                f"{self.motor.odrv0.axis0.error},"
-                f"{self.motor.odrv0.axis0.controller.error},"
-                f"{self.motor.odrv0.axis0.encoder.error},"
-                f"{self.motor.odrv0.axis0.motor.error},"
-                f"{self.motor.odrv0.axis0.sensorless_estimator.error} | "
+                f"{self._traduce_error(self.motor.odrv0.error, ODriveError)},"
+                f"{self._traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)},"
+                f"{self._traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)},"
+                f"{self._traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)},"
+                f"{self._traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)},"
+                f"{self._traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)} | "
                 f"{self.motor.odrv0.brake_resistor_armed}, "
                 f"{self.motor.odrv0.brake_resistor_saturated} "
                 f"{self.motor.odrv0.brake_resistor_current:.2f}"
@@ -394,7 +408,11 @@ class App(QtWidgets.QMainWindow):
 
     def _vel_ecc_thread(self):
         self.motor.vel_ecc_secu()
+        self.ui.control_label.setText(
+            "The motor will restart in a few seconds, please don't force against it until it has reached its velocity"
+        )
         self.motor.velocity_control(self.ui.instruction_spinBox.value())
+        self.ui.control_label.setText(self.motor.get_control_mode().value)
 
     def save_start(self):
         # ToDo: Implement this for real.

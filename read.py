@@ -3,7 +3,16 @@ import matplotlib.pyplot as plt
 
 from save_and_load import load
 
-data = load("XP/gui_74.bio")
+from enums import(
+    ODriveMotorError,
+    ODriveSensorlessEstimatorError,
+    ODriveError,
+    ODriveAxisError,
+    ODriveEncoderError,
+    ODriveControllerError,
+)
+
+data = load("XP/Kevin_torque_ecc_crash_1.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
@@ -167,15 +176,27 @@ plt.plot(data["controller_error"])
 plt.plot(data["encoder_error"])
 plt.plot(data["motor_error"])
 plt.plot(data["sensorless_estimator_error"])
-print(data["error"][-1],
-      data["axis_error"][-1],
-      data["controller_error"][-1],
-      data["encoder_error"][-1],
-      data["motor_error"][-1],
-      data["sensorless_estimator_error"][-1],
-      data["brake_resistor_saturated"][-1], data["brake_resistor_saturated"][-1],
-      # data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
-      )
+
+
+def _traduce_error(decim_number, odrive_enum):
+    hex_number = "{0:x}".format(decim_number)
+    res = ""
+    for i, j in enumerate(hex_number[::-1]):
+        if j != '0':
+            for member in odrive_enum.__members__.values():
+                if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
+                    res += member.name
+                    res += ", "
+    return res
+
+print(
+    f"{_traduce_error(data['error'][-1], ODriveError)}"
+    f"{_traduce_error(data['axis_error'][-1], ODriveAxisError)}"
+    f"{_traduce_error(data['controller_error'][-1], ODriveControllerError)}"
+    f"{_traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
+    f"{_traduce_error(data['motor_error'][-1], ODriveMotorError)}"
+    f"{_traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}")
+
 plt.legend()
 
 plt.show()
