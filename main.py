@@ -377,15 +377,15 @@ class App(QtWidgets.QMainWindow):
             self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.2f}")
             self.motor.odrv0.axis0.watchdog_feed()
             self.ui.errors_label.setText(
-                f"{self._traduce_error(self.motor.odrv0.error, ODriveError)},"
-                f"{self._traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)},"
-                f"{self._traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)},"
-                f"{self._traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)},"
-                f"{self._traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)},"
-                f"{self._traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)} | "
-                f"{self.motor.odrv0.brake_resistor_armed}, "
-                f"{self.motor.odrv0.brake_resistor_saturated} "
-                f"{self.motor.odrv0.brake_resistor_current:.2f}"
+                f"{self._traduce_error(self.motor.odrv0.error, ODriveError)}"
+                f"{self._traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
+                f"{self._traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
+                f"{self._traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
+                f"{self._traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
+                f"{self._traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
+                f"brake resistor armed: {self.motor.odrv0.brake_resistor_armed}, "
+                f"brake resistor saturated: {self.motor.odrv0.brake_resistor_saturated}, "
+                f"brake resistor current: {self.motor.odrv0.brake_resistor_current:.2f}"
             )
             self.motor.odrv0.axis0.watchdog_feed()
             if (
@@ -407,10 +407,10 @@ class App(QtWidgets.QMainWindow):
             self.motor.odrv0.axis0.watchdog_feed()
 
     def _vel_ecc_thread(self):
-        self.motor.vel_ecc_secu()
         self.ui.control_label.setText(
-            "The motor will restart in a few seconds, please don't force against it until it has reached its velocity"
+            "The motor will restart in a few seconds, please don't force against it until it has reached its velocity."
         )
+        self.motor.vel_ecc_secu()
         self.motor.velocity_control(self.ui.instruction_spinBox.value())
         self.ui.control_label.setText(self.motor.get_control_mode().value)
 
