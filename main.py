@@ -1,3 +1,5 @@
+import time
+
 from ergocycle_gui import Ui_MainWindow
 import sys
 import random
@@ -380,19 +382,19 @@ class App(QtWidgets.QMainWindow):
             ):
                 self.motor.odrv0.axis0.watchdog_feed()
 
-                self.motor.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
-                self.motor.odrv0.axis0.controller.input_torque = 0.0
+                vel_ecc_thread = threading.Thread(
+                    target=self._vel_ecc_thread, name="Security for velocity control", daemon=True
+                )
 
                 self.motor.odrv0.axis0.watchdog_feed()
-                self.motor.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.motor.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
-                self.motor.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
-
-                self.motor.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                vel_ecc_thread.start()
 
             self.motor.odrv0.axis0.watchdog_feed()
+
+    def _vel_ecc_thread(self):
+        self.motor.vel_ecc_secu()
+        self.motor.velocity_control(self.ui.instruction_spinBox.value())
 
     def save_start(self):
         # ToDo: Implement this for real.

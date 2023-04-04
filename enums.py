@@ -33,6 +33,7 @@ class StrEnum(str, Enum):
         """
         return name.lower()
 
+
 class ControlMode(StrEnum):
     """
     The control modes implemented.
@@ -46,6 +47,7 @@ class ControlMode(StrEnum):
     TORQUE_CONTROL = "Torque control"
     POWER_CONTROL = "Power control"
     TEST = "Test"
+    ECC_VEL_SECU = "Eccentric velocity security"
 
 
 control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.POWER_CONTROL + ControlMode.LINEAR_CONTROL

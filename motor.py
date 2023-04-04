@@ -472,6 +472,29 @@ class OdriveEncoderHall:
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.VELOCITY_CONTROL
 
+    def vel_ecc_secu(self):
+        self._control_mode = ControlMode.
+        self.odrv0.axis0.watchdog_feed()
+
+        self.odrv0.axis0.controller.config.torque_ramp_rate = 2.0
+        self.odrv0.axis0.controller.input_torque = 0.0
+
+        self.odrv0.axis0.watchdog_feed()
+
+        self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+
+        self.odrv0.axis0.watchdog_feed()
+
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
+        self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
+
+        self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+        t0 = time.time()
+
+        while time.time() - t0 < 1.0:
+            self.motor.odrv0.axis0.watchdog_feed()
+
     def torque_control_init(self, input_torque_motor, torque_ramp_rate_motor, control_mode):
         """
 
