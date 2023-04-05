@@ -14,10 +14,23 @@ from enums import(
     ODriveAxisError,
     ODriveEncoderError,
     ODriveControllerError,
+    ODriveCanError,
 )
 
 with open("parameters/hardware_and_security.json", "r") as hardware_and_security_file:
     hardware_and_security = json.load(hardware_and_security_file)
+
+
+def traduce_error(decim_number, odrive_enum):
+    hex_number = "{0:x}".format(decim_number)
+    res = ""
+    for i, j in enumerate(hex_number[::-1]):
+        if j != '0':
+            for member in odrive_enum.__members__.values():
+                if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
+                    res += member.name
+                    res += ", "
+    return res
 
 
 class App(QtWidgets.QMainWindow):
@@ -348,17 +361,6 @@ class App(QtWidgets.QMainWindow):
         elif control_mode == ControlMode.LINEAR_CONTROL:
             self.linear_coeff = self.ui.instruction_spinBox.value()
 
-    def _traduce_error(self, decim_number, odrive_enum):
-        hex_number = "{0:x}".format(decim_number)
-        res = ""
-        for i, j in enumerate(hex_number[::-1]):
-            if j != '0':
-                for member in odrive_enum.__members__.values():
-                    if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
-                        res += member.name
-                        res += ", "
-        return res
-
     def _data(self):
         """
         To be called by a daemon thread.
@@ -377,12 +379,13 @@ class App(QtWidgets.QMainWindow):
             self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.2f}")
             self.motor.odrv0.axis0.watchdog_feed()
             self.ui.errors_label.setText(
-                f"{self._traduce_error(self.motor.odrv0.error, ODriveError)}"
-                f"{self._traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
-                f"{self._traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
-                f"{self._traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
-                f"{self._traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
-                f"{self._traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
+                f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
+                f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
                 f"brake resistor armed: {self.motor.odrv0.brake_resistor_armed}, "
                 f"brake resistor saturated: {self.motor.odrv0.brake_resistor_saturated}, "
                 f"brake resistor current: {self.motor.odrv0.brake_resistor_current:.2f}"
