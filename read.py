@@ -13,7 +13,6 @@ from enums import(
 )
 
 data = load("XP/gui_732.bio")
-#577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
 
@@ -126,15 +125,20 @@ fig.legend(loc="upper right")
 fig, ax1 = plt.subplots()
 
 ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+# ax3 = ax1.twinx()
+# ax3.spines["right"].set_position(("axes", 1.05))
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('vbus')
 ax2.set_ylabel('Velocity (tr/min)')
-
+# ax3.set_ylabel('Brake resistor saturated')
 ax1.plot(data['time'], data["vbus"], label="vbus")
-ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
+# ax3.plot(data['time'], data["brake_resistor_saturated"], label="Brake resistor saturated")
 
-plt.title("vbus and velocity")
-fig.legend(loc="upper right")
+ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity of the pedals", color="r")
+ax2.plot(data['time'], - np.asarray(data["instruction"]), label="Velocity instruction of the pedals", color="m")
+
+plt.title("vbus, velocity of the pedal and saturation of the brake resistor")
+fig.legend()
 
 # ibus
 fig, ax1 = plt.subplots()
@@ -144,13 +148,18 @@ ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Current (A)')
 ax2.set_ylabel('Velocity (tr/min)')
 
+# ax2.spines["right"].set_position(("axes", 1.05))
+ax2.set_ylabel('Brake resistor saturated')
+ax2.plot(data['time'], data["brake_resistor_saturated"], label="Brake resistor saturated", color="green")
+
 dibusdt = (np.asarray(data["ibus"])[1:] - np.asarray(data["ibus"])[:-1])/(np.asarray(data["time"])[1:] - np.asarray(data["time"])[:-1])
 ax1.plot(data['time'], data["ibus"], label="ibus")
 ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
-ax2.plot(data['time'], data['velocity'], label="Velocity", color='tab:red')
-ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
+# ax2.plot(data['time'], data['velocity'], label="Velocity", color='tab:red')
+# ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
 # ax2.plot(data['time'], data['spin_box'], label="Spin box", color='tab:green')
 fig.legend(loc="upper right")
+fig.suptitle("ibus, resistor current and saturation of the brake resistor")
 
 # # Issue 16
 fig, ax1 = plt.subplots()
