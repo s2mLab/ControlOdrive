@@ -12,7 +12,7 @@ from enums import(
     ODriveControllerError,
 )
 
-data = load("XP/Kevin_torque_ecc_crash_1.bio")
+data = load("XP/vel_ecc_crash_3.bio")
 #577
 
 # t_pb = data['time'][np.where(np.asarray(data["error"]) != 0)[0][0]]
@@ -65,9 +65,9 @@ ax2.plot(data['time'], - np.asarray(data["velocity"]), label="- Smoothed velocit
 
 plt.title("Currents and velocity")
 
-ax1.plot(data['time'], data["iq_measured"], label="Smoothed Iq measured")
+ax1.plot(data['time'], data["iq_measured"], label="Iq measured")
 # ax1.plot(data['time'], data["motor_error"])
-ax1.plot(data['time'], data["iq_setpoint"], label="Smoothed Iq setpoint")
+ax1.plot(data['time'], data["iq_setpoint"], label="Iq setpoint")
 # ax1.plot(data['time'], data["instruction"], label="Instruction")
 # ax1.plot(data['time'], data["spin_box"], label="Spin box")
 ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
@@ -82,21 +82,21 @@ fig.legend(loc="upper right")
 # plt.ylabel("Velocity (tr/min)")
 # plt.legend()
 
-# Torques
-fig, ax1 = plt.subplots()
-
-ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('Torque (Nm)')
-ax2.set_ylabel('Velocity (tr/min)')
-
-plt.title("Torques")
-
-ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
-ax1.plot(data['time'][9: -10], smoothed_measured_torque, label="Smoothed measured torque")
-ax1.plot(data['time'][9: -10], - smoothed_user_torque, label="Smoothed user torque")
-ax2.plot(data['time'], data["instruction"], label="Instruction")
-fig.legend(loc="upper right")
+# # Torques
+# fig, ax1 = plt.subplots()
+#
+# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+# ax1.set_xlabel('Time (s)')
+# ax1.set_ylabel('Torque (Nm)')
+# ax2.set_ylabel('Velocity (tr/min)')
+#
+# plt.title("Torques")
+#
+# ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
+# ax1.plot(data['time'][9: -10], smoothed_measured_torque, label="Smoothed measured torque")
+# ax1.plot(data['time'][9: -10], - smoothed_user_torque, label="Smoothed user torque")
+# ax2.plot(data['time'], data["instruction"], label="Instruction")
+# fig.legend(loc="upper right")
 
 # plt.figure()
 # plt.title("Torque")
@@ -106,21 +106,21 @@ fig.legend(loc="upper right")
 # plt.ylabel("Torque (Nm)")
 # plt.legend()
 
-# Powers
-fig, ax1 = plt.subplots()
-plt.title("Powers")
-
-ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('Powers(W)')
-ax2.set_ylabel('Velocity (tr/min)')
-
-ax1.plot(data['time'][14: -15], smoothed_electrical_power, label="Smoothed electrical power")
-ax1.plot(data['time'][9: -10], smoothed_mechanical_power, label="Smoothed mechanical power (user + resisting torque)")
-ax1.plot(data['time'][9: -10], abs(smoothed_user_power), label="User power")
-ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
-
-fig.legend(loc="upper right")
+# # Powers
+# fig, ax1 = plt.subplots()
+# plt.title("Powers")
+#
+# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+# ax1.set_xlabel('Time (s)')
+# ax1.set_ylabel('Powers(W)')
+# ax2.set_ylabel('Velocity (tr/min)')
+#
+# ax1.plot(data['time'][14: -15], smoothed_electrical_power, label="Smoothed electrical power")
+# ax1.plot(data['time'][9: -10], smoothed_mechanical_power, label="Smoothed mechanical power (user + resisting torque)")
+# ax1.plot(data['time'][9: -10], abs(smoothed_user_power), label="User power")
+# ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
+#
+# fig.legend(loc="upper right")
 
 # vbus
 fig, ax1 = plt.subplots()
@@ -147,25 +147,25 @@ ax2.set_ylabel('Velocity (tr/min)')
 dibusdt = (np.asarray(data["ibus"])[1:] - np.asarray(data["ibus"])[:-1])/(np.asarray(data["time"])[1:] - np.asarray(data["time"])[:-1])
 ax1.plot(data['time'], data["ibus"], label="ibus")
 ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
-ax2.plot(data['time'][9: -10], smoothed_velocity, label="Smoothed velocity", color='tab:red')
+ax2.plot(data['time'], data['velocity'], label="Velocity", color='tab:red')
 ax2.plot(data['time'], data['instruction'], label="Instruction", color='tab:blue')
 # ax2.plot(data['time'], data['spin_box'], label="Spin box", color='tab:green')
 fig.legend(loc="upper right")
 
-# Issue 16
-fig, ax1 = plt.subplots()
-
-ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('Saturated (True/False)')
-ax2.set_ylabel('Velocity (tr/min)')
-
-ax1.plot(data["brake_resistor_saturated"], label="Saturated")
-ax2.plot(data["velocity"], label="Velocity", color='tab:red')
-
-print(min(data["ibus"]))
-plt.title("brake_resistor_saturated and velocity")
-fig.legend(loc="upper right")
+# # Issue 16
+# fig, ax1 = plt.subplots()
+#
+# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+# ax1.set_xlabel('Time (s)')
+# ax1.set_ylabel('Saturated (True/False)')
+# ax2.set_ylabel('Velocity (tr/min)')
+#
+# ax1.plot(data["brake_resistor_saturated"], label="Saturated")
+# ax2.plot(data["velocity"], label="Velocity", color='tab:red')
+#
+# print(min(data["ibus"]))
+# plt.title("brake_resistor_saturated and velocity")
+# fig.legend(loc="upper right")
 
 # Errors
 plt.figure()
