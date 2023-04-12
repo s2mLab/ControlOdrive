@@ -50,15 +50,40 @@ popt, pcov = curve_fit(res_i, v, iq, p0=[1, 0, 3])
 print(popt)
 
 
-plt.plot(v, iq)
-plt.plot(v, res_i(v, *popt))
-plt.show()
-
-
+# plt.plot(v, iq)
+# plt.plot(v, res_i(v, *popt))
+# plt.show()
+#
+#
 plt.plot(time, iq_setpoint_filtered)
 plt.plot(time, res_i(vel_estimate, *popt))
 plt.show()
 
+
+def get_user_torque(i_measured, velocity, resisting_torque_current, reduction_ratio, torque_constant):
+    user_torque = []
+    for i, v in zip(i_measured, velocity):
+        if v != 0.0:
+            dyn_resisting_current = - 0.8 * v / abs(v) * abs(v) ** (1 / 3.2)
+            i_user = i - dyn_resisting_current
+        else:
+            if abs(i) <= resisting_torque_current:
+                i_user = 0.0
+            else:
+                i_user = i
+        user_torque.append(torque_constant * i_user / reduction_ratio)
+    return user_torque
+
+user_torque = get_user_torque(np.asarray(monitoring_commands["iq_measured"]), np.asarray(monitoring_commands["vel_estimate"]), 0.42, 8 / 36 * 10 / 91, 0.1053225104205947)
+
+window_length = 30
+kernel = np.ones(window_length) / window_length
+smoothed_user_torque = np.convolve(user_torque, kernel, mode='valid')
+plt.plot(np.asarray(monitoring_commands["time"]), user_torque)
+plt.plot(np.asarray(monitoring_commands["time"])[int(window_length / 2) - 1: - int(window_length / 2)], smoothed_user_torque)
+plt.show()
+
+print(np.mean(user_torque))
 # Fit sur setpoint
 # [8.27031057e-01 1.30934379e-03 3.24180986e+00]
 # measured -0.008663893192693001

@@ -699,6 +699,13 @@ class OdriveEncoderHall:
         return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
             / self._reduction_ratio
 
+    def get_motor_torque(self):
+        """
+        Returns the measured torque.
+        """
+        return - self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
+            / self._reduction_ratio
+
     def get_user_torque(self):
         """
         Returns the measured user torque (the resisting torque has been subtracted).
@@ -730,6 +737,7 @@ class OdriveEncoderHall:
             "iq_setpoint": self.get_iq_setpoint(),
             "iq_measured": self.get_iq_measured(),
             "measured_torque": self.get_measured_torque(),
+            "motor_torque": self.get_motor_torque(),
             "user_torque": self.get_user_torque(),
             "velocity": self.get_velocity(),
             "angle": self.get_angle(),
@@ -744,6 +752,7 @@ class OdriveEncoderHall:
             "encoder_error": self.odrv0.axis0.encoder.error,
             "motor_error": self.odrv0.axis0.motor.error,
             "sensorless_estimator_error": self.odrv0.axis0.sensorless_estimator.error,
+            "can_error": self.odrv0.can.error,
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
             "training_mode": self._training_mode.value,
