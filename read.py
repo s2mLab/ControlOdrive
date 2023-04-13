@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/gui_351.bio")
+data = load("XP/Antoine_torque_cons_3.bio")
 
 # Moving average
 window_length = 20
@@ -26,6 +26,10 @@ smoothed_user_power = np.convolve(data['user_power'], kernel, mode='valid')
 smoothed_mechanical_power = np.convolve(data['mechanical_power'], kernel, mode='valid')
 smoothed_electrical_power = np.convolve(data['electrical_power'], kernel, mode='valid')
 
+plt.plot(data['time'], data['ramp_instruction'], label="Ramp instruction")
+plt.plot(data['time'], data['instruction'], label="Instruction")
+plt.plot(data['time'], data['spin_box'], label="Spin box")
+plt.legend()
 # Currents
 plt.figure()
 
@@ -81,6 +85,17 @@ ax1.plot(
     smoothed_user_torque,
     label="Smoothed user torque"
 )
+ax1.plot(
+    data['time'],
+    np.asarray(data['instruction']),
+    label="Instruction",
+)
+ax1.plot(
+    data['time'],
+    - np.asarray(data['spin_box']),
+    label="Spin box",
+)
+
 fig.legend(loc="upper right")
 
 # Powers

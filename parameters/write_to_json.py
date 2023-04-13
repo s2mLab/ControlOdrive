@@ -6,8 +6,8 @@ with open("hardware_and_security.json", "r") as hardware_and_security_file:
 
 dictionary = {
     "enable_dc_bus_overvoltage_ramp": True,
-    "dc_bus_overvoltage_ramp_start": 48.2,
-    "dc_bus_overvoltage_ramp_end": 48.35,
+    "dc_bus_overvoltage_ramp_start": 48.0,
+    "dc_bus_overvoltage_ramp_end": 50.0,
     "gpio9_mode": GPIO_MODE_DIGITAL,  # The pins the encoder is connected to
     "gpio10_mode": GPIO_MODE_DIGITAL,
     "gpio11_mode": GPIO_MODE_DIGITAL,
@@ -49,7 +49,8 @@ dictionary = {
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8 / 36 * 10 / 91,
-    "pedals_accel_lim": 1080,  # tr/(min^2) of the pedals
+    "pedals_accel_lim": 18,  # tr/(min^2) of the pedals
+    "torque_ramp_rate_lim": 5,  # Nm/s
     "maximal_velocity_stop": 15,  # tr/s of the pedals
     "resisting_current_coeff_proportional": hardware_and_security["resisting_current_coeff_proportional"],
     "resisting_current_coeff_power": hardware_and_security["resisting_current_coeff_power"],

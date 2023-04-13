@@ -36,13 +36,6 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
-       <widget class="QPushButton" name="torque_pushButton">
-        <property name="text">
-         <string>Torque control</string>
-        </property>
-       </widget>
-      </item>
       <item row="5" column="0">
        <widget class="QPushButton" name="linear_pushButton">
         <property name="text">
@@ -126,13 +119,6 @@
         </item>
        </layout>
       </item>
-      <item row="4" column="0">
-       <widget class="QPushButton" name="velocity_pushButton">
-        <property name="text">
-         <string>Velocity control</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="2">
        <layout class="QVBoxLayout" name="instructions_verticalLayout">
         <item>
@@ -172,6 +158,20 @@
           </item>
           <item>
            <widget class="QLabel" name="units_label">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="acceleration_horizontalLayout">
+          <item>
+           <widget class="QSpinBox" name="acceleration_spinBox"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="acceleration_units_label">
             <property name="text">
              <string/>
             </property>
@@ -225,13 +225,6 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="0">
-       <widget class="QPushButton" name="test_pushButton">
-        <property name="text">
-         <string>Test</string>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="4">
        <layout class="QHBoxLayout" name="power_horizontalLayout">
         <item>
@@ -258,6 +251,20 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="velocity_pushButton">
+        <property name="text">
+         <string>Velocity control</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="torque_pushButton">
+        <property name="text">
+         <string>Torque control</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
