@@ -1,7 +1,6 @@
 """
 This script was used to find the torque constant.
 """
-import json
 import matplotlib.pyplot as plt
 
 from motor import *

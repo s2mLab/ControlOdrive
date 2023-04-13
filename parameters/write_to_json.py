@@ -1,6 +1,8 @@
 import json
 from odrive.enums import GPIO_MODE_DIGITAL, MOTOR_TYPE_HIGH_CURRENT, ENCODER_MODE_HALL
 
+with open("hardware_and_security.json", "r") as hardware_and_security_file:
+    hardware_and_security = json.load(hardware_and_security_file)
 
 dictionary = {
     "enable_dc_bus_overvoltage_ramp": True,
@@ -49,6 +51,8 @@ dictionary = {
     "reduction_ratio": 8 / 36 * 10 / 91,
     "pedals_accel_lim": 1080,  # tr/(min^2) of the pedals
     "maximal_velocity_stop": 15,  # tr/s of the pedals
+    "resisting_current_coeff_proportional": hardware_and_security["resisting_current_coeff_proportional"],
+    "resisting_current_coeff_power": hardware_and_security["resisting_current_coeff_power"],
 }
 
 # Serializing json

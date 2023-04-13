@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/Antoine_with.bio")
+data = load("XP/gui_351.bio")
 
 # Moving average
 window_length = 20
@@ -104,7 +104,7 @@ ax1.plot(
 )
 ax1.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    abs(smoothed_user_power),
+    smoothed_user_power,
     label="User power"
 )
 ax2.plot(
@@ -161,7 +161,7 @@ plt.plot(data["controller_error"], label="Controller error")
 plt.plot(data["encoder_error"], label="Encoder error")
 plt.plot(data["motor_error"], label="Motor error")
 plt.plot(data["sensorless_estimator_error"], label="Sensorless estimator error")
-# plt.plot(data["can_error"], label="Can error")
+plt.plot(data["can_error"], label="Can error")
 
 
 def _traduce_error(decim_number, odrive_enum):

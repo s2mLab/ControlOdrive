@@ -1,7 +1,6 @@
 """
 This script was used to find the current corresponding to the resisting torque.
 """
-import json
 import matplotlib.pyplot as plt
 
 from motor import *

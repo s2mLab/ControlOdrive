@@ -1,5 +1,3 @@
-import time
-
 from ergocycle_gui import Ui_MainWindow
 import sys
 import random

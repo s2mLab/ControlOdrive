@@ -42,7 +42,7 @@ def load(filename, number_of_line=None):
             try:
                 data_tmp = pickle.load(file)
                 for key in data_tmp.keys():
-                    if key in data.keys():
+                    if key in data.keys() and data[key] is not None:
                         if isinstance(data[key], list) is True:
                             data[key].append(data_tmp[key])
                         else:

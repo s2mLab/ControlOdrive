@@ -68,6 +68,9 @@ class OdriveEncoderHall:
 
         self._gains_path = gains_path
 
+        self.resisting_current_coeff_proportional = self._hardware_and_security["resisting_current_coeff_proportional"]
+        self.resisting_current_coeff_power = self._hardware_and_security["resisting_current_coeff_power"]
+
         if file_path:
             self.file_path = file_path
         else:
@@ -713,7 +716,8 @@ class OdriveEncoderHall:
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
         velocity = self.odrv0.axis0.encoder.vel_estimate
         if velocity != 0.0:
-            dyn_resisting_current = - 0.8 * velocity / abs(velocity) * abs(velocity)**(1/3.2)
+            dyn_resisting_current = - self.resisting_current_coeff_proportional * velocity / abs(velocity)\
+                                    * abs(velocity)**(1/self.resisting_current_coeff_power)
             i_user = i_measured - dyn_resisting_current
         else:
             if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
