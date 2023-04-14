@@ -49,9 +49,9 @@ dictionary = {
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8 / 36 * 10 / 91,
-    "pedals_accel_lim": 30,  # (tr/min)/s of the pedals
+    "pedals_accel_lim": 31,  # (tr/min)/s of the pedals
     "torque_ramp_rate_lim": 5,  # Nm/s
-    "maximal_velocity_stop": 15,  # tr/s of the pedals
+    "maximal_velocity_stop": 31,  # tr/s of the pedals
     "resisting_current_coeff_proportional": hardware_and_security["resisting_current_coeff_proportional"],
     "resisting_current_coeff_power": hardware_and_security["resisting_current_coeff_power"],
 }

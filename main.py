@@ -200,7 +200,7 @@ class App(QtWidgets.QMainWindow):
         """
         while self.run:
             self.motor.odrv0.axis0.watchdog_feed()
-            self.motor.save_data_to_file(f'XP/gui_{self.rd}',
+            self.motor.save_data_to_file(f'XP/preXP_{self.rd}',
                                          spin_box=self.spin_box,
                                          instruction=self.instruction,
                                          ramp_instruction=self.ramp_instruction,)

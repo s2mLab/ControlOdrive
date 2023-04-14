@@ -11,10 +11,10 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/gui_962.bio")
+data = load("XP/preXP_kevin_sprint.bio")
 
 # Moving average
-window_length = 366
+window_length = 20
 # /!\ bias because the time steps are not the same
 kernel = np.ones(window_length) / window_length
 smoothed_velocity = np.convolve(data['velocity'], kernel, mode='valid')
@@ -38,7 +38,7 @@ plt.plot(
     smoothed_velocity,
     label="Smoothed velocity"
 )
-plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
+# plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
 
 plt.legend()
 
@@ -62,8 +62,8 @@ plt.title("Currents")
 plt.ylabel("Current (A)")
 plt.xlabel("Time (s)")
 
-plt.plot(data['time'], np.asarray(data['iq_setpoint']), label="Iq setpoint")
 plt.plot(data['time'], np.asarray(data['iq_measured']), label="Iq measured")
+plt.plot(data['time'], np.asarray(data['iq_setpoint']), label="Iq setpoint")
 
 plt.legend(loc="upper right")
 
@@ -77,7 +77,7 @@ ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Current (A)')
 ax2.set_ylabel('Velocity (tr/min)')
 
-ax2.plot(data['time'], np.asarray(data["velocity"]), label="Smoothed velocity", color='k')
+ax2.plot(data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_velocity, label="Smoothed velocity", color='k')
 ax1.plot(data['time'], data["iq_measured"], label="Iq measured")
 ax1.plot(data['time'], data["iq_setpoint"], label="Iq setpoint")
 ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
@@ -100,30 +100,30 @@ plt.title("Torques")
 #     color='k'
 # )
 ax1.plot(
-    data['time'],
-    data['motor_torque'],
+    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
+    smoothed_motor_torque,
     label="Smoothed motor torque"
 )
 ax1.plot(
-    data['time'],
-    data['user_torque'],
-    label="User torque"
+    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
+    smoothed_user_torque,
+    label="Smoothed user torque"
 )
 ax1.plot(
     data['time'],
     np.asarray(data['instruction']),
     label="Instruction",
 )
-ax1.plot(
-    data['time'],
-    np.asarray(data['spin_box']),
-    label="Spin box",
-)
-ax1.plot(
-    data['time'],
-    np.asarray(data['spin_box']) * np.asarray(data['velocity']),
-    label="Spin box * velocity",
-)
+#ax1.plot(
+#    data['time'],
+#    np.asarray(data['spin_box']),
+#    label="Spin box",
+#)
+#ax1.plot(
+#    data['time'],
+#    np.asarray(data['spin_box']) * np.asarray(data['velocity']),
+#    label="Spin box * velocity",
+#)
 
 fig.legend(loc="upper right")
 
@@ -155,11 +155,6 @@ ax1.plot(
     data['time'],
     data['spin_box'],
     label="Spin_box"
-)
-ax1.plot(
-    data['time'],
-    data['instruction'],
-    label="Instruction"
 )
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
