@@ -26,7 +26,7 @@ dictionary = {
     # If you set this to a higher value than the true brake resistance then the ODrive will unnecessarily burn more
     # power than required during braking.
     "brake_resistance": 3.5,  # Ohms
-    "pedals_vel_limit": 120,  # tr/min of the pedals
+    "pedals_vel_limit": 66,  # tr/min of the pedals
     "vel_limit_tolerance": 2.0,  # tr/s of the motor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
@@ -49,7 +49,7 @@ dictionary = {
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8 / 36 * 10 / 91,
-    "pedals_accel_lim": 18,  # tr/(min^2) of the pedals
+    "pedals_accel_lim": 30,  # (tr/min)/s of the pedals
     "torque_ramp_rate_lim": 5,  # Nm/s
     "maximal_velocity_stop": 15,  # tr/s of the pedals
     "resisting_current_coeff_proportional": hardware_and_security["resisting_current_coeff_proportional"],

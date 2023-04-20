@@ -594,7 +594,7 @@ class OdriveEncoderHall:
 
     def stopping(
             self,
-            velocity_ramp_rate: float = 5.0,
+            velocity_ramp_rate: float = 30,
     ):
         """
         Starts the stopping sequence of the motor.
@@ -635,7 +635,7 @@ class OdriveEncoderHall:
     def stop(
         self,
         vel_stop: float = 10.0,
-        velocity_ramp_rate: float = 5.0,
+        velocity_ramp_rate: float = 30,
     ):
         """
         Stops the motor gently.

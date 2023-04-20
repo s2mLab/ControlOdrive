@@ -48,9 +48,9 @@ class App(QtWidgets.QMainWindow):
         self.motor = odrive_motor
 
         self.run = True
-        self.instruction = np.inf
-        self.ramp_instruction = np.inf
-        self.spin_box = np.inf
+        self.instruction = 0.0
+        self.ramp_instruction = 0.0
+        self.spin_box = 0.0
         self.rd = random.randint(0, 1000)
         data = threading.Thread(target=self._data, name="Data", daemon=True)
         data.start()
@@ -77,6 +77,8 @@ class App(QtWidgets.QMainWindow):
         # Instruction
         self.ui.instruction_spinBox.valueChanged.connect(self.change_instruction)
         self.ui.acceleration_spinBox.valueChanged.connect(self.change_instruction)
+        self.ui.instruction_spinBox.setEnabled(False)
+        self.ui.acceleration_spinBox.setEnabled(False)
 
         # Saving
         self.ui.save_stop_pushButton.setEnabled(False)
@@ -95,9 +97,9 @@ class App(QtWidgets.QMainWindow):
         self.change_mode()
         self.ui.instruction_spinBox.setValue(0)
         self.ui.acceleration_spinBox.setValue(0)
-        self.instruction = np.inf
-        self.spin_box = np.inf
-        self.ramp_instruction = np.inf
+        self.instruction = 0.0
+        self.spin_box = 0.0
+        self.ramp_instruction = 0.0
         self.ui.instruction_spinBox.setEnabled(False)
         self.ui.acceleration_spinBox.setEnabled(False)
         self.ui.training_comboBox.setEnabled(False)
@@ -129,8 +131,8 @@ class App(QtWidgets.QMainWindow):
         self.ui.acceleration_spinBox.setEnabled(not stop)
 
     def velocity_mode(self):
-        self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"])
-        self.ui.acceleration_spinBox.setRange(0, hardware_and_security["pedals_accel_lim"])
+        self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"] - 1)
+        self.ui.acceleration_spinBox.setRange(0, hardware_and_security["pedals_accel_lim"] - 1)
         self.ui.instruction_spinBox.setSingleStep(10)
         self.ui.acceleration_spinBox.setSingleStep(5)
         self.ui.acceleration_spinBox.setValue(5)
@@ -167,7 +169,7 @@ class App(QtWidgets.QMainWindow):
     def linear_mode(self):
         self.ui.instruction_spinBox.setRange(0, 1.0)
         self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
-        self.ui.instruction_spinBox.setSingleStep(1)
+        self.ui.instruction_spinBox.setSingleStep(0.1)
         self.ui.acceleration_spinBox.setSingleStep(1)
         self.ui.acceleration_spinBox.setValue(2)
         self.ramp_instruction = 2.0
@@ -183,13 +185,13 @@ class App(QtWidgets.QMainWindow):
             self.spin_box = self.instruction = self.motor.get_sign() * self.ui.instruction_spinBox.value()
             self.motor.velocity_control(self.spin_box, self.ramp_instruction)
         elif control_mode == ControlMode.TORQUE_CONTROL:
-            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.spin_box = self.motor.get_sign() * self.ui.instruction_spinBox.value()
             self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
         elif control_mode == ControlMode.POWER_CONTROL:
-            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.spin_box = self.ui.instruction_spinBox.value()
             self.instruction = self.motor.power_control(self.spin_box, self.ramp_instruction)
         elif control_mode == ControlMode.LINEAR_CONTROL:
-            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.spin_box = self.ui.instruction_spinBox.value()
             self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
     def _data(self):
@@ -199,7 +201,7 @@ class App(QtWidgets.QMainWindow):
         while self.run:
             self.motor.odrv0.axis0.watchdog_feed()
             self.motor.save_data_to_file(f'XP/gui_{self.rd}',
-                                         spin_box=self.ui.instruction_spinBox.value(),
+                                         spin_box=self.spin_box,
                                          instruction=self.instruction,
                                          ramp_instruction=self.ramp_instruction,)
             self.motor.odrv0.axis0.watchdog_feed()

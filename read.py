@@ -11,10 +11,10 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/Antoine_linear_ecc.bio")
+data = load("XP/gui_962.bio")
 
 # Moving average
-window_length = 20
+window_length = 366
 # /!\ bias because the time steps are not the same
 kernel = np.ones(window_length) / window_length
 smoothed_velocity = np.convolve(data['velocity'], kernel, mode='valid')
@@ -100,28 +100,28 @@ plt.title("Torques")
 #     color='k'
 # )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_motor_torque,
+    data['time'],
+    data['motor_torque'],
     label="Smoothed motor torque"
 )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_user_torque,
-    label="Smoothed user torque"
+    data['time'],
+    data['user_torque'],
+    label="User torque"
 )
 ax1.plot(
     data['time'],
     np.asarray(data['instruction']),
     label="Instruction",
 )
-# ax1.plot(
-#     data['time'],
-#     np.asarray(data['spin_box']),
-#     label="Spin box",
-# )
 ax1.plot(
     data['time'],
-    np.abs(np.asarray(data['spin_box'])) * np.asarray(data['velocity']),
+    np.asarray(data['spin_box']),
+    label="Spin box",
+)
+ax1.plot(
+    data['time'],
+    np.asarray(data['spin_box']) * np.asarray(data['velocity']),
     label="Spin box * velocity",
 )
 
@@ -137,24 +137,29 @@ ax1.set_ylabel('Powers(W)')
 ax2.set_ylabel('Velocity (tr/min)')
 
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_electrical_power,
-    label="Smoothed electrical power"
+    data['time'],
+    data['electrical_power'],
+    label="Electrical power"
 )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_mechanical_power,
-    label="Smoothed mechanical power (user + resisting torque)"
+    data['time'],
+    data['mechanical_power'],
+    label="Mechanical power (user + resisting torque)"
 )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_user_power,
+    data['time'],
+    data['user_power'],
     label="User power"
 )
 ax1.plot(
     data['time'],
     data['spin_box'],
     label="Spin_box"
+)
+ax1.plot(
+    data['time'],
+    data['instruction'],
+    label="Instruction"
 )
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
