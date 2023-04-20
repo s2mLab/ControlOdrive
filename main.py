@@ -1,13 +1,14 @@
+import sys
+import random
 import numpy as np
 
 from ergocycle_gui import Ui_MainWindow
-import sys
-import random
+
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import *
 
 from motor import *
-from enums import(
+from enums import (
     ODriveMotorError,
     ODriveSensorlessEstimatorError,
     ODriveError,
@@ -21,8 +22,8 @@ with open("parameters/hardware_and_security.json", "r") as hardware_and_security
     hardware_and_security = json.load(hardware_and_security_file)
 
 
-def traduce_error(decim_number, odrive_enum):
-    hex_number = "{0:x}".format(decim_number)
+def traduce_error(decimal_number, odrive_enum):
+    hex_number = "{0:x}".format(decimal_number)
     res = ""
     for i, j in enumerate(hex_number[::-1]):
         if j != '0':
@@ -84,8 +85,6 @@ class App(QtWidgets.QMainWindow):
         self._save = False
         self._file_path = ""
 
-        self.power = 0.0
-        self.linear_coeff = 0.0
         self.velocities = np.zeros(20)
 
     def bau(self):
@@ -105,20 +104,8 @@ class App(QtWidgets.QMainWindow):
         self.ui.units_label.setText("")
         self.ui.acceleration_units_label.setText("")
 
-        self.motor.previous_control_mode = self.motor.get_control_mode()
-
         self.motor.stopping()
-        self.ui.control_label.setText("The motor is stopping")
-
-        # TODO: Put in the _data_thread
-        stopped = threading.Thread(target=self._stopped_thread, name="Data", daemon=True)
-        stopped.start()
-
-    def _stopped_thread(self):
-        self.motor.stopped()
-        self.ui.STOP_pushButton.setEnabled(True)
-        self.change_mode(stop=True)
-        self.ui.control_label.setText("The motor has stopped")
+        self.ui.control_label.setText("The motor is stopping. You can let the pedals go.")
 
     def change_training_mode(self):
         self.motor.set_training_mode(self.ui.training_comboBox.currentText())
@@ -126,8 +113,13 @@ class App(QtWidgets.QMainWindow):
     def change_mode(self, stop=False):
         self.ui.instruction_spinBox.setValue(0)
         self.spin_box = 0.0
+        control_mode = self.motor.get_control_mode()
         if not stop:
-            self.ui.control_label.setText(self.motor.get_control_mode().value)
+            if control_mode == ControlMode.VELOCITY_CONTROL:
+                self.ui.control_label.setText(f"You are in {control_mode.value} mode, "
+                                              f"you can force as soon as the velocity is stabilized.")
+            elif control_mode in control_modes_based_on_torque:
+                self.ui.control_label.setText(f"You are in {control_mode.value} mode, you can pedal now.")
         self.ui.velocity_pushButton.setEnabled(stop)
         self.ui.torque_pushButton.setEnabled(stop)
         self.ui.power_pushButton.setEnabled(stop)
@@ -136,101 +128,14 @@ class App(QtWidgets.QMainWindow):
         self.ui.instruction_spinBox.setEnabled(not stop)
         self.ui.acceleration_spinBox.setEnabled(not stop)
 
-    def power_mode(self):
-        self.ui.acceleration_spinBox.setValue(10)
-        self.ui.instruction_spinBox.setRange(
-            0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
-        )
-        self.ui.acceleration_spinBox.setRange(
-            0, int(hardware_and_security["pedals_accel_lim"] * hardware_and_security["torque_ramp_rate"])
-        )
-        self.ui.instruction_spinBox.setSingleStep(10)
-        self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.units_label.setText("(W)")
-        self.ui.acceleration_spinBox.setText("(W/s)")
-
-        power_control_thread = threading.Thread(target=self._power_thread, name="Power control", daemon=True)
-        power_control_thread.start()
-
-    def _power_thread(
-            self,
-            torque_ramp_rate: float = 1.0,
-            vel_min: float = 12.0,
-    ):
-        self.velocities = np.zeros(20)
-        self.motor.odrv0.axis0.watchdog_feed()
-
-        reduction_ratio = self.motor.get_reduction_ratio()
-        self.motor.odrv0.axis0.watchdog_feed()
-
-        resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-                           hardware_and_security["resisting_torque_current"] / reduction_ratio
-        self.motor.odrv0.axis0.watchdog_feed()
-
-        if self.motor.get_control_mode() != ControlMode.POWER_CONTROL:
-            self.motor.odrv0.axis0.watchdog_feed()
-            if self.power == 0.0:
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.instruction = 0.0
-            else:
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.instruction = vel_min * 2 * np.pi / 60
-            self.motor.odrv0.axis0.watchdog_feed()
-            self.motor.torque_control_init(
-                self.instruction,
-                torque_ramp_rate * reduction_ratio,
-                ControlMode.POWER_CONTROL
-            )
-            self.motor.odrv0.axis0.watchdog_feed()
-
-        self.motor.odrv0.axis0.watchdog_feed()
-        self.change_mode()
-        self.motor.odrv0.axis0.watchdog_feed()
-
-        t0 = time.time()
-        f = 10
-        i = 0
-
-        while self.motor.get_control_mode() == ControlMode.POWER_CONTROL:
-            t1 = time.time()
-            if t1 - t0 > i / f:
-                self.motor.save_data_to_file(f'XP/gui_{self.rd}',
-                                             spin_box=self.ui.instruction_spinBox.value(),
-                                             instruction=self.instruction)
-                self.motor.odrv0.axis0.watchdog_feed()
-
-                if self.power == 0.0:
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.motor.odrv0.axis0.controller.input_torque = 0.0
-                else:
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.motor.odrv0.axis0.controller.input_torque = \
-                        - self.motor.get_sign() * (abs(self.instruction) + resisting_torque) * reduction_ratio
-
-                self.velocities[i % 20] = self.motor.get_velocity()
-                self.motor.odrv0.axis0.watchdog_feed()
-
-                vel = np.mean(self.velocities[:min(i + 1, 20)])
-                self.motor.odrv0.axis0.watchdog_feed()
-
-                if abs(vel) < vel_min:
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.instruction = self.power / (vel_min * 2 * np.pi / 60)
-                else:
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.instruction = self.power / (abs(vel) * 2 * np.pi / 60)
-
-                i += 1
-        print("Out of the power thread")
-
     def velocity_mode(self):
         self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"])
         self.ui.acceleration_spinBox.setRange(0, hardware_and_security["pedals_accel_lim"])
         self.ui.instruction_spinBox.setSingleStep(10)
         self.ui.acceleration_spinBox.setSingleStep(5)
         self.ui.acceleration_spinBox.setValue(5)
-        self.ui.units_label.setText("(tr/min)")
-        self.ui.acceleration_units_label.setText("(tr/min^2)")
+        self.ui.units_label.setText("tr/min")
+        self.ui.acceleration_units_label.setText("(tr/min)/s")
         self.motor.velocity_control(0.0)
         self.change_mode()
 
@@ -241,98 +146,51 @@ class App(QtWidgets.QMainWindow):
         self.ui.acceleration_spinBox.setSingleStep(1)
         self.ui.acceleration_spinBox.setValue(2)
         self.ramp_instruction = 2.0
-        self.ui.units_label.setText("(Nm)")
-        self.ui.acceleration_units_label.setText("(Nm/s)")
+        self.ui.units_label.setText("Nm")
+        self.ui.acceleration_units_label.setText("Nm/s")
         self.instruction = self.motor.torque_control(0.0)
         self.change_mode()
 
-    def linear_mode(self):
+    def power_mode(self):
         self.ui.instruction_spinBox.setRange(
-            0, 100
+            0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
         )
-        self.ui.acceleration_spinBox.setRange(
-            0, 100
-        )
+        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
+        self.ui.instruction_spinBox.setSingleStep(10)
+        self.ui.acceleration_spinBox.setSingleStep(1)
+        self.ui.acceleration_spinBox.setValue(10)
+        self.ui.units_label.setText("W")
+        self.ui.acceleration_units_label.setText("Nm/s")
+        self.instruction = self.motor.power_control(0.0)
+        self.change_mode()
+
+    def linear_mode(self):
+        self.ui.instruction_spinBox.setRange(0, 1.0)
+        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
         self.ui.instruction_spinBox.setSingleStep(1)
         self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.units_label.setText("(Nm/(tr/min))")
-        self.ui.acceleration_units_label.setText("(Nm/(tr/min)/s)")
-
-        linear_control_thread = threading.Thread(target=self._linear_thread, name="Linear control", daemon=True)
-        linear_control_thread.start()
-
-    def _linear_thread(
-            self,
-            torque_ramp_rate: float = 1.0,
-            vel_min: float = 12.0,
-    ):
-        self.linear = 0.0
-        self.velocities = np.zeros(20)
-        self.motor.odrv0.axis0.watchdog_feed()
-        reduction_ratio = self.motor.get_reduction_ratio()
-        self.motor.odrv0.axis0.watchdog_feed()
-        resisting_torque = self.motor.odrv0.axis0.motor.config.torque_constant * \
-                           hardware_and_security["resisting_torque_current"] / reduction_ratio
-
-        torque = 0.0
-        self.motor.odrv0.axis0.watchdog_feed()
-        if self.motor.get_control_mode() != ControlMode.LINEAR_CONTROL:
-            if self.linear == 0.0:
-                self.motor.odrv0.axis0.watchdog_feed()
-                torque = 0.0
-            else:
-                self.motor.odrv0.axis0.watchdog_feed()
-                torque = self.linear * self.motor.get_velocity()
-            self.motor.odrv0.axis0.watchdog_feed()
-            self.motor.torque_control_init(
-                torque,
-                torque_ramp_rate * reduction_ratio,
-                ControlMode.LINEAR_CONTROL
-            )
-            self.motor.odrv0.axis0.watchdog_feed()
-
+        self.ui.acceleration_spinBox.setValue(2)
+        self.ramp_instruction = 2.0
+        self.ui.units_label.setText("Nm/(tr/min)")
+        self.ui.acceleration_units_label.setText("Nm/s")
+        self.instruction = self.motor.linear_control(0.0)
         self.change_mode()
-        self.motor.odrv0.axis0.watchdog_feed()
-        t0 = time.time()
-        f = 10
-        i = 0
-
-        while self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
-            t1 = time.time()
-            if t1 - t0 > i / f:
-                self.motor.save_data_to_file(f'XP/gui_{self.rd}',
-                                             spin_box=self.ui.instruction_spinBox.value(),
-                                             instruction=self.instruction)
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.instruction = - self.motor.get_sign() * (abs(torque) + resisting_torque) * reduction_ratio
-                self.motor.odrv0.axis0.controller.input_torque = self.instruction
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.velocities[i % 20] = self.motor.get_velocity()
-                self.motor.odrv0.axis0.watchdog_feed()
-                vel = np.mean(self.velocities[:min(i + 1, 20)])
-                self.motor.odrv0.axis0.watchdog_feed()
-                if abs(vel) < vel_min:
-                    torque = self.linear_coeff * vel_min
-                else:
-                    torque = self.linear_coeff * abs(vel)
-                self.motor.odrv0.axis0.watchdog_feed()
-                i += 1
-        print("Out of the linear thread")
 
     def change_instruction(self):
         control_mode = self.motor.get_control_mode()
-        if control_mode == ControlMode.POWER_CONTROL:
-            self.power = self.ui.instruction_spinBox.value()
-        elif control_mode == ControlMode.VELOCITY_CONTROL:
-            self.spin_box = self.instruction = self.ui.instruction_spinBox.value()
-            self.ramp_instruction = self.ui.acceleration_spinBox.value()
+        self.ramp_instruction = self.ui.acceleration_spinBox.value()
+        if control_mode == ControlMode.VELOCITY_CONTROL:
+            self.spin_box = self.instruction = self.motor.get_sign() * self.ui.instruction_spinBox.value()
             self.motor.velocity_control(self.spin_box, self.ramp_instruction)
         elif control_mode == ControlMode.TORQUE_CONTROL:
-            self.spin_box = self.ui.instruction_spinBox.value()
-            self.ramp_instruction = self.ui.acceleration_spinBox.value()
-            self. instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
+            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
+        elif control_mode == ControlMode.POWER_CONTROL:
+            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.instruction = self.motor.power_control(self.spin_box, self.ramp_instruction)
         elif control_mode == ControlMode.LINEAR_CONTROL:
-            self.linear_coeff = self.ui.instruction_spinBox.value()
+            self.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
     def _data(self):
         """
@@ -372,13 +230,6 @@ class App(QtWidgets.QMainWindow):
             ):
                 self.motor.odrv0.axis0.watchdog_feed()
                 # TODO: Please don't force too much against the motor.
-                # vel_ecc_thread = threading.Thread(
-                #     target=self._vel_ecc_thread, name="Security for velocity control", daemon=True
-                # )
-                #
-                # self.motor.odrv0.axis0.watchdog_feed()
-                #
-                # vel_ecc_thread.start()
 
             # If the motor is in torque control, the torque input needs to be updated in function of the velocity
             # because of the resisting torque.
@@ -386,6 +237,32 @@ class App(QtWidgets.QMainWindow):
             if self.motor.get_control_mode() == ControlMode.TORQUE_CONTROL:
                 self.motor.odrv0.axis0.watchdog_feed()
                 self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
+
+            # The power control mode is based on the torque control mode, but the torque input is calculated from the
+            # current velocity (torque_input = power / velocity and resiting torque).
+            if self.motor.get_control_mode() == ControlMode.POWER_CONTROL:
+                self.motor.odrv0.axis0.watchdog_feed()
+                self.instruction = self.motor.power_control(self.spin_box, self.ramp_instruction)
+
+            # The linear control mode is based on the torque control mode, but the torque input is calculated from the
+            # current velocity (torque_input = linear_coeff * velocity and resiting torque).
+            if self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
+                self.motor.odrv0.axis0.watchdog_feed()
+                self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
+
+            if self.motor.get_control_mode() == ControlMode.STOPPING:
+                self.motor.odrv0.axis0.watchdog_feed()
+                if abs(motor.get_velocity()) < 10.0:
+                    self.motor.odrv0.axis0.watchdog_feed()
+                    self.motor.stopped()
+                    self.motor.odrv0.axis0.watchdog_feed()
+                    self.ui.STOP_pushButton.setEnabled(True)
+                    self.motor.odrv0.axis0.watchdog_feed()
+                    self.change_mode(stop=True)
+                    self.motor.odrv0.axis0.watchdog_feed()
+                    self.ui.control_label.setText("The motor has stopped. Choose a training mode "
+                                                  "(eccentric or concentric), a control mode (power, velocity, torque, "
+                                                  "linear) a ramp instruction and an instruction.")
 
             self.motor.odrv0.axis0.watchdog_feed()
 

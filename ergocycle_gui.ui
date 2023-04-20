@@ -123,8 +123,17 @@
        <layout class="QVBoxLayout" name="instructions_verticalLayout">
         <item>
          <widget class="QLabel" name="control_label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font: 20pt &quot;Ubuntu&quot;;</string>
+          </property>
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a control mode (power, velocity, torque), a training mode and an instruction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a training mode (eccentric or concentric), a control mode (power, velocity, torque, linear) a ramp instruction and an instruction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="scaledContents">
            <bool>false</bool>
@@ -154,7 +163,7 @@
         <item>
          <layout class="QHBoxLayout" name="instructions_horizontalLayout_2">
           <item>
-           <widget class="QSpinBox" name="instruction_spinBox"/>
+           <widget class="QDoubleSpinBox" name="instruction_spinBox"/>
           </item>
           <item>
            <widget class="QLabel" name="units_label">

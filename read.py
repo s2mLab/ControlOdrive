@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/Antoine_torque_cons_3.bio")
+data = load("XP/Antoine_linear_ecc.bio")
 
 # Moving average
 window_length = 20
@@ -26,10 +26,34 @@ smoothed_user_power = np.convolve(data['user_power'], kernel, mode='valid')
 smoothed_mechanical_power = np.convolve(data['mechanical_power'], kernel, mode='valid')
 smoothed_electrical_power = np.convolve(data['electrical_power'], kernel, mode='valid')
 
+# Velocity
+plt.figure()
+plt.title("Velocity")
+plt.ylabel("Velocity (tr/min)")
+plt.xlabel("Time (s)")
+
+plt.plot(data['time'], data['velocity'], label="Velocity")
+plt.plot(
+    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
+    smoothed_velocity,
+    label="Smoothed velocity"
+)
+plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
+
+plt.legend()
+
+# Instructions
+plt.figure()
+plt.title("Instructions")
+plt.ylabel("Instruction")
+plt.xlabel("Time (s)")
+
 plt.plot(data['time'], data['ramp_instruction'], label="Ramp instruction")
 plt.plot(data['time'], data['instruction'], label="Instruction")
 plt.plot(data['time'], data['spin_box'], label="Spin box")
+
 plt.legend()
+
 # Currents
 plt.figure()
 
@@ -53,7 +77,7 @@ ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Current (A)')
 ax2.set_ylabel('Velocity (tr/min)')
 
-ax2.plot(data['time'], np.asarray(data["velocity"]), label="Smoothed velocity", color='tab:red')
+ax2.plot(data['time'], np.asarray(data["velocity"]), label="Smoothed velocity", color='k')
 ax1.plot(data['time'], data["iq_measured"], label="Iq measured")
 ax1.plot(data['time'], data["iq_setpoint"], label="Iq setpoint")
 ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
@@ -63,18 +87,18 @@ fig.legend(loc="upper right")
 # Torques
 fig, ax1 = plt.subplots()
 
-ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Torque (Nm)')
-ax2.set_ylabel('Velocity (tr/min)')
+# ax2.set_ylabel('Velocity (tr/min)')
 
 plt.title("Torques")
 
-ax2.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_velocity,
-    label="Smoothed velocity",
-    color='tab:red'
-)
+# ax2.plot(
+#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_velocity,
+#     label="Smoothed velocity",
+#     color='k'
+# )
 ax1.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
     smoothed_motor_torque,
@@ -90,10 +114,15 @@ ax1.plot(
     np.asarray(data['instruction']),
     label="Instruction",
 )
+# ax1.plot(
+#     data['time'],
+#     np.asarray(data['spin_box']),
+#     label="Spin box",
+# )
 ax1.plot(
     data['time'],
-    - np.asarray(data['spin_box']),
-    label="Spin box",
+    np.abs(np.asarray(data['spin_box'])) * np.asarray(data['velocity']),
+    label="Spin box * velocity",
 )
 
 fig.legend(loc="upper right")
@@ -122,11 +151,16 @@ ax1.plot(
     smoothed_user_power,
     label="User power"
 )
+ax1.plot(
+    data['time'],
+    data['spin_box'],
+    label="Spin_box"
+)
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
     smoothed_velocity,
     label="Smoothed velocity",
-    color='tab:red')
+    color='k')
 
 fig.legend(loc="upper right")
 
@@ -144,7 +178,7 @@ ax1.plot(data['time'], data["vbus"], label="vbus")
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
     smoothed_velocity, label="Smoothed velocity of the pedals",
-    color="r"
+    color="k"
 )
 
 fig.legend()
