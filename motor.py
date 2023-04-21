@@ -331,6 +331,7 @@ class OdriveEncoderHall:
     def get_sign(self):
         """
         Set the sign of the rotation depending on the mode (eccentric or concentric).
+        # TODO: track ecc cons
         """
         if self._training_mode == TrainingMode.FORWARD:
             return -1
@@ -440,11 +441,12 @@ class OdriveEncoderHall:
         velocity_ramp_rate: float
             Velocity ramp rate in (tr/min)/s of the pedals.
         """
-        if abs(velocity / self._reduction_ratio / 60) > self.odrv0.axis0.controller.config.vel_limit:
+        velocity = abs(velocity)
+        if velocity / self._reduction_ratio / 60 > self.odrv0.axis0.controller.config.vel_limit:
             raise ValueError(
                 f"The velocity limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
                 f"tr/min for the pedals."
-                f"Velocity specified: {abs(velocity)} tr/min for the pedals"
+                f"Velocity specified: {velocity} tr/min for the pedals"
             )
 
         self._check_ramp_rate(velocity_ramp_rate)
@@ -455,13 +457,8 @@ class OdriveEncoderHall:
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
-        if control_mode == ControlMode.VELOCITY_CONTROL:
-            sign = self.get_sign()
-        elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
-            sign = 1
-
         self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 60 / self._reduction_ratio
-        self.odrv0.axis0.controller.input_vel = sign * abs(velocity / 60 / self._reduction_ratio)
+        self.odrv0.axis0.controller.input_vel = self.get_sign() * velocity / 60 / self._reduction_ratio
 
         if self._control_mode not in control_modes_based_on_velocity:
             # Starts the motor if the previous control mode was not already `VELOCITY_CONTROL`
@@ -469,7 +466,7 @@ class OdriveEncoderHall:
 
         self._control_mode = control_mode
 
-        return sign * abs(velocity / 60 / self._reduction_ratio)
+        return self.get_sign() * velocity
 
     def torque_control(
             self,
@@ -581,7 +578,8 @@ class OdriveEncoderHall:
     def eccentric_power_control(
             self,
             power: float = 0.0,
-            velocity_ramp_rate: float = 5.0):
+            velocity_ramp_rate: float = 5.0,
+            velocity_max: float = 50.0):
         """
         Parameters
         ----------
@@ -589,6 +587,8 @@ class OdriveEncoderHall:
             Power (W) at the pedals.
         velocity_ramp_rate: float
             Velocity ramp rate ((tr/min)/s) at the pedals.
+        velocity_max: float
+            Maximum velocity (tr/min) at the pedals, if no torque is applied or if the torque < power / velocity_max.
 
         Returns
         -------
@@ -596,13 +596,14 @@ class OdriveEncoderHall:
         """
         torque = self.get_user_torque()
 
-        # `velocity` is the velocity at the pedals in tr/min.
-        if torque > 0:
-            velocity = self._hardware_and_security["pedals_vel_limit"]
+        # If the user is not forcing against the motor, the motor goes to the maximum velocity.
+        if (self._training_mode == TrainingMode.REVERSE and torque >= 0)\
+                or (self._training_mode == TrainingMode.FORWARD and torque <= 0):
+            self.velocity_control(velocity_max, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            return np.inf  # So we know that the user is not forcing.
         else:
-            velocity = min(abs(power) / torque / 2 / np.pi * 60, self._hardware_and_security["pedals_vel_limit"])
-
-        return self.velocity_control(velocity, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            velocity = min(abs(power / torque) / 2 / np.pi * 60, velocity_max)
+            return self.velocity_control(velocity, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
     def linear_control(
             self,

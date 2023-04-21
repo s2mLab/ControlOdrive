@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/preXP_kevin_sprint.bio")
+data = load("XP/preXP_501.bio")
 
 # Moving average
 window_length = 20
@@ -38,7 +38,7 @@ plt.plot(
     smoothed_velocity,
     label="Smoothed velocity"
 )
-# plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
+plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
 
 plt.legend()
 

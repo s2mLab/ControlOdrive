@@ -164,7 +164,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.acceleration_spinBox.setSingleStep(1)
         self.ui.acceleration_spinBox.setValue(10)
         self.ui.units_label.setText("W")
-        self.ui.acceleration_units_label.setText("Nm/s")
+        self.ui.acceleration_units_label.setText("(tr/min)/s")
         self.instruction = self.motor.power_control(0.0)
         self.change_mode()
 
@@ -172,7 +172,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.instruction_spinBox.setRange(
             0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
         )
-        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
+        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["pedals_accel_lim"]))
         self.ui.instruction_spinBox.setSingleStep(10)
         self.ui.acceleration_spinBox.setSingleStep(1)
         self.ui.acceleration_spinBox.setValue(10)
@@ -195,6 +195,7 @@ class App(QtWidgets.QMainWindow):
 
     def change_instruction(self):
         control_mode = self.motor.get_control_mode()
+        print(control_mode)
         self.ramp_instruction = self.ui.acceleration_spinBox.value()
         if control_mode == ControlMode.VELOCITY_CONTROL:
             self.spin_box = self.instruction = self.motor.get_sign() * self.ui.instruction_spinBox.value()
@@ -208,6 +209,10 @@ class App(QtWidgets.QMainWindow):
         elif control_mode == ControlMode.LINEAR_CONTROL:
             self.spin_box = self.ui.instruction_spinBox.value()
             self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
+        elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
+            # In eccentric mode, the sign is inverted because the user's power is negative
+            self.spin_box = - self.ui.instruction_spinBox.value()
+            self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
 
     def _data(self):
         """
@@ -266,6 +271,10 @@ class App(QtWidgets.QMainWindow):
             if self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
                 self.motor.odrv0.axis0.watchdog_feed()
                 self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
+
+            if self.motor.get_control_mode() == ControlMode.ECCENTRIC_POWER_CONTROL:
+                self.motor.odrv0.axis0.watchdog_feed()
+                self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
 
             if self.motor.get_control_mode() == ControlMode.STOPPING:
                 self.motor.odrv0.axis0.watchdog_feed()
