@@ -6,8 +6,12 @@ with open("hardware_and_security.json", "r") as hardware_and_security_file:
 
 dictionary = {
     "enable_dc_bus_overvoltage_ramp": True,
-    "dc_bus_overvoltage_ramp_start": 48.0,
-    "dc_bus_overvoltage_ramp_end": 50.0,
+    # See https://discourse.odriverobotics.com/t/power-supply-in-security-mode-when-forcing-on-the-motor/10229/16
+    # The doc of the power supply specify that the output voltage adj. range is 48 – 56 VDC
+    # At output voltage higher than nominal output voltage max. output current has to be reduced accordingly, in order
+    # not to exceed max. output power.
+    "dc_bus_overvoltage_ramp_start": 53.0,
+    "dc_bus_overvoltage_ramp_end": 55.0,
     "gpio9_mode": GPIO_MODE_DIGITAL,  # The pins the encoder is connected to
     "gpio10_mode": GPIO_MODE_DIGITAL,
     "gpio11_mode": GPIO_MODE_DIGITAL,

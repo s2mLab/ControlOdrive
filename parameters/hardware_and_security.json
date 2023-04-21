@@ -1,7 +1,7 @@
 {
     "enable_dc_bus_overvoltage_ramp": true,
-    "dc_bus_overvoltage_ramp_start": 48.0,
-    "dc_bus_overvoltage_ramp_end": 50.0,
+    "dc_bus_overvoltage_ramp_start": 53.0,
+    "dc_bus_overvoltage_ramp_end": 55.0,
     "gpio9_mode": 0,
     "gpio10_mode": 0,
     "gpio11_mode": 0,

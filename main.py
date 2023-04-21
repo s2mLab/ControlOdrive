@@ -60,8 +60,8 @@ class App(QtWidgets.QMainWindow):
 
         # Combo boxes
         _translate = QtCore.QCoreApplication.translate
-        self.ui.training_comboBox.setItemText(0, _translate("MainWindow", TrainingMode.CONCENTRIC.value))
-        self.ui.training_comboBox.setItemText(1, _translate("MainWindow", TrainingMode.ECCENTRIC.value))
+        self.ui.training_comboBox.setItemText(0, _translate("MainWindow", TrainingMode.FORWARD.value))
+        self.ui.training_comboBox.setItemText(1, _translate("MainWindow", TrainingMode.REVERSE.value))
         self.ui.training_comboBox.setCurrentText(self.motor.get_training_mode().value)
 
         # Training modes
@@ -70,6 +70,7 @@ class App(QtWidgets.QMainWindow):
         # Control modes
         self.ui.STOP_pushButton.clicked.connect(self.stop)
         self.ui.power_pushButton.clicked.connect(self.power_mode)
+        self.ui.eccentric_power_pushButton.clicked.connect(self.eccentric_power_mode)
         self.ui.velocity_pushButton.clicked.connect(self.velocity_mode)
         self.ui.torque_pushButton.clicked.connect(self.torque_mode)
         self.ui.linear_pushButton.clicked.connect(self.linear_mode)
@@ -125,6 +126,7 @@ class App(QtWidgets.QMainWindow):
         self.ui.velocity_pushButton.setEnabled(stop)
         self.ui.torque_pushButton.setEnabled(stop)
         self.ui.power_pushButton.setEnabled(stop)
+        self.ui.eccentric_power_pushButton.setEnabled(stop)
         self.ui.linear_pushButton.setEnabled(stop)
         self.ui.training_comboBox.setEnabled(stop)
         self.ui.instruction_spinBox.setEnabled(not stop)
@@ -164,6 +166,19 @@ class App(QtWidgets.QMainWindow):
         self.ui.units_label.setText("W")
         self.ui.acceleration_units_label.setText("Nm/s")
         self.instruction = self.motor.power_control(0.0)
+        self.change_mode()
+
+    def eccentric_power_mode(self):
+        self.ui.instruction_spinBox.setRange(
+            0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
+        )
+        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
+        self.ui.instruction_spinBox.setSingleStep(10)
+        self.ui.acceleration_spinBox.setSingleStep(1)
+        self.ui.acceleration_spinBox.setValue(10)
+        self.ui.units_label.setText("W")
+        self.ui.acceleration_units_label.setText("Nm/s")
+        self.instruction = self.motor.eccentric_power_control(0.0)
         self.change_mode()
 
     def linear_mode(self):

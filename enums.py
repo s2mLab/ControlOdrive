@@ -47,11 +47,11 @@ class ControlMode(StrEnum):
     VELOCITY_CONTROL = "Velocity control"
     TORQUE_CONTROL = "Torque control"
     POWER_CONTROL = "Power control"
-    TEST = "Test"
-    ECC_VEL_SECU = "Eccentric velocity security"
+    ECCENTRIC_POWER_CONTROL = "Eccentric power control"
 
 
 control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.POWER_CONTROL + ControlMode.LINEAR_CONTROL
+control_modes_based_on_velocity = ControlMode.VELOCITY_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
 
 
 class TrainingMode(StrEnum):
@@ -59,8 +59,8 @@ class TrainingMode(StrEnum):
     The training modes implemented.
     """
 
-    ECCENTRIC = "Eccentric"
-    CONCENTRIC = "Concentric"
+    REVERSE = "Reverse"
+    FORWARD = "Forward"
 
 
 class ODriveError(StrEnum):

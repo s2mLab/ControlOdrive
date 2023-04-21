@@ -150,6 +150,9 @@ class Ui_MainWindow(object):
         self.torque_pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.torque_pushButton.setObjectName("torque_pushButton")
         self.gridLayout.addWidget(self.torque_pushButton, 4, 0, 1, 1)
+        self.eccentric_power_pushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.eccentric_power_pushButton.setObjectName("eccentric_power_pushButton")
+        self.gridLayout.addWidget(self.eccentric_power_pushButton, 3, 2, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -173,7 +176,7 @@ class Ui_MainWindow(object):
         self.save_lineEdit.setText(_translate("MainWindow", "XP_participantX"))
         self.save_start_pushButton.setText(_translate("MainWindow", "Start"))
         self.save_stop_pushButton.setText(_translate("MainWindow", "Stop"))
-        self.control_label.setText(_translate("MainWindow", "<html><head/><body><p>Choose a control mode (power, velocity, torque), a training mode and an instruction.</p></body></html>"))
+        self.control_label.setText(_translate("MainWindow", "<html><head/><body><p>Choose a training mode (eccentric or concentric), a control mode (power, velocity, torque, linear) a ramp instruction and an instruction.</p></body></html>"))
         self.training_comboBox.setItemText(0, _translate("MainWindow", "Eccentric"))
         self.training_comboBox.setItemText(1, _translate("MainWindow", "Concentric"))
         self.errors_label.setText(_translate("MainWindow", "TextLabel"))
@@ -182,6 +185,7 @@ class Ui_MainWindow(object):
         self.power_label.setText(_translate("MainWindow", "Power (W)"))
         self.velocity_pushButton.setText(_translate("MainWindow", "Velocity control"))
         self.torque_pushButton.setText(_translate("MainWindow", "Torque control"))
+        self.eccentric_power_pushButton.setText(_translate("MainWindow", "Eccentric power"))
 
 
 if __name__ == "__main__":
