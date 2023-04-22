@@ -142,7 +142,6 @@ class App(QtWidgets.QMainWindow):
         self.motor_thread = MotorThread(self.ui, odrive_motor)
         self.motor_thread.plot_update_signal.connect(self._plot_update)
         self.motor_thread.start()
-        self.motor.config_watchdog(True, 1.0)
 
         # Colors
         self._color_red = QtGui.QColor(255, 150, 150)
@@ -611,6 +610,7 @@ class MotorThread(QtCore.QThread):
 
         # Data
         self._display_frequency = 4  # Hz
+        self._save_frequency = 5  # Hz
 
         # Plot
         self.plot_start_time = 0.0
@@ -634,8 +634,7 @@ class MotorThread(QtCore.QThread):
         Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
         It updates the command and the display, saves the data and feeds the watchdog.
         """
-        t_plot_precedent = time.time()
-        t_display_precedent = time.time()
+        t_plot_precedent = t_display_precedent = t_save_precedent = time.time()
         self.plot_start_time = time.time()
         date_time = QtCore.QDateTime()
 
@@ -645,8 +644,6 @@ class MotorThread(QtCore.QThread):
             # Date
             current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
             self.ui.date_label.setText(current_time)
-
-            self.feed_watchdog()
 
             # Stopwatch
             if self.stopwatch_state == StopwatchStates.RUNNING:
@@ -671,7 +668,8 @@ class MotorThread(QtCore.QThread):
             self.feed_watchdog()
 
             # Save data
-            if self.saving:
+            t_since_precedent_save = time.time() - t_save_precedent
+            if self.saving and t_since_precedent_save > 1 / self._save_frequency:
                 if self.comment_to_save:
                     comment = self.comment
                     self.comment_to_save = False
@@ -686,8 +684,9 @@ class MotorThread(QtCore.QThread):
                     stopwatch=self._stopwatch,
                     lap=self._lap,
                 )
+                t_save_precedent = time.time()
 
-            self.feed_watchdog()
+                self.feed_watchdog()
 
             # Display data
             t_since_precedent_display = time.time() - t_display_precedent
@@ -763,10 +762,11 @@ class MotorThread(QtCore.QThread):
 
 
 if __name__ == "__main__":
-    motor = OdriveEncoderHall(enable_watchdog=False, external_watchdog=True)
+    motor = OdriveEncoderHall(enable_watchdog=True, external_watchdog=True)
     app = QApplication(sys.argv)
     gui = App(motor)
     gui.show()
+    gui.motor.config_watchdog(True, 0.3)
     app.exec()
     app.run = False
 
