@@ -3,7 +3,7 @@ Script to control the ergocycle through a graphical user interface.
 """
 import os
 import sys
-import time
+
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import *
@@ -11,8 +11,8 @@ import pyqtgraph as pg
 
 from ergocycle_gui import Ui_MainWindow
 
-# from motor import *
-from phantom import Phantom
+from motor import *
+# from phantom import Phantom
 
 from utils import (
     traduce_error,
@@ -100,7 +100,7 @@ class App(QtWidgets.QMainWindow):
 
         # Saving
         self.saving = False
-        self.watchdog_frequency = 2  # Hz
+        self.watchdog_frequency = 10  # Hz
         self.watchdog_thread = SignalThread(self.watchdog_frequency)
         self.watchdog_thread.signal.connect(self._save_data)
         self.watchdog_thread.start()
@@ -126,6 +126,8 @@ class App(QtWidgets.QMainWindow):
         self.ui.start_update_pushButton.setStyleSheet(f"background-color: {self._color_green.name()};")
         self.ui.errors_label.setStyleSheet(f"font-weight: bold; color: red;")
         self.ui.emergency_pushButton.setStyleSheet(f"background-color: red; color: white;")
+
+        self.dt = []
 
     def emergency_stop(self):
         """
@@ -503,8 +505,10 @@ class App(QtWidgets.QMainWindow):
         )
 
     def _save_data(self):
-        # self.motor.odrv0.axis0.watchdog_feed()
+        self.motor.odrv0.axis0.watchdog_feed()
+
         if self.saving:
+            t0 = time.time()
             # Save data
             if self.comment_to_save:
                 comment = self.comment
@@ -520,7 +524,8 @@ class App(QtWidgets.QMainWindow):
                 stopwatch=self.motor_thread.stopwatch,
                 lap=self.motor_thread.lap,
             )
-            # self.motor.odrv0.axis0.watchdog_feed()
+            self.dt.append(time.time() - t0)
+            self.motor.odrv0.axis0.watchdog_feed()
 
 
 class MotorThread(QtCore.QThread):
@@ -582,6 +587,8 @@ class MotorThread(QtCore.QThread):
         date_time = QtCore.QDateTime()
 
         while self.run:
+            self.motor.odrv0.axis0.watchdog_feed()
+
             # Date
             current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
             self.ui.date_label.setText(current_time)
@@ -616,15 +623,17 @@ class MotorThread(QtCore.QThread):
                 self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
                 t_display_precedent = time.time()
 
-            # self.ui.errors_label.setText(
-            #     f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
-            #     f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
-            #     f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
-            #     f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
-            #     f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
-            #     f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
-            #     f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
-            # )
+            self.ui.errors_label.setText(
+                f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
+                f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
+                f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
+            )
+
+            self.motor.odrv0.axis0.watchdog_feed()
 
             # Adapt the control of the motor accordingly to the current cadence and torque
             control_mode = self.motor.get_control_mode()
@@ -655,6 +664,8 @@ class MotorThread(QtCore.QThread):
                     self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
 
+            self.motor.odrv0.axis0.watchdog_feed()
+
             # Plot data
             t_since_precedent_plot = time.time() - t_plot_precedent
             if t_since_precedent_plot > 1 / self.plot_frequency:
@@ -678,12 +689,14 @@ class MotorThread(QtCore.QThread):
 
 
 if __name__ == "__main__":
-    motor = Phantom(enable_watchdog=True, external_watchdog=True)
+    motor = OdriveEncoderHall(enable_watchdog=True, external_watchdog=True)
     app = QApplication(sys.argv)
     gui = App(motor)
     gui.show()
     gui.motor.config_watchdog(True, 0.3)
     app.exec()
     app.run = False
+    dt = np.asarray(gui.dt)
+    print(np.sum(dt) / len(dt))
 
 # python -m PyQt5.uic.pyuic -x ergocycle_gui.ui -o ergocycle_gui.py
