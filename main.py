@@ -367,11 +367,11 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                 i += 1
             self.motor_thread.file_name = f"{self.motor_thread.file_name}({i})"
 
-        self.saving = not self.saving
-        self.ui.save_lineEdit.setEnabled(not self.saving)
-        self.ui.comments_save_pushButton.setEnabled(self.saving)
-        self.ui.comments_lineEdit.setEnabled(self.saving)
-        if self.saving:
+        self.motor_thread.saving = not self.motor_thread.saving
+        self.ui.save_lineEdit.setEnabled(not self.motor_thread.saving)
+        self.ui.comments_save_pushButton.setEnabled(self.motor_thread.saving)
+        self.ui.comments_lineEdit.setEnabled(self.motor_thread.saving)
+        if self.motor_thread.saving:
             self.ui.save_st_pushButton.setText("Stop saving")
             self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_red.name()}")
             self.ui.comments_save_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
@@ -520,8 +520,8 @@ class MotorDisplayThread(QtCore.QThread):
         self.spin_box = 0.0
 
         # Comments
-        self.motor_thread.comment_to_save = False
-        self.motor_thread.comment = ""
+        self.comment_to_save = False
+        self.comment = ""
 
         # Stopwatch
         self.stopwatch_start_time = 0.0
@@ -551,8 +551,6 @@ class MotorDisplayThread(QtCore.QThread):
 
         # Saving
         self.saving = False
-        self.comment_to_save = False
-        self.comment = ""
         self.file_name = ""
 
     def watchdog_feed(self):
