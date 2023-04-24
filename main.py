@@ -705,6 +705,9 @@ if __name__ == "__main__":
     app.exec()
     app.run = False
     dt = np.asarray(gui.motor_thread.dt)
+    import matplotlib.pyplot as plt
+    plt.plot(dt)
+    plt.show()
     print(np.mean(dt), np.max(dt))
 
 # python -m PyQt5.uic.pyuic -x ergocycle_gui.ui -o ergocycle_gui.py
