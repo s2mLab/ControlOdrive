@@ -124,7 +124,6 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         """
         Emergency stop. Stop the motor and close the GUI.
         """
-        self.watchdog_thread.stop()
         self.motor_thread.run = False
         self.close()
 
@@ -132,7 +131,6 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         """
         Stop the motor on close.
         """
-        self.watchdog_thread.stop()
         self.motor_thread.run = False
         event.accept()
 

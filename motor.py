@@ -49,6 +49,7 @@ class MotorController(MotorComputations):
             gains_path: str = "parameters/gains.json",
             file_path: str = None,
     ):
+        super(MotorController, self).__init__()
         self._watchdog_is_ready = False
         self._external_watchdog = external_watchdog
         self._watchdog_timeout = self.hardware_and_security["watchdog_timeout"]
