@@ -14,7 +14,7 @@ from enums import (
 
 from utils import traduce_error
 
-data = read("XP/XP_torque.bio", 100, 100)
+data = read("XP/XP_power.bio", 100, 100)
 
 # Comments
 for time, comment in zip(data["time"], data['comments']):
@@ -102,12 +102,12 @@ ax1.plot(
 fig.legend(loc="upper right")
 
 # Powers
-spinbox_for_power = np.zeros(len(data["instruction"]))
+spinbox_for_power = np.zeros(len(data["spin_box"]))
 spinbox_for_power[:] = np.nan
 spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = \
-    data["instruction"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
+    data["spin_box"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
 spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = \
-    data["instruction"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
+    data["spin_box"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
 
 fig, ax1 = plt.subplots()
 plt.title("Powers")
