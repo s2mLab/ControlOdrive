@@ -27,10 +27,10 @@ from odrive.enums import (
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
 
-from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
+from ergocycleS2M import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
 from ergocycleS2M import save
 
-from motor_computations import MotorComputations
+from ergocycleS2M import MotorComputations
 
 
 class MotorController(MotorComputations):

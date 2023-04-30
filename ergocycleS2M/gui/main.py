@@ -665,7 +665,7 @@ class MotorDisplayThread(QtCore.QThread):
                                                                       self.ramp_instruction)
 
             elif control_mode == ControlMode.STOPPING:
-                if abs(motor.get_cadence()) < 10.0:
+                if abs(self.motor.get_cadence()) < 10.0:
                     self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
 

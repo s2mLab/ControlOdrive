@@ -19,7 +19,7 @@ setup(
             ('ergocycleS2M/parameters',
              ['ergocycleS2M/parameters/hardware_and_security.json', 'ergocycleS2M/parameters/gains.json']),
     ],
-    install_requires=['numpy', 'matplotlib', 'scipy', 'pyqtgraph'],
+    install_requires=['numpy', 'matplotlib'],
     entry_points={
         'console_scripts': [
             'read_ergocycle_file = ergocycleS2M.data_processing.save_and_load:read_from_terminal',
