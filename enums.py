@@ -1,38 +1,4 @@
-from enum import Enum
-
-
-class StrEnum(str, Enum):
-    """
-    Enum where members are also (and must be) strings. Existing class in Python 3.11 but the code is running in Python
-    3.9 for now.
-    """
-
-    def __new__(cls, *values):
-        "values must already be of type `str`"
-        if len(values) > 3:
-            raise TypeError('too many arguments for str(): %r' % (values,))
-        if len(values) == 1:
-            # it must be a string
-            if not isinstance(values[0], str):
-                raise TypeError('%r is not a string' % (values[0],))
-        if len(values) >= 2:
-            # check that encoding argument is a string
-            if not isinstance(values[1], str):
-                raise TypeError('encoding must be a string, not %r' % (values[1],))
-        if len(values) == 3:
-            # check that errors argument is a string
-            if not isinstance(values[2], str):
-                raise TypeError('errors must be a string, not %r' % (values[2]))
-        value = str(*values)
-        member = str.__new__(cls, value)
-        member._value_ = value
-        return member
-
-    def _generate_next_value_(name, start, count, last_values):
-        """
-        Return the lower-cased version of the member name.
-        """
-        return name.lower()
+from utils import StrEnum
 
 
 class ControlMode(StrEnum):
@@ -46,15 +12,15 @@ class ControlMode(StrEnum):
     LINEAR_CONTROL = "Linear control"
     VELOCITY_CONTROL = "Velocity control"
     TORQUE_CONTROL = "Torque control"
-    POWER_CONTROL = "Power control"
+    CONCENTRIC_POWER_CONTROL = "Concentric power control"
     ECCENTRIC_POWER_CONTROL = "Eccentric power control"
 
 
-control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.POWER_CONTROL + ControlMode.LINEAR_CONTROL
+control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.CONCENTRIC_POWER_CONTROL + ControlMode.LINEAR_CONTROL
 control_modes_based_on_velocity = ControlMode.VELOCITY_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
 
 
-class TrainingMode(StrEnum):
+class DirectionMode(StrEnum):
     """
     The training modes implemented.
     """

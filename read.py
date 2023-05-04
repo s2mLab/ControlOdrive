@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/preXP_501.bio")
+data = load("XP/XP_participantX(2).bio")
 
 # Moving average
 window_length = 20
@@ -25,6 +25,21 @@ smoothed_user_torque = np.convolve(data['user_torque'], kernel, mode='valid')
 smoothed_user_power = np.convolve(data['user_power'], kernel, mode='valid')
 smoothed_mechanical_power = np.convolve(data['mechanical_power'], kernel, mode='valid')
 smoothed_electrical_power = np.convolve(data['electrical_power'], kernel, mode='valid')
+
+for time, comment in zip(data["time"], data['comments']):
+    if comment != "":
+        print(f"{time}: {comment}")
+
+# Stopwatch
+plt.figure()
+plt.title("Stopwatch")
+plt.ylabel("Time (s)")
+plt.xlabel("Time (s)")
+
+plt.plot(data['time'], data['stopwatch'], label="Stopwatch")
+plt.plot(data['time'], data['lap'], label="Lap")
+
+plt.legend()
 
 # Velocity
 plt.figure()

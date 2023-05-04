@@ -1,0 +1,19 @@
+plt.rcParams.update({'font.size': 16})
+
+fig, ax1 = plt.subplots()
+
+plt.title("Concentrique isocinétique")
+ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+ax2.set_ylabel('Couple (Nm)')
+ax1.set_ylabel("Vitesse (tr/min)")
+ax1.set_xlabel("Temps (s)")
+# plt.plot(data['time'], data['velocity'], label="Velocity")
+ax1.plot(
+    data['time'][int(window_length / 2) - 1: int(- window_length / 2)][:-10],
+    - smoothed_velocity[:-10],
+    label="Vitesse"
+)
+ax1.plot(data['time'][:-10], - np.asarray(data['instruction'][:-10]), label="Instruction")
+ax2.plot(data['time'][int(window_length / 2) - 1: int(- window_length / 2)][:-10], - smoothed_user_torque[:-10], color="g", label="Couple utilisateur")
+
+plt.legend()

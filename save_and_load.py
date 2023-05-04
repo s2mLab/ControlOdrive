@@ -19,6 +19,7 @@ def save(data_dict, data_path):
     with open(data_path, "ab") as outf:
         pickle.dump(data_dict, outf, pickle.HIGHEST_PROTOCOL)
 
+
 def load(filename, number_of_line=None):
     """This function reads data from a pickle file to concatenate them into one dictionary.
     Parameters

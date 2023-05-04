@@ -27,7 +27,7 @@ from odrive.enums import (
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
 
-from enums import ControlMode, TrainingMode, control_modes_based_on_torque, control_modes_based_on_velocity
+from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_velocity
 from save_and_load import save
 
 
@@ -49,28 +49,28 @@ class OdriveEncoderHall:
     ):
 
         with open(hardware_and_security_path, "r") as hardware_and_security_file:
-            self._hardware_and_security = json.load(hardware_and_security_file)
+            self.hardware_and_security = json.load(hardware_and_security_file)
 
         self._watchdog_is_ready = False
         self._external_watchdog = external_watchdog
-        self._watchdog_timeout = self._hardware_and_security["watchdog_timeout"]
-        self._watchdog_feed_time = self._hardware_and_security["watchdog_feed_time"]
+        self._watchdog_timeout = self.hardware_and_security["watchdog_timeout"]
+        self._watchdog_feed_time = self.hardware_and_security["watchdog_feed_time"]
         print("Look for an odrive ...")
         self.odrv0 = odrive.find_any()
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
-        self._reduction_ratio = self._hardware_and_security["reduction_ratio"]
+        self._reduction_ratio = self.hardware_and_security["reduction_ratio"]
 
         self._control_mode = ControlMode.STOP
         self._relative_pos = 0
-        self._training_mode = TrainingMode.FORWARD
+        self._direction = DirectionMode.FORWARD
         self.previous_control_mode = ControlMode.STOP
 
         self._gains_path = gains_path
 
-        self.resisting_current_coeff_proportional = self._hardware_and_security["resisting_current_coeff_proportional"]
-        self.resisting_current_coeff_power = self._hardware_and_security["resisting_current_coeff_power"]
+        self.resisting_current_coeff_proportional = self.hardware_and_security["resisting_current_coeff_proportional"]
+        self.resisting_current_coeff_power = self.hardware_and_security["resisting_current_coeff_power"]
 
         if file_path:
             self.file_path = file_path
@@ -219,7 +219,7 @@ class OdriveEncoderHall:
         """
         print("Configuration for HALL encoder")
 
-        self._hardware_and_security_configuration()
+        self.hardware_and_security_configuration()
         self.gains_configuration(custom=False)
 
         print("Configuration done")
@@ -281,83 +281,83 @@ class OdriveEncoderHall:
 
         self.save_configuration()
 
-    def _hardware_and_security_configuration(self):
+    def hardware_and_security_configuration(self):
         """
         Configures the settings linked to the hardware or the security not supposed to be changed by the user.
         """
-        self.odrv0.config.enable_dc_bus_overvoltage_ramp = self._hardware_and_security["enable_dc_bus_overvoltage_ramp"]
-        self.odrv0.config.dc_bus_overvoltage_ramp_start = self._hardware_and_security["dc_bus_overvoltage_ramp_start"]
-        self.odrv0.config.dc_bus_overvoltage_ramp_end = self._hardware_and_security["dc_bus_overvoltage_ramp_end"]
-        self.odrv0.config.gpio9_mode = self._hardware_and_security["gpio9_mode"]
-        self.odrv0.config.gpio10_mode = self._hardware_and_security["gpio10_mode"]
-        self.odrv0.config.gpio11_mode = self._hardware_and_security["gpio11_mode"]
-        self.odrv0.config.max_regen_current = self._hardware_and_security["max_regen_current"]
-        self.odrv0.config.dc_max_positive_current = self._hardware_and_security["dc_max_positive_current"]
-        self.odrv0.config.dc_max_negative_current = self._hardware_and_security["dc_max_negative_current"]
-        self.odrv0.config.enable_brake_resistor = self._hardware_and_security["enable_brake_resistor"]
-        self.odrv0.config.brake_resistance = self._hardware_and_security["brake_resistance"]
+        self.odrv0.config.enable_dc_bus_overvoltage_ramp = self.hardware_and_security["enable_dc_bus_overvoltage_ramp"]
+        self.odrv0.config.dc_bus_overvoltage_ramp_start = self.hardware_and_security["dc_bus_overvoltage_ramp_start"]
+        self.odrv0.config.dc_bus_overvoltage_ramp_end = self.hardware_and_security["dc_bus_overvoltage_ramp_end"]
+        self.odrv0.config.gpio9_mode = self.hardware_and_security["gpio9_mode"]
+        self.odrv0.config.gpio10_mode = self.hardware_and_security["gpio10_mode"]
+        self.odrv0.config.gpio11_mode = self.hardware_and_security["gpio11_mode"]
+        self.odrv0.config.max_regen_current = self.hardware_and_security["max_regen_current"]
+        self.odrv0.config.dc_max_positive_current = self.hardware_and_security["dc_max_positive_current"]
+        self.odrv0.config.dc_max_negative_current = self.hardware_and_security["dc_max_negative_current"]
+        self.odrv0.config.enable_brake_resistor = self.hardware_and_security["enable_brake_resistor"]
+        self.odrv0.config.brake_resistance = self.hardware_and_security["brake_resistance"]
 
         # Controller
         self.odrv0.axis0.controller.config.vel_limit = \
-            self._hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60  # tr/s
+            self.hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60  # tr/s
         self.odrv0.axis0.controller.config.vel_limit_tolerance = \
-            self._hardware_and_security["vel_limit_tolerance"]  # tr/s
+            self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
         # Encoder
-        self.odrv0.axis0.encoder.config.mode = self._hardware_and_security["mode"]  # Mode of the encoder
-        self.odrv0.axis0.encoder.config.cpr = self._hardware_and_security["cpr"]  # Count Per Revolution
-        self.odrv0.axis0.encoder.config.calib_scan_distance = self._hardware_and_security["calib_scan_distance"]
+        self.odrv0.axis0.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
+        self.odrv0.axis0.encoder.config.cpr = self.hardware_and_security["cpr"]  # Count Per Revolution
+        self.odrv0.axis0.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
-        self.odrv0.axis0.motor.config.motor_type = self._hardware_and_security["motor_type"]
-        self.odrv0.axis0.motor.config.pole_pairs = self._hardware_and_security["pole_pairs"]
-        self.odrv0.axis0.motor.config.torque_constant = self._hardware_and_security["torque_constant"]
-        self.odrv0.axis0.motor.config.calibration_current = self._hardware_and_security["calibration_current"]
+        self.odrv0.axis0.motor.config.motor_type = self.hardware_and_security["motor_type"]
+        self.odrv0.axis0.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
+        self.odrv0.axis0.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
+        self.odrv0.axis0.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
         self.odrv0.axis0.motor.config.resistance_calib_max_voltage = \
-            self._hardware_and_security["resistance_calib_max_voltage"]
-        self.odrv0.axis0.motor.config.requested_current_range = self._hardware_and_security["requested_current_range"]
+            self.hardware_and_security["resistance_calib_max_voltage"]
+        self.odrv0.axis0.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
         self.odrv0.axis0.motor.config.current_control_bandwidth = \
-            self._hardware_and_security["current_control_bandwidth"]
-        self.odrv0.axis0.motor.config.current_lim = self._hardware_and_security["current_lim"]
-        self.odrv0.axis0.motor.config.torque_lim = self._hardware_and_security["torque_lim"] * self._reduction_ratio
+            self.hardware_and_security["current_control_bandwidth"]
+        self.odrv0.axis0.motor.config.current_lim = self.hardware_and_security["current_lim"]
+        self.odrv0.axis0.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self._reduction_ratio
 
         # Velocity and acceleration limits
         self.odrv0.axis0.trap_traj.config.vel_limit = self.odrv0.axis0.controller.config.vel_limit
         self.odrv0.axis0.trap_traj.config.accel_limit = \
-            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60  # tr/s²
+            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60  # tr/s²
         self.odrv0.axis0.trap_traj.config.decel_limit = \
-            self._hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60  # tr/s²
+            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60  # tr/s²
 
     def get_sign(self):
         """
         Set the sign of the rotation depending on the mode (eccentric or concentric).
         # TODO: track ecc cons
         """
-        if self._training_mode == TrainingMode.FORWARD:
+        if self._direction == DirectionMode.FORWARD:
             return -1
         else:
             return 1
 
-    def set_training_mode(self, mode: str):
+    def set_direction(self, mode: str):
         """
-        Set the training mode to eccentric or concentric.
+        Set the direction to forward or reversed.
 
         Parameters
         ----------
 
-        mode: TrainingMode
+        mode: DirectionMode
         """
-        self._training_mode = TrainingMode(mode)
+        self._direction = DirectionMode(mode)
 
-    def get_training_mode(self):
+    def get_direction(self):
         """
-        Get the training mode.
+        Get the direction.
 
         Returns
         -------
-        mode: TrainingMode
+        mode: DirectionMode
         """
-        return self._training_mode
+        return self._direction
 
     def _check_ramp_rate(self, ramp_rate):
         """
@@ -440,6 +440,8 @@ class OdriveEncoderHall:
             Targeted velocity in tr/min of the pedals.
         velocity_ramp_rate: float
             Velocity ramp rate in (tr/min)/s of the pedals.
+        control_mode: ControlMode
+            Control mode of the motor.
         """
         velocity = abs(velocity)
         if velocity / self._reduction_ratio / 60 > self.odrv0.axis0.controller.config.vel_limit:
@@ -466,7 +468,7 @@ class OdriveEncoderHall:
 
         self._control_mode = control_mode
 
-        return self.get_sign() * velocity
+        return - self.get_sign() * velocity
 
     def torque_control(
             self,
@@ -495,8 +497,8 @@ class OdriveEncoderHall:
         The input torque (Nm) at the pedals.
         """
         # If the user is not pedaling yet or if he has stopped pedaling, the motor is stopped.
-        if ((self._training_mode == TrainingMode.FORWARD and self.odrv0.axis0.encoder.vel_estimate >= 0)
-                or (self._training_mode == TrainingMode.REVERSE and self.odrv0.axis0.encoder.vel_estimate <= 0)):
+        if ((self._direction == DirectionMode.FORWARD and self.odrv0.axis0.encoder.vel_estimate >= 0)
+                or (self._direction == DirectionMode.REVERSE and self.odrv0.axis0.encoder.vel_estimate <= 0)):
             input_torque_motor = 0.0
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
@@ -541,9 +543,9 @@ class OdriveEncoderHall:
         # not `TORQUE_CONTROL`, self._control_mode is updated.
         self._control_mode = control_mode
 
-        return input_torque_motor / self._reduction_ratio  # Nm at the pedals
+        return - input_torque_motor / self._reduction_ratio  # Nm at the pedals
 
-    def power_control(
+    def concentric_power_control(
             self,
             power: float = 0.0,
             torque_ramp_rate: float = 2.0,
@@ -566,13 +568,13 @@ class OdriveEncoderHall:
         """
         velocity = abs(self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 2 * np.pi)  # rad/s
         if velocity == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.POWER_CONTROL)
+            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
         else:
             return self.torque_control(
-                min(abs(power) / velocity, self._hardware_and_security["torque_lim"]),
+                min(abs(power) / velocity, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
                 resisting_torque,
-                ControlMode.POWER_CONTROL,
+                ControlMode.CONCENTRIC_POWER_CONTROL,
             )
 
     def eccentric_power_control(
@@ -597,8 +599,8 @@ class OdriveEncoderHall:
         torque = self.get_user_torque()
 
         # If the user is not forcing against the motor, the motor goes to the maximum velocity.
-        if (self._training_mode == TrainingMode.REVERSE and torque >= 0)\
-                or (self._training_mode == TrainingMode.FORWARD and torque <= 0):
+        if (self._direction == DirectionMode.REVERSE and torque >= 0)\
+                or (self._direction == DirectionMode.FORWARD and torque <= 0):
             self.velocity_control(velocity_max, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
         else:
@@ -627,7 +629,7 @@ class OdriveEncoderHall:
         """
         velocity = abs(self.get_velocity())  # tr/min
         return self.torque_control(
-            min(velocity * abs(linear_coeff), self._hardware_and_security["torque_lim"]),
+            min(velocity * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
@@ -688,10 +690,10 @@ class OdriveEncoderHall:
         velocity_ramp_rate: float
             The ramp_rate of the deceleration ((tr/min)/s of the pedals).
         """
-        if vel_stop > self._hardware_and_security["maximal_velocity_stop"]:
+        if vel_stop > self.hardware_and_security["maximal_velocity_stop"]:
             raise ValueError(
                 f"The maximal velocity at which the motor can be stopped is "
-                f"{self._hardware_and_security['maximal_velocity_stop']} tr/min for the pedals."
+                f"{self.hardware_and_security['maximal_velocity_stop']} tr/min for the pedals."
                 f"Stop velocity specified: {abs(vel_stop)} tr/min for the pedals"
             )
 
@@ -702,23 +704,29 @@ class OdriveEncoderHall:
 
         self.stopped()
 
-    def get_reduction_ratio(self):
-        return self._reduction_ratio
-
     def get_control_mode(self):
+        """
+        Returns the current control mode.
+        """
         return self._control_mode
 
     def get_angle(self):
         """
         Returns the estimated angle in degrees. A calibration is needed to know the 0.
         """
-        return ((self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio * 360) % 360
+        return - ((self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio * 360) % 360
+
+    def get_turns(self):
+        """
+        Returns the estimated number of turns.
+        """
+        return - (self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio
 
     def get_velocity(self) -> float:
         """
         Returns the estimated velocity of the pedals in tr/min.
         """
-        return self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 60
+        return - self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 60
 
     def get_electrical_power(self):
         """
@@ -754,14 +762,14 @@ class OdriveEncoderHall:
         """
         Returns the measured torque.
         """
-        return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
+        return - self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
             / self._reduction_ratio
 
     def get_motor_torque(self):
         """
         Returns the measured torque.
         """
-        return - self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
+        return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
             / self._reduction_ratio
 
     def get_resisting_torque(self):
@@ -774,11 +782,11 @@ class OdriveEncoderHall:
             dyn_resisting_current = - self.resisting_current_coeff_proportional * velocity / abs(velocity) \
                                     * abs(velocity) ** (1 / self.resisting_current_coeff_power)
         else:
-            if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
+            if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
                 dyn_resisting_current = i_measured
             else:
-                dyn_resisting_current = self._hardware_and_security["resisting_torque_current"]
-        return self.odrv0.axis0.motor.config.torque_constant * dyn_resisting_current / self._reduction_ratio
+                dyn_resisting_current = self.hardware_and_security["resisting_torque_current"]
+        return - self.odrv0.axis0.motor.config.torque_constant * dyn_resisting_current / self._reduction_ratio
 
     def get_user_torque(self):
         """
@@ -791,18 +799,21 @@ class OdriveEncoderHall:
                                     * abs(velocity)**(1/self.resisting_current_coeff_power)
             i_user = i_measured - dyn_resisting_current
         else:
-            if abs(i_measured) <= self._hardware_and_security["resisting_torque_current"]:
+            if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
                 i_user = 0.0
             else:
                 i_user = i_measured
-        return self.odrv0.axis0.motor.config.torque_constant * i_user / self._reduction_ratio
+        return - self.odrv0.axis0.motor.config.torque_constant * i_user / self._reduction_ratio
 
     def save_data_to_file(
             self,
             file_path: str,
             spin_box: float = None,
             instruction: float = None,
-            ramp_instruction: float = None
+            ramp_instruction: float = None,
+            comment: str = "",
+            stopwatch: float = 0.0,
+            lap: float = 0.0,
     ):
         """
         Saves data.
@@ -812,6 +823,9 @@ class OdriveEncoderHall:
             self.first_save = False
 
         data = {
+            "comments": comment,
+            "stopwatch": stopwatch,
+            "lap": lap,
             "spin_box": spin_box,
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,
@@ -824,6 +838,7 @@ class OdriveEncoderHall:
             "resisting_torque": self.get_resisting_torque(),
             "velocity": self.get_velocity(),
             "angle": self.get_angle(),
+            "turns": self.get_turns(),
             "mechanical_power": self.get_mechanical_power(),
             "electrical_power": self.get_electrical_power(),
             "user_power": self.get_user_power(),
@@ -838,7 +853,7 @@ class OdriveEncoderHall:
             "can_error": self.odrv0.can.error,
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
-            "training_mode": self._training_mode.value,
+            "direction": self._direction.value,
             "resistor_current": self.odrv0.brake_resistor_current,
             "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
             "brake_resistor_armed": self.odrv0.brake_resistor_armed,

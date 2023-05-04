@@ -1,14 +1,26 @@
+"""
+Script to control the ergocycle through a graphical user interface.
+"""
+import os
 import sys
-import random
+
 import numpy as np
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtWidgets import *
+import pyqtgraph as pg
 
 from ergocycle_gui import Ui_MainWindow
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import *
-
 from motor import *
+# from phantom import Phantom
+
+from utils import (
+    traduce_error
+)
+
 from enums import (
+    ControlMode,
+    DirectionMode,
     ODriveMotorError,
     ODriveSensorlessEstimatorError,
     ODriveError,
@@ -17,221 +29,676 @@ from enums import (
     ODriveControllerError,
     ODriveCanError,
 )
+from gui_enums import (
+    TrainingMode,
+    GUIControlMode,
+    StopwatchStates,
+)
 
-with open("parameters/hardware_and_security.json", "r") as hardware_and_security_file:
-    hardware_and_security = json.load(hardware_and_security_file)
 
+class PlotWidget(pg.PlotWidget):
+    def __init__(self, parent=None, name=None, y_label=None, color="b"):
+        super().__init__(parent=parent)
 
-def traduce_error(decimal_number, odrive_enum):
-    hex_number = "{0:x}".format(decimal_number)
-    res = ""
-    for i, j in enumerate(hex_number[::-1]):
-        if j != '0':
-            for member in odrive_enum.__members__.values():
-                if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
-                    res += member.name
-                    res += ", "
-    return res
+        # Set background color to white
+        self.setBackground('w')
+
+        # Set x and y axis labels
+        self.setLabel('bottom', 'Time since last control start (s)', color='k')
+        self.setLabel('left', y_label, color='k')
+
+        # Create a legend
+        self.legend = self.addLegend(offset=(1, 1))
+        self.legend.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
+        self._instruction_curve = self.plot([], [], pen=pg.mkPen('k', width=2), name='Instruction')
+        self._data_curve = self.plot([], [], pen=pg.mkPen(color, width=2), name=name)
+        self.removeItem(self._instruction_curve)
+
+        # Set color of legend text to black
+        self.legend.labelTextColor = pg.mkColor('k')
+
+        # Set axes color
+        axis = self.getAxis('bottom')
+        axis.setPen(pg.mkPen('k'))
+        axis.setTextPen('k')
+
+        axis = self.getAxis('left')
+        axis.setPen(pg.mkPen('k'))
+        axis.setTextPen('k')
+
+        # Set the grid
+        self.showGrid(x=False, y=True, alpha=0.5)
+
+    def update_plot(
+            self,
+            time_array: np.ndarray,
+            data_array: np.ndarray,
+            spin_box_array: np.ndarray = None,
+    ):
+        """
+        Update the plot with the new data.
+
+        Parameters
+        ----------
+        time_array: np.ndarray
+            Time values to plot.
+        data_array: np.ndarray
+            Data to plot.
+        spin_box_array: np.ndarray
+            Spin box values to plot.
+        """
+        self._data_curve.setData(time_array, data_array)
+        min_array = np.min(data_array)
+        max_array = np.max(data_array)
+
+        if spin_box_array is not None:
+            min_array = min(min_array, np.min(spin_box_array))
+            max_array = max(max_array, np.max(spin_box_array))
+            self._instruction_curve.setData(time_array, spin_box_array)
+
+        self.setXRange(time_array[0], time_array[-1])
+        if min_array > - 10 and max_array < 10:
+            self.setYRange(-10, 10)
+        else:
+            self.setYRange(min(min_array, 0), max(max_array, 0))
+
+    def add_instruction(self):
+        """
+        Add the instruction to the plot.
+        """
+        self.addItem(self._instruction_curve)
+
+    def remove_instruction(self):
+        """
+        Remove the instruction from the plot.
+        """
+        self.removeItem(self._instruction_curve)
 
 
 class App(QtWidgets.QMainWindow):
-    def __init__(self, odrive_motor: OdriveEncoderHall):
-        super(App, self).__init__()
+    def __init__(self, odrive_motor):
+        super(App, self).__init__(parent=None)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
-        # Style
-        self.ui.power_lineEdit.setStyleSheet("background-color: white; color: black;")
-        self.ui.velocity_lineEdit.setStyleSheet("background-color: white; color: black;")
-        self.ui.torque_lineEdit.setStyleSheet("background-color: white; color: black;")
-
         self.motor = odrive_motor
+        self.motor.zero_position_calibration()
 
-        self.run = True
-        self.instruction = 0.0
-        self.ramp_instruction = 0.0
-        self.spin_box = 0.0
-        self.rd = random.randint(0, 1000)
-        data = threading.Thread(target=self._data, name="Data", daemon=True)
-        data.start()
+        # Plot
+        self._gui_control_mode = GUIControlMode.POWER
+        self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g")
+        self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
+        self.plot_power.getAxis('bottom').setStyle(tickLength=0)
+        self.plot_power.getAxis('bottom').setVisible(False)
+        self.plot_velocity = PlotWidget(self, name="Velocity", y_label="Velocity (tr/min)", color="r")
+        self.ui.velocity_horizontalLayout.insertWidget(0, self.plot_velocity)
+        self.plot_velocity.getAxis('bottom').setStyle(tickLength=0)
+        self.plot_velocity.getAxis('bottom').setVisible(False)
+        self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b")
+        self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
+
+        # Thread for the watchdog, data saving and control
+        # There is only one thread to control the order of execution of the different tasks since there is only one
+        # process. Otherwise, the watchdog risks to not be fed in time.
+        self.motor_thread = MotorThread(self.ui, odrive_motor)
+        self.motor_thread.plot_update_signal.connect(self._plot_update)
+        self.motor_thread.start()
         self.motor.config_watchdog(True, 1.0)
 
-        self.ui.BAU_pushButton.clicked.connect(self.bau)
+        # Colors
+        self._color_red = QtGui.QColor(255, 150, 150)
+        self._color_green = QtGui.QColor(150, 255, 150)
+        self._color_blue = QtGui.QColor(180, 180, 255)
+        self._color_default = self.ui.angle_reset_pushButton.palette().color(
+            self.ui.angle_reset_pushButton.backgroundRole()
+        )
 
-        # Combo boxes
-        _translate = QtCore.QCoreApplication.translate
-        self.ui.training_comboBox.setItemText(0, _translate("MainWindow", TrainingMode.FORWARD.value))
-        self.ui.training_comboBox.setItemText(1, _translate("MainWindow", TrainingMode.REVERSE.value))
-        self.ui.training_comboBox.setCurrentText(self.motor.get_training_mode().value)
+        # Security
+        self.ui.emergency_pushButton.clicked.connect(self.emergency_stop)
 
-        # Training modes
-        self.ui.training_comboBox.activated.connect(self.change_training_mode)
+        # Modes
+        # Training mode
+        self.ui.training_comboBox.addItems([TrainingMode.CONCENTRIC.value, TrainingMode.ECCENTRIC.value])
+        self.ui.training_comboBox.setCurrentIndex(0)
+        self.ui.training_comboBox.activated.connect(self._update_instruction_display_on_training_mode_change)
+        # Control mode
+        self._update_instruction_display_on_training_mode_change()
+        self.ui.control_comboBox.activated.connect(self._update_instruction_display_on_control_mode_change)
+        # Direction of rotation
+        self.ui.direction_comboBox.addItems([DirectionMode.FORWARD.value, DirectionMode.REVERSE.value])
+        self.ui.direction_comboBox.setCurrentIndex(0)
+        self.ui.direction_comboBox.activated.connect(self._set_instruction_to_0)
 
-        # Control modes
-        self.ui.STOP_pushButton.clicked.connect(self.stop)
-        self.ui.power_pushButton.clicked.connect(self.power_mode)
-        self.ui.eccentric_power_pushButton.clicked.connect(self.eccentric_power_mode)
-        self.ui.velocity_pushButton.clicked.connect(self.velocity_mode)
-        self.ui.torque_pushButton.clicked.connect(self.torque_mode)
-        self.ui.linear_pushButton.clicked.connect(self.linear_mode)
-
-        # Instruction
-        self.ui.instruction_spinBox.valueChanged.connect(self.change_instruction)
-        self.ui.acceleration_spinBox.valueChanged.connect(self.change_instruction)
-        self.ui.instruction_spinBox.setEnabled(False)
-        self.ui.acceleration_spinBox.setEnabled(False)
+        # Command
+        self._angle_reset_once = False
+        self.ui.angle_reset_pushButton.clicked.connect(self._angle_reset)
+        self.ui.start_update_pushButton.clicked.connect(self._control_update)
+        self.ui.stop_pushButton.clicked.connect(self._control_stop)
+        self.ui.stop_pushButton.setEnabled(False)
+        self.ui.angle_reset_pushButton.setStyleSheet(f"background-color: {self._color_blue.name()}")
 
         # Saving
-        self.ui.save_stop_pushButton.setEnabled(False)
-        self.ui.save_start_pushButton.clicked.connect(self.save_start)
-        self.ui.save_stop_pushButton.clicked.connect(self.save_stop)
-        self._save = False
-        self._file_path = ""
+        self.ui.save_lineEdit.textChanged.connect(self._check_text)
+        self.ui.save_st_pushButton.clicked.connect(self._save_start_stop)
+        self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
 
-        self.velocities = np.zeros(20)
+        # Comments
+        self.ui.comments_save_pushButton.clicked.connect(self._comments_save)
+        self.ui.comments_save_pushButton.setEnabled(False)
+        self.ui.comments_lineEdit.setEnabled(False)
 
-    def bau(self):
-        self.run = False
+        # Stopwatch
+        self._stopwatch_display()
+        self.ui.stopwatch_start_stop_pushButton.clicked.connect(self._stopwatch_start_stop)
+        self.ui.stopwatch_lap_reset_pushButton.clicked.connect(self._stopwatch_lap_reset)
+        self.ui.stopwatch_lcdNumber.setDigitCount(8)
+        self.ui.lap_lcdNumber.setDigitCount(5)
 
-    def stop(self):
-        self.ui.STOP_pushButton.setEnabled(False)
-        self.change_mode()
+        # Style
+        self.ui.start_update_pushButton.setStyleSheet(f"background-color: {self._color_green.name()};")
+        self.ui.errors_label.setStyleSheet(f"font-weight: bold; color: red;")
+        self.ui.emergency_pushButton.setStyleSheet(f"background-color: red; color: white;")
+
+    def emergency_stop(self):
+        """
+        Emergency stop. Stop the motor and close the GUI.
+        """
+        self.motor_thread.run = False
+        self.close()
+
+    def closeEvent(self, event):
+        """
+        Stop the motor on close.
+        """
+        self.motor_thread.run = False
+        event.accept()
+
+    def _check_text(self, text):
+        """
+        Check if the text is correct for a file name.
+        """
+        new_text = ''
+        for char in text:
+            if char.isalnum() or char in ('_', '-'):
+                new_text += char
+        if new_text != text:
+            cursor_pos = self.ui.save_lineEdit.cursorPosition()
+            self.ui.save_lineEdit.setText(new_text)
+            self.ui.save_lineEdit.setCursorPosition(cursor_pos - 1)
+
+    def _update_instruction_display_on_training_mode_change(self):
+        """
+        Update the display accordingly to the training mode.
+        """
+        self._set_instruction_to_0()
+        training_mode = self.ui.training_comboBox.currentText()
+        index = self.ui.control_comboBox.currentIndex()
+        # If there was no precedent index, set the GUIControlMode to POWER.
+        if index == -1:
+            index = 0
+        self.ui.control_comboBox.clear()
+        if training_mode == TrainingMode.CONCENTRIC.value:
+            self.ui.control_comboBox.addItems([
+                GUIControlMode.POWER.value,
+                GUIControlMode.VELOCITY.value,
+                GUIControlMode.LINEAR.value,
+                GUIControlMode.TORQUE.value])
+            self.ui.direction_comboBox.setCurrentText(DirectionMode.FORWARD.value)
+        elif training_mode == TrainingMode.ECCENTRIC.value:
+            self.ui.control_comboBox.addItems([
+                GUIControlMode.POWER.value,
+                GUIControlMode.VELOCITY.value])
+            self.ui.direction_comboBox.setCurrentText(DirectionMode.REVERSE.value)
+            # If the GUIControlMode corresponding to the precedent index was LINEAR or TORQUE, set the GUIControlMode to
+            # POWER.
+            if index >= 2:
+                index = 0
+        else:
+            raise ValueError(f"{training_mode} training has not been implemented yet.")
+        self.ui.control_comboBox.setCurrentIndex(index)
+        self._update_instruction_display_on_control_mode_change()
+
+    def _update_instruction_display_on_control_mode_change(self):
+        """
+        Update the display accordingly to the control mode.
+        """
+        self._set_instruction_to_0()
+        power_step = 10
+        vel_step = 10
+        vel_ramp = 30
+        torque_step = 1
+        torque_ramp = 5
+        linear_step = 0.1
+
+        control_mode = self.ui.control_comboBox.currentText()
+        if control_mode == GUIControlMode.POWER.value:
+            power_max = int(
+                self.motor.hardware_and_security["pedals_vel_limit"] * self.motor.hardware_and_security["torque_lim"])
+            self.ui.instruction_spinBox.setRange(0, power_max)
+            self.ui.instruction_spinBox.setSingleStep(power_step)
+            self.ui.units_label.setText("W")
+
+            training_mode = self.ui.training_comboBox.currentText()
+            if training_mode == TrainingMode.CONCENTRIC.value:
+                self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_ramp_rate_lim"]))
+                self.ui.acceleration_spinBox.setSingleStep(torque_step)
+                self.ui.acceleration_spinBox.setValue(torque_ramp)
+                self.ui.acceleration_units_label.setText("N.m/s")
+            elif training_mode == TrainingMode.ECCENTRIC.value:
+                self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["pedals_accel_lim"]) - 1)
+                self.ui.acceleration_spinBox.setSingleStep(vel_step)
+                self.ui.acceleration_spinBox.setValue(vel_ramp)
+                self.ui.acceleration_units_label.setText("(tr/min)/s")
+            else:
+                raise ValueError(f"{training_mode} training has not been implemented yet.")
+
+        elif control_mode == GUIControlMode.LINEAR.value:
+            self.ui.instruction_spinBox.setRange(0, 1.0)
+            self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_ramp_rate_lim"]))
+            self.ui.instruction_spinBox.setSingleStep(linear_step)
+            self.ui.acceleration_spinBox.setSingleStep(torque_step)
+            self.ui.acceleration_spinBox.setValue(torque_ramp)
+            self.ui.units_label.setText("N.m/(tr/min)")
+            self.ui.acceleration_units_label.setText("N.m/s")
+
+        elif control_mode == GUIControlMode.VELOCITY.value:
+            self.ui.instruction_spinBox.setRange(0, self.motor.hardware_and_security["pedals_vel_limit"] - 1)
+            self.ui.acceleration_spinBox.setRange(0, self.motor.hardware_and_security["pedals_accel_lim"] - 1)
+            self.ui.instruction_spinBox.setSingleStep(vel_step)
+            self.ui.acceleration_spinBox.setSingleStep(vel_step)
+            self.ui.acceleration_spinBox.setValue(vel_ramp)
+            self.ui.units_label.setText("tr/min")
+            self.ui.acceleration_units_label.setText("(tr/min)/s")
+
+        elif control_mode == GUIControlMode.TORQUE.value:
+            self.ui.instruction_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_lim"]))
+            self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_ramp_rate_lim"]))
+            self.ui.instruction_spinBox.setSingleStep(torque_step)
+            self.ui.acceleration_spinBox.setSingleStep(torque_step)
+            self.ui.acceleration_spinBox.setValue(torque_ramp)
+            self.ui.units_label.setText("N.m")
+            self.ui.acceleration_units_label.setText("N.m/s")
+
+        else:
+            raise ValueError(f"{control_mode} control has not been implemented yet.")
+
+    def _set_instruction_to_0(self):
+        """
+        Set the instruction to 0.
+        """
         self.ui.instruction_spinBox.setValue(0)
-        self.ui.acceleration_spinBox.setValue(0)
+
+    def _angle_reset(self):
+        """
+        Reset the angle to 0.
+        """
+        self.motor_thread.motor.zero_position_calibration()
+        self._angle_reset_once = True
+        self.ui.angle_reset_pushButton.setStyleSheet(f"background-color: {self._color_default.name()}")
+
+    def _control_update(self):
+        """
+        Start or update the control depending on the control mode and the training mode.
+        """
+        # If the motor is not started: change the display, get the control and training modes and set the direction.
+        if not self.motor_thread.motor_started:
+            if not self._angle_reset_once:
+                self._angle_reset()
+            self._control_display()
+            self._plot_add_instruction()
+            self.motor_thread.plot_start_time = time.time()
+            self.motor_thread.time_array = np.linspace(
+                - self.motor_thread.size_arrays / self.motor_thread.plot_frequency, 0, self.motor_thread.size_arrays
+            )
+
+        # Update instructions and the control depending on the control mode.
+        self.motor_thread.ramp_instruction = self.ui.acceleration_spinBox.value()
+
+        if self._gui_control_mode == GUIControlMode.POWER:
+            if self._training_mode == TrainingMode.CONCENTRIC.value:
+                self.motor_thread.spin_box = self.ui.instruction_spinBox.value()
+                self.motor_thread.instruction = self.motor.linear_control(
+                    self.motor_thread.spin_box, self.motor_thread.ramp_instruction
+                )
+            elif self._training_mode == TrainingMode.ECCENTRIC.value:
+                # In eccentric mode, the sign is inverted because the user's power is negative
+                self.motor_thread.spin_box = - self.ui.instruction_spinBox.value()
+                self.motor_thread.instruction = self.motor.eccentric_power_control(
+                    self.motor_thread.spin_box, self.motor_thread.ramp_instruction
+                )
+            else:
+                raise ValueError(f"{self._training_mode} training has not been implemented yet.")
+
+        elif self._gui_control_mode == GUIControlMode.LINEAR:
+            self.motor_thread.spin_box = self.ui.instruction_spinBox.value()
+            self.motor_thread.instruction = self.motor.linear_control(
+                self.motor_thread.spin_box, self.motor_thread.ramp_instruction
+            )
+
+        elif self._gui_control_mode == GUIControlMode.VELOCITY:
+            self.motor_thread.instruction = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.motor_thread.spin_box = self.motor_thread.instruction
+            self.motor.velocity_control(
+                self.motor_thread.spin_box, self.motor_thread.ramp_instruction
+            )
+
+        elif self._gui_control_mode == GUIControlMode.TORQUE:
+            self.motor_thread.spin_box = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
+            self.motor_thread.instruction = self.motor.torque_control(
+                self.motor_thread.spin_box, self.motor_thread.ramp_instruction
+            )
+
+        else:
+            raise ValueError(f"{self._gui_control_mode} control has not been implemented yet.")
+
+    def _control_stop(self):
+        """
+        Start the stopping procedure and adapt the GUI accordingly.
+        """
+        ramp_instruction = self.motor_thread.ramp_instruction
+
+        self._control_display()
+        self._plot_remove_instruction()
+        self.ui.start_update_pushButton.setEnabled(False)
+        self.motor_thread.instruction = 0.0
+        self.motor_thread.spin_box = 0.0
+        self.motor_thread.ramp_instruction = 0.0
+
+        # If the motor is based on velocity control, the ramp is in (tr/min)/s. It can be given to motor.stopping(),
+        # else it won't be used. Either way it is protected by the min() function.
+        self.motor.stopping(velocity_ramp_rate=ramp_instruction)
+
+    def _control_display(self):
+        """
+        Change the display when starting or stopping the motor.
+        If starting the motor get the control and training modes and set the direction.
+        """
+        self.motor_thread.motor_started = not self.motor_thread.motor_started
+        self.ui.training_comboBox.setEnabled(not self.motor_thread.motor_started)
+        self.ui.control_comboBox.setEnabled(not self.motor_thread.motor_started)
+        self.ui.direction_comboBox.setEnabled(not self.motor_thread.motor_started)
+        self.ui.stop_pushButton.setEnabled(self.motor_thread.motor_started)
+        if self.motor_thread.motor_started:
+            self._gui_control_mode = self.ui.control_comboBox.currentText()
+            self._training_mode = self.ui.training_comboBox.currentText()
+            self.motor.set_direction(self.ui.direction_comboBox.currentText())
+            self.ui.start_update_pushButton.setText("Update")
+            self.ui.start_update_pushButton.setStyleSheet(f"background-color: {self._color_blue.name()};")
+            self.ui.stop_pushButton.setStyleSheet(f"background-color: {self._color_red.name()};")
+            self.motor_thread.motor_started = True
+        else:
+            self.ui.start_update_pushButton.setText("Start")
+            self.ui.start_update_pushButton.setStyleSheet(f"background-color: {self._color_green.name()};")
+            self.ui.stop_pushButton.setStyleSheet(f"background-color: {self._color_default.name()};")
+            self.motor_thread.motor_started = False
+
+    def _save_start_stop(self):
+        """
+        Start or stop saving the data to a file.
+        """
+        # Choosing the file name at the beginning of the saving.
+        self.motor_thread.file_name = f"XP/{self.ui.save_lineEdit.text()}"
+        ext = ".bio"
+        if os.path.isfile(f"{self.motor_thread.file_name}{ext}"):
+            # File already exists, add a suffix to the filename
+            i = 1
+            while os.path.isfile(f"{self.motor_thread.file_name}({i}){ext}"):
+                i += 1
+            self.motor_thread.file_name = f"{self.motor_thread.file_name}({i})"
+
+        self.motor_thread.saving = not self.motor_thread.saving
+        self.ui.save_lineEdit.setEnabled(not self.motor_thread.saving)
+        self.ui.comments_save_pushButton.setEnabled(self.motor_thread.saving)
+        self.ui.comments_lineEdit.setEnabled(self.motor_thread.saving)
+        if self.motor_thread.saving:
+            self.ui.save_st_pushButton.setText("Stop saving")
+            self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_red.name()}")
+            self.ui.comments_save_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
+        else:
+            self.ui.save_st_pushButton.setText("Start saving")
+            self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
+            self.ui.comments_save_pushButton.setStyleSheet(f"background-color: {self._color_default.name()}")
+
+    def _comments_save(self):
+        """
+        Indicates that the comment needs to be saved and clear the comment line edit.
+        """
+        self.motor_thread.comment_to_save = True
+        self.motor_thread.comment = self.ui.comments_lineEdit.text()
+        self.ui.comments_lineEdit.setText("")
+
+    def _stopwatch_start_stop(self):
+        """
+        Start, stop or pause the stopwatch.
+        """
+        if self.motor_thread.stopwatch_state == StopwatchStates.PAUSED:
+            self.motor_thread.stopwatch_state = StopwatchStates.RUNNING
+            self.motor_thread.stopwatch_start_time += (time.time() - self.motor_thread.stopwatch_pause_time)
+            self.motor_thread.stopwatch_lap_time += (time.time() - self.motor_thread.stopwatch_pause_time)
+
+        elif self.motor_thread.stopwatch_state == StopwatchStates.RUNNING:
+            self.motor_thread.stopwatch_state = StopwatchStates.PAUSED
+            self.motor_thread.stopwatch_pause_time = time.time()
+
+        elif self.motor_thread.stopwatch_state == StopwatchStates.STOPPED:
+            self.motor_thread.stopwatch_state = StopwatchStates.RUNNING
+            self.motor_thread.stopwatch_start_time = time.time()
+            self.motor_thread.stopwatch_lap_time = time.time()
+
+        self._stopwatch_display()
+
+    def _stopwatch_lap_reset(self):
+        """
+        Reset the stopwatch if it is paused, otherwise, save the lap time.
+        """
+        if self.motor_thread.stopwatch_state == StopwatchStates.RUNNING:
+            self.motor_thread.stopwatch_lap_time = time.time()
+
+        elif self.motor_thread.stopwatch_state == StopwatchStates.PAUSED:
+            self.motor_thread.stopwatch_state = StopwatchStates.STOPPED
+
+        self._stopwatch_display()
+
+    def _stopwatch_display(self):
+        """
+        Update the stopwatch display accordingly to the stopwatch state.
+        """
+        if self.motor_thread.stopwatch_state == StopwatchStates.PAUSED:
+            self.ui.stopwatch_lap_reset_pushButton.setText("Reset")
+            self.ui.stopwatch_start_stop_pushButton.setText("Start")
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_green.name()}')
+
+        elif self.motor_thread.stopwatch_state == StopwatchStates.RUNNING:
+            self.ui.stopwatch_lap_reset_pushButton.setEnabled(True)
+            self.ui.stopwatch_lap_reset_pushButton.setText("Lap")
+            self.ui.stopwatch_start_stop_pushButton.setText("Stop")
+            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f'background-color: {self._color_blue.name()}')
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_red.name()}')
+
+        elif self.motor_thread.stopwatch_state == StopwatchStates.STOPPED:
+            self.ui.stopwatch_lap_reset_pushButton.setEnabled(False)
+            self.ui.stopwatch_lap_reset_pushButton.setText("Lap")
+            self.ui.stopwatch_start_stop_pushButton.setText("Start")
+            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f'background-color: {self._color_default.name()}')
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_green.name()}')
+
+    def _plot_add_instruction(self):
+        """
+        Add an instruction to the plot.
+        """
+        if self._gui_control_mode == GUIControlMode.POWER:
+            self.plot_power.add_instruction()
+        elif self._gui_control_mode == GUIControlMode.VELOCITY:
+            self.plot_velocity.add_instruction()
+        elif self._gui_control_mode == GUIControlMode.TORQUE:
+            self.plot_torque.add_instruction()
+
+    def _plot_remove_instruction(self):
+        """
+        Remove the instruction from the plot.
+        """
+        if self._gui_control_mode == GUIControlMode.POWER:
+            self.plot_power.remove_instruction()
+        elif self._gui_control_mode == GUIControlMode.VELOCITY:
+            self.plot_velocity.remove_instruction()
+        elif self._gui_control_mode == GUIControlMode.TORQUE:
+            self.plot_torque.remove_instruction()
+
+    def _plot_update(self):
+        """
+        Update the plot with the new data.
+        """
+        power_spin_box_array = None
+        velocity_spin_box_array = None
+        torque_spin_box_array = None
+        if self._gui_control_mode == GUIControlMode.POWER:
+            power_spin_box_array = self.motor_thread.spin_box_array
+        elif self._gui_control_mode == GUIControlMode.VELOCITY:
+            velocity_spin_box_array = self.motor_thread.spin_box_array
+        elif self._gui_control_mode == GUIControlMode.TORQUE:
+            torque_spin_box_array = self.motor_thread.spin_box_array
+
+        self.plot_power.update_plot(
+            self.motor_thread.time_array,
+            self.motor_thread.power_array,
+            power_spin_box_array,
+        )
+        self.plot_velocity.update_plot(
+            self.motor_thread.time_array,
+            self.motor_thread.velocity_array,
+            velocity_spin_box_array,
+        )
+        self.plot_torque.update_plot(
+            self.motor_thread.time_array,
+            self.motor_thread.torque_array,
+            torque_spin_box_array,
+        )
+
+
+class MotorThread(QtCore.QThread):
+    plot_update_signal = QtCore.pyqtSignal(name="plot_update_signal")
+    plot_instruction_add_signal = QtCore.pyqtSignal(name="plot_instruction_add_signal")
+    plot_instruction_remove_signal = QtCore.pyqtSignal(name="plot_instruction_remove_signal")
+
+    def __init__(self, ui: Ui_MainWindow, odrive_motor):
+        super(MotorThread, self).__init__(parent=None)
+        self.ui = ui
+        self.motor = odrive_motor
+
+        # Security
+        self.run = True
+
+        # Control
+        self.motor_started = False
+
+        # Saving
+        self.saving = False
+        self.file_name = ""
         self.instruction = 0.0
-        self.spin_box = 0.0
         self.ramp_instruction = 0.0
-        self.ui.instruction_spinBox.setEnabled(False)
-        self.ui.acceleration_spinBox.setEnabled(False)
-        self.ui.training_comboBox.setEnabled(False)
-        self.ui.units_label.setText("")
-        self.ui.acceleration_units_label.setText("")
-
-        self.motor.stopping()
-        self.ui.control_label.setText("The motor is stopping. You can let the pedals go.")
-
-    def change_training_mode(self):
-        self.motor.set_training_mode(self.ui.training_comboBox.currentText())
-
-    def change_mode(self, stop=False):
-        self.ui.instruction_spinBox.setValue(0)
         self.spin_box = 0.0
-        control_mode = self.motor.get_control_mode()
-        if not stop:
-            if control_mode == ControlMode.VELOCITY_CONTROL:
-                self.ui.control_label.setText(f"You are in {control_mode.value} mode, "
-                                              f"you can force as soon as the velocity is stabilized.")
-            elif control_mode in control_modes_based_on_torque:
-                self.ui.control_label.setText(f"You are in {control_mode.value} mode, you can pedal now.")
-        self.ui.velocity_pushButton.setEnabled(stop)
-        self.ui.torque_pushButton.setEnabled(stop)
-        self.ui.power_pushButton.setEnabled(stop)
-        self.ui.eccentric_power_pushButton.setEnabled(stop)
-        self.ui.linear_pushButton.setEnabled(stop)
-        self.ui.training_comboBox.setEnabled(stop)
-        self.ui.instruction_spinBox.setEnabled(not stop)
-        self.ui.acceleration_spinBox.setEnabled(not stop)
 
-    def velocity_mode(self):
-        self.ui.instruction_spinBox.setRange(0, hardware_and_security["pedals_vel_limit"] - 1)
-        self.ui.acceleration_spinBox.setRange(0, hardware_and_security["pedals_accel_lim"] - 1)
-        self.ui.instruction_spinBox.setSingleStep(10)
-        self.ui.acceleration_spinBox.setSingleStep(5)
-        self.ui.acceleration_spinBox.setValue(5)
-        self.ui.units_label.setText("tr/min")
-        self.ui.acceleration_units_label.setText("(tr/min)/s")
-        self.motor.velocity_control(0.0)
-        self.change_mode()
+        # Comments
+        self.comment_to_save = False
+        self.comment = ""
 
-    def torque_mode(self):
-        self.ui.instruction_spinBox.setRange(0, int(hardware_and_security["torque_lim"]))
-        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
-        self.ui.instruction_spinBox.setSingleStep(1)
-        self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.acceleration_spinBox.setValue(2)
-        self.ramp_instruction = 2.0
-        self.ui.units_label.setText("Nm")
-        self.ui.acceleration_units_label.setText("Nm/s")
-        self.instruction = self.motor.torque_control(0.0)
-        self.change_mode()
+        # Stopwatch
+        self.stopwatch_start_time = 0.0
+        self.stopwatch_pause_time = 0.0
+        self.stopwatch_lap_time = 0.0
+        self.stopwatch_state = StopwatchStates.STOPPED
+        self._stopwatch = 0.0
+        self._lap = 0.0
 
-    def power_mode(self):
-        self.ui.instruction_spinBox.setRange(
-            0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
-        )
-        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
-        self.ui.instruction_spinBox.setSingleStep(10)
-        self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.acceleration_spinBox.setValue(10)
-        self.ui.units_label.setText("W")
-        self.ui.acceleration_units_label.setText("(tr/min)/s")
-        self.instruction = self.motor.power_control(0.0)
-        self.change_mode()
+        # Data
+        self._display_frequency = 4  # Hz
 
-    def eccentric_power_mode(self):
-        self.ui.instruction_spinBox.setRange(
-            0, int(hardware_and_security["pedals_vel_limit"] * hardware_and_security["torque_lim"])
-        )
-        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["pedals_accel_lim"]))
-        self.ui.instruction_spinBox.setSingleStep(10)
-        self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.acceleration_spinBox.setValue(10)
-        self.ui.units_label.setText("W")
-        self.ui.acceleration_units_label.setText("Nm/s")
-        self.instruction = self.motor.eccentric_power_control(0.0)
-        self.change_mode()
+        # Plot
+        self.plot_start_time = 0.0
+        self.plot_frequency = 2  # Hz
+        self.size_arrays = 20
+        self.time_array = np.linspace(- self.size_arrays / self.plot_frequency, 0, self.size_arrays)
+        self.velocity_array = np.zeros(self.size_arrays)
+        self.torque_array = np.zeros(self.size_arrays)
+        self.power_array = np.zeros(self.size_arrays)
+        self.spin_box_array = None
 
-    def linear_mode(self):
-        self.ui.instruction_spinBox.setRange(0, 1.0)
-        self.ui.acceleration_spinBox.setRange(0, int(hardware_and_security["torque_ramp_rate_lim"]))
-        self.ui.instruction_spinBox.setSingleStep(0.1)
-        self.ui.acceleration_spinBox.setSingleStep(1)
-        self.ui.acceleration_spinBox.setValue(2)
-        self.ramp_instruction = 2.0
-        self.ui.units_label.setText("Nm/(tr/min)")
-        self.ui.acceleration_units_label.setText("Nm/s")
-        self.instruction = self.motor.linear_control(0.0)
-        self.change_mode()
-
-    def change_instruction(self):
-        control_mode = self.motor.get_control_mode()
-        print(control_mode)
-        self.ramp_instruction = self.ui.acceleration_spinBox.value()
-        if control_mode == ControlMode.VELOCITY_CONTROL:
-            self.spin_box = self.instruction = self.motor.get_sign() * self.ui.instruction_spinBox.value()
-            self.motor.velocity_control(self.spin_box, self.ramp_instruction)
-        elif control_mode == ControlMode.TORQUE_CONTROL:
-            self.spin_box = self.motor.get_sign() * self.ui.instruction_spinBox.value()
-            self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
-        elif control_mode == ControlMode.POWER_CONTROL:
-            self.spin_box = self.ui.instruction_spinBox.value()
-            self.instruction = self.motor.power_control(self.spin_box, self.ramp_instruction)
-        elif control_mode == ControlMode.LINEAR_CONTROL:
-            self.spin_box = self.ui.instruction_spinBox.value()
-            self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
-        elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
-            # In eccentric mode, the sign is inverted because the user's power is negative
-            self.spin_box = - self.ui.instruction_spinBox.value()
-            self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
-
-    def _data(self):
+    def feed_watchdog(self):
         """
-        To be called by a daemon thread.
+        Feed the watchdog of the motor. This method is not necessary in itself, but it allows to test the GUI without an
+        Odrive connected by commenting the line.
         """
+        self.motor.odrv0.axis0.watchdog_feed()
+
+    def run(self):
+        """
+        Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
+        It updates the command and the display, saves the data and feeds the watchdog.
+        """
+        t_plot_precedent = time.time()
+        t_display_precedent = time.time()
+        self.plot_start_time = time.time()
+        date_time = QtCore.QDateTime()
+
         while self.run:
-            self.motor.odrv0.axis0.watchdog_feed()
-            self.motor.save_data_to_file(f'XP/preXP_{self.rd}',
-                                         spin_box=self.spin_box,
-                                         instruction=self.instruction,
-                                         ramp_instruction=self.ramp_instruction,)
-            self.motor.odrv0.axis0.watchdog_feed()
+            self.feed_watchdog()
 
-            self.ui.power_lineEdit.setText(f"{self.motor.get_user_power():.0f}")
-            self.motor.odrv0.axis0.watchdog_feed()
-            self.ui.velocity_lineEdit.setText(f"{self.motor.get_velocity():.0f}")
-            self.motor.odrv0.axis0.watchdog_feed()
-            self.ui.torque_lineEdit.setText(f"{self.motor.get_user_torque():.0f}")
-            self.motor.odrv0.axis0.watchdog_feed()
+            # Date
+            current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
+            self.ui.date_label.setText(current_time)
+
+            self.feed_watchdog()
+
+            # Stopwatch
+            if self.stopwatch_state == StopwatchStates.RUNNING:
+                self._stopwatch = time.time() - self.stopwatch_start_time
+                self._lap = time.time() - self.stopwatch_lap_time
+            elif self.stopwatch_state == StopwatchStates.PAUSED:
+                self._stopwatch = self.stopwatch_pause_time - self.stopwatch_start_time
+                self._lap = self.stopwatch_pause_time - self.stopwatch_lap_time
+            elif self.stopwatch_state == StopwatchStates.STOPPED:
+                self._stopwatch = 0.0
+                self._lap = 0.0
+
+            minutes = int(self._stopwatch // 60)  # get the integer part of the quotient
+            seconds = int(self._stopwatch % 60)  # get the integer part of the remainder
+            milliseconds = int(
+                (self._stopwatch - int(self._stopwatch)) * 100)  # get the milliseconds component
+            self.ui.stopwatch_lcdNumber.display(f"{minutes:02d}:{seconds:02d}.{milliseconds:02d}")
+            minutes = int(self._lap // 60)  # get the integer part of the quotient
+            seconds = int(self._lap % 60)  # get the integer part of the remainder
+            self.ui.lap_lcdNumber.display(f"{minutes:02d}:{seconds:02d}")
+
+            self.feed_watchdog()
+
+            # Save data
+            if self.saving:
+                if self.comment_to_save:
+                    comment = self.comment
+                    self.comment_to_save = False
+                else:
+                    comment = ""
+                self.motor.save_data_to_file(
+                    self.file_name,
+                    spin_box=self.spin_box,
+                    instruction=self.instruction,
+                    ramp_instruction=self.ramp_instruction,
+                    comment=comment,
+                    stopwatch=self._stopwatch,
+                    lap=self._lap,
+                )
+
+            self.feed_watchdog()
+
+            # Display data
+            t_since_precedent_display = time.time() - t_display_precedent
+            if t_since_precedent_display > 1 / self._display_frequency:
+                self.ui.power_display.setText(f"{self.motor.get_user_power():.0f} W")
+                self.ui.velocity_display.setText(f"{self.motor.get_velocity():.0f} tr/min")
+                self.ui.torque_display.setText(f"{self.motor.get_user_torque():.0f} N.m")
+                self.ui.turns_display.setText(f"{self.motor.get_turns():.0f} tr")
+                self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
+                t_display_precedent = time.time()
+
             self.ui.errors_label.setText(
                 f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
                 f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
@@ -240,71 +707,59 @@ class App(QtWidgets.QMainWindow):
                 f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
                 f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
                 f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
-                f"brake resistor armed: {self.motor.odrv0.brake_resistor_armed}, "
-                f"brake resistor saturated: {self.motor.odrv0.brake_resistor_saturated}, "
-                f"brake resistor current: {self.motor.odrv0.brake_resistor_current:.2f}"
             )
-            self.motor.odrv0.axis0.watchdog_feed()
-            if (
-                    self.motor.get_control_mode() == ControlMode.VELOCITY_CONTROL
-                    and abs(self.motor.get_iq_setpoint()) > 10.0
-                    and abs(self.motor.get_velocity()) < 5.0
-            ):
-                self.motor.odrv0.axis0.watchdog_feed()
-                # TODO: Please don't force too much against the motor.
 
+            self.feed_watchdog()
+
+            # Adapt the control of the motor accordingly to the current velocity and torque
+            control_mode = self.motor.get_control_mode()
             # If the motor is in torque control, the torque input needs to be updated in function of the velocity
             # because of the resisting torque.
             # Furthermore, it allows to stop the pedals by reducing the torque if the user has stopped.
-            if self.motor.get_control_mode() == ControlMode.TORQUE_CONTROL:
-                self.motor.odrv0.axis0.watchdog_feed()
+            if control_mode == ControlMode.TORQUE_CONTROL:
                 self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
 
             # The power control mode is based on the torque control mode, but the torque input is calculated from the
             # current velocity (torque_input = power / velocity and resiting torque).
-            if self.motor.get_control_mode() == ControlMode.POWER_CONTROL:
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.instruction = self.motor.power_control(self.spin_box, self.ramp_instruction)
+            elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
+                self.instruction = self.motor.concentric_power_control(self.spin_box, self.ramp_instruction)
 
             # The linear control mode is based on the torque control mode, but the torque input is calculated from the
             # current velocity (torque_input = linear_coeff * velocity and resiting torque).
-            if self.motor.get_control_mode() == ControlMode.LINEAR_CONTROL:
-                self.motor.odrv0.axis0.watchdog_feed()
+            elif control_mode == ControlMode.LINEAR_CONTROL:
                 self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
-            if self.motor.get_control_mode() == ControlMode.ECCENTRIC_POWER_CONTROL:
-                self.motor.odrv0.axis0.watchdog_feed()
-                self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
+            elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
+                self.instruction = self.motor.eccentric_power_control(self.spin_box,
+                                                                      self.ramp_instruction)
 
-            if self.motor.get_control_mode() == ControlMode.STOPPING:
-                self.motor.odrv0.axis0.watchdog_feed()
+            elif self.motor.get_control_mode() == ControlMode.STOPPING:
                 if abs(motor.get_velocity()) < 10.0:
-                    self.motor.odrv0.axis0.watchdog_feed()
                     self.motor.stopped()
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.ui.STOP_pushButton.setEnabled(True)
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.change_mode(stop=True)
-                    self.motor.odrv0.axis0.watchdog_feed()
-                    self.ui.control_label.setText("The motor has stopped. Choose a training mode "
-                                                  "(eccentric or concentric), a control mode (power, velocity, torque, "
-                                                  "linear) a ramp instruction and an instruction.")
+                    self.ui.start_update_pushButton.setEnabled(True)
 
-            self.motor.odrv0.axis0.watchdog_feed()
+            self.feed_watchdog()
 
-    def save_start(self):
-        # ToDo: Implement this for real.
-        self._file_path = self.ui.save_lineEdit.text()
-        self._save = True
-        self.ui.save_start_pushButton.setEnabled(False)
-        self.ui.save_stop_pushButton.setEnabled(True)
-        self.ui.save_lineEdit.setEnabled(False)
-
-    def save_stop(self):
-        self._save = False
-        self.ui.save_start_pushButton.setEnabled(True)
-        self.ui.save_stop_pushButton.setEnabled(False)
-        self.ui.save_lineEdit.setEnabled(True)
+            # Plot data
+            t_since_precedent_plot = time.time() - t_plot_precedent
+            if t_since_precedent_plot > 1 / self.plot_frequency:
+                self.time_array = np.roll(self.time_array, -1)
+                self.time_array[-1] = time.time() - self.plot_start_time
+                self.velocity_array = np.roll(self.velocity_array, -1)
+                self.velocity_array[-1] = self.motor.get_velocity()
+                self.torque_array = np.roll(self.torque_array, -1)
+                self.torque_array[-1] = self.motor.get_user_torque()
+                self.power_array = np.roll(self.power_array, -1)
+                self.power_array[-1] = self.motor.get_user_power()
+                if self.motor_started:
+                    if self.spin_box_array is None:
+                        self.spin_box_array = np.zeros(self.size_arrays)
+                    self.spin_box_array = np.roll(self.spin_box_array, -1)
+                    self.spin_box_array[-1] = self.spin_box
+                else:
+                    self.spin_box_array = None
+                self.plot_update_signal.emit()
+                t_plot_precedent = time.time()
 
 
 if __name__ == "__main__":
