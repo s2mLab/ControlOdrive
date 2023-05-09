@@ -17,7 +17,7 @@ data = load("XP/XP_participantX(2).bio")
 window_length = 20
 # /!\ bias because the time steps are not the same
 kernel = np.ones(window_length) / window_length
-smoothed_velocity = np.convolve(data['velocity'], kernel, mode='valid')
+smoothed_cadence = np.convolve(data['cadence'], kernel, mode='valid')
 smoothed_i_measured = np.convolve(data['iq_measured'], kernel, mode='valid')
 smoothed_i_setpoint = np.convolve(data['iq_setpoint'], kernel, mode='valid')
 smoothed_motor_torque = np.convolve(data['motor_torque'], kernel, mode='valid')
@@ -41,17 +41,17 @@ plt.plot(data['time'], data['lap'], label="Lap")
 
 plt.legend()
 
-# Velocity
+# cadence
 plt.figure()
-plt.title("Velocity")
-plt.ylabel("Velocity (tr/min)")
+plt.title("cadence")
+plt.ylabel("cadence (rpm)")
 plt.xlabel("Time (s)")
 
-plt.plot(data['time'], data['velocity'], label="Velocity")
+plt.plot(data['time'], data['cadence'], label="cadence")
 plt.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_velocity,
-    label="Smoothed velocity"
+    smoothed_cadence,
+    label="Smoothed cadence"
 )
 plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
 
@@ -85,14 +85,14 @@ plt.legend(loc="upper right")
 # Currents
 fig, ax1 = plt.subplots()
 
-plt.title("Currents and velocity")
+plt.title("Currents and cadence")
 
 ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Current (A)')
-ax2.set_ylabel('Velocity (tr/min)')
+ax2.set_ylabel('cadence (rpm)')
 
-ax2.plot(data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_velocity, label="Smoothed velocity", color='k')
+ax2.plot(data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_cadence, label="Smoothed cadence", color='k')
 ax1.plot(data['time'], data["iq_measured"], label="Iq measured")
 ax1.plot(data['time'], data["iq_setpoint"], label="Iq setpoint")
 ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
@@ -105,13 +105,13 @@ fig, ax1 = plt.subplots()
 # ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Torque (Nm)')
-# ax2.set_ylabel('Velocity (tr/min)')
+# ax2.set_ylabel('cadence (rpm)')
 
 plt.title("Torques")
 
 # ax2.plot(
-#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_velocity,
-#     label="Smoothed velocity",
+#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_cadence,
+#     label="Smoothed cadence",
 #     color='k'
 # )
 ax1.plot(
@@ -136,8 +136,8 @@ ax1.plot(
 #)
 #ax1.plot(
 #    data['time'],
-#    np.asarray(data['spin_box']) * np.asarray(data['velocity']),
-#    label="Spin box * velocity",
+#    np.asarray(data['spin_box']) * np.asarray(data['cadence']),
+#    label="Spin box * cadence",
 #)
 
 fig.legend(loc="upper right")
@@ -149,7 +149,7 @@ plt.title("Powers")
 ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Powers(W)')
-ax2.set_ylabel('Velocity (tr/min)')
+ax2.set_ylabel('cadence (rpm)')
 
 ax1.plot(
     data['time'],
@@ -173,8 +173,8 @@ ax1.plot(
 )
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_velocity,
-    label="Smoothed velocity",
+    smoothed_cadence,
+    label="Smoothed cadence",
     color='k')
 
 fig.legend(loc="upper right")
@@ -182,17 +182,17 @@ fig.legend(loc="upper right")
 # vbus
 fig, ax1 = plt.subplots()
 
-plt.title("vbus and velocity of the pedal")
+plt.title("vbus and cadence of the pedal")
 
 ax2 = ax1.twinx()
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('vbus (V)')
-ax2.set_ylabel('Velocity (tr/min)')
+ax2.set_ylabel('cadence (rpm)')
 
 ax1.plot(data['time'], data["vbus"], label="vbus")
 ax2.plot(
     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_velocity, label="Smoothed velocity of the pedals",
+    smoothed_cadence, label="Smoothed cadence of the pedals",
     color="k"
 )
 

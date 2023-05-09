@@ -10,14 +10,14 @@ class ControlMode(StrEnum):
     STOPPING = "Stopping"
     POSITION_CONTROL = "Position control"
     LINEAR_CONTROL = "Linear control"
-    VELOCITY_CONTROL = "Velocity control"
+    CADENCE_CONTROL = "Cadence control"
     TORQUE_CONTROL = "Torque control"
     CONCENTRIC_POWER_CONTROL = "Concentric power control"
     ECCENTRIC_POWER_CONTROL = "Eccentric power control"
 
 
 control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.CONCENTRIC_POWER_CONTROL + ControlMode.LINEAR_CONTROL
-control_modes_based_on_velocity = ControlMode.VELOCITY_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
+control_modes_based_on_cadence = ControlMode.CADENCE_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
 
 
 class DirectionMode(StrEnum):

@@ -129,10 +129,10 @@ class App(QtWidgets.QMainWindow):
         self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
         self.plot_power.getAxis('bottom').setStyle(tickLength=0)
         self.plot_power.getAxis('bottom').setVisible(False)
-        self.plot_velocity = PlotWidget(self, name="Velocity", y_label="Velocity (tr/min)", color="r")
-        self.ui.velocity_horizontalLayout.insertWidget(0, self.plot_velocity)
-        self.plot_velocity.getAxis('bottom').setStyle(tickLength=0)
-        self.plot_velocity.getAxis('bottom').setVisible(False)
+        self.plot_cadence = PlotWidget(self, name="cadence", y_label="cadence rpm", color="r")
+        self.ui.cadence_horizontalLayout.insertWidget(0, self.plot_cadence)
+        self.plot_cadence.getAxis('bottom').setStyle(tickLength=0)
+        self.plot_cadence.getAxis('bottom').setVisible(False)
         self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b")
         self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
 
@@ -238,14 +238,14 @@ class App(QtWidgets.QMainWindow):
         if training_mode == TrainingMode.CONCENTRIC.value:
             self.ui.control_comboBox.addItems([
                 GUIControlMode.POWER.value,
-                GUIControlMode.VELOCITY.value,
+                GUIControlMode.CADENCE.value,
                 GUIControlMode.LINEAR.value,
                 GUIControlMode.TORQUE.value])
             self.ui.direction_comboBox.setCurrentText(DirectionMode.FORWARD.value)
         elif training_mode == TrainingMode.ECCENTRIC.value:
             self.ui.control_comboBox.addItems([
                 GUIControlMode.POWER.value,
-                GUIControlMode.VELOCITY.value])
+                GUIControlMode.CADENCE.value])
             self.ui.direction_comboBox.setCurrentText(DirectionMode.REVERSE.value)
             # If the GUIControlMode corresponding to the precedent index was LINEAR or TORQUE, set the GUIControlMode to
             # POWER.
@@ -286,7 +286,7 @@ class App(QtWidgets.QMainWindow):
                 self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["pedals_accel_lim"]) - 1)
                 self.ui.acceleration_spinBox.setSingleStep(vel_step)
                 self.ui.acceleration_spinBox.setValue(vel_ramp)
-                self.ui.acceleration_units_label.setText("(tr/min)/s")
+                self.ui.acceleration_units_label.setText("rpm/s")
             else:
                 raise ValueError(f"{training_mode} training has not been implemented yet.")
 
@@ -296,17 +296,17 @@ class App(QtWidgets.QMainWindow):
             self.ui.instruction_spinBox.setSingleStep(linear_step)
             self.ui.acceleration_spinBox.setSingleStep(torque_step)
             self.ui.acceleration_spinBox.setValue(torque_ramp)
-            self.ui.units_label.setText("N.m/(tr/min)")
+            self.ui.units_label.setText("N.m/rpm")
             self.ui.acceleration_units_label.setText("N.m/s")
 
-        elif control_mode == GUIControlMode.VELOCITY.value:
+        elif control_mode == GUIControlMode.CADENCE.value:
             self.ui.instruction_spinBox.setRange(0, self.motor.hardware_and_security["pedals_vel_limit"] - 1)
             self.ui.acceleration_spinBox.setRange(0, self.motor.hardware_and_security["pedals_accel_lim"] - 1)
             self.ui.instruction_spinBox.setSingleStep(vel_step)
             self.ui.acceleration_spinBox.setSingleStep(vel_step)
             self.ui.acceleration_spinBox.setValue(vel_ramp)
-            self.ui.units_label.setText("tr/min")
-            self.ui.acceleration_units_label.setText("(tr/min)/s")
+            self.ui.units_label.setText("rpm")
+            self.ui.acceleration_units_label.setText("rpm/s")
 
         elif control_mode == GUIControlMode.TORQUE.value:
             self.ui.instruction_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_lim"]))
@@ -373,10 +373,10 @@ class App(QtWidgets.QMainWindow):
                 self.motor_thread.spin_box, self.motor_thread.ramp_instruction
             )
 
-        elif self._gui_control_mode == GUIControlMode.VELOCITY:
+        elif self._gui_control_mode == GUIControlMode.CADENCE:
             self.motor_thread.instruction = - self.motor.get_sign() * self.ui.instruction_spinBox.value()
             self.motor_thread.spin_box = self.motor_thread.instruction
-            self.motor.velocity_control(
+            self.motor.cadence_control(
                 self.motor_thread.spin_box, self.motor_thread.ramp_instruction
             )
 
@@ -402,9 +402,9 @@ class App(QtWidgets.QMainWindow):
         self.motor_thread.spin_box = 0.0
         self.motor_thread.ramp_instruction = 0.0
 
-        # If the motor is based on velocity control, the ramp is in (tr/min)/s. It can be given to motor.stopping(),
+        # If the motor is based on cadence control, the ramp is in rpm/s. It can be given to motor.stopping(),
         # else it won't be used. Either way it is protected by the min() function.
-        self.motor.stopping(velocity_ramp_rate=ramp_instruction)
+        self.motor.stopping(cadence_ramp_rate=ramp_instruction)
 
     def _control_display(self):
         """
@@ -526,8 +526,8 @@ class App(QtWidgets.QMainWindow):
         """
         if self._gui_control_mode == GUIControlMode.POWER:
             self.plot_power.add_instruction()
-        elif self._gui_control_mode == GUIControlMode.VELOCITY:
-            self.plot_velocity.add_instruction()
+        elif self._gui_control_mode == GUIControlMode.CADENCE:
+            self.plot_cadence.add_instruction()
         elif self._gui_control_mode == GUIControlMode.TORQUE:
             self.plot_torque.add_instruction()
 
@@ -537,8 +537,8 @@ class App(QtWidgets.QMainWindow):
         """
         if self._gui_control_mode == GUIControlMode.POWER:
             self.plot_power.remove_instruction()
-        elif self._gui_control_mode == GUIControlMode.VELOCITY:
-            self.plot_velocity.remove_instruction()
+        elif self._gui_control_mode == GUIControlMode.CADENCE:
+            self.plot_cadence.remove_instruction()
         elif self._gui_control_mode == GUIControlMode.TORQUE:
             self.plot_torque.remove_instruction()
 
@@ -547,12 +547,12 @@ class App(QtWidgets.QMainWindow):
         Update the plot with the new data.
         """
         power_spin_box_array = None
-        velocity_spin_box_array = None
+        cadence_spin_box_array = None
         torque_spin_box_array = None
         if self._gui_control_mode == GUIControlMode.POWER:
             power_spin_box_array = self.motor_thread.spin_box_array
-        elif self._gui_control_mode == GUIControlMode.VELOCITY:
-            velocity_spin_box_array = self.motor_thread.spin_box_array
+        elif self._gui_control_mode == GUIControlMode.CADENCE:
+            cadence_spin_box_array = self.motor_thread.spin_box_array
         elif self._gui_control_mode == GUIControlMode.TORQUE:
             torque_spin_box_array = self.motor_thread.spin_box_array
 
@@ -561,10 +561,10 @@ class App(QtWidgets.QMainWindow):
             self.motor_thread.power_array,
             power_spin_box_array,
         )
-        self.plot_velocity.update_plot(
+        self.plot_cadence.update_plot(
             self.motor_thread.time_array,
-            self.motor_thread.velocity_array,
-            velocity_spin_box_array,
+            self.motor_thread.cadence_array,
+            cadence_spin_box_array,
         )
         self.plot_torque.update_plot(
             self.motor_thread.time_array,
@@ -615,9 +615,9 @@ class MotorThread(QtCore.QThread):
         # Plot
         self.plot_start_time = 0.0
         self.plot_frequency = 2  # Hz
-        self.size_arrays = 20
+        self.size_arrays = 10 * self.plot_frequency  # 10 seconds
         self.time_array = np.linspace(- self.size_arrays / self.plot_frequency, 0, self.size_arrays)
-        self.velocity_array = np.zeros(self.size_arrays)
+        self.cadence_array = np.zeros(self.size_arrays)
         self.torque_array = np.zeros(self.size_arrays)
         self.power_array = np.zeros(self.size_arrays)
         self.spin_box_array = None
@@ -692,7 +692,7 @@ class MotorThread(QtCore.QThread):
             t_since_precedent_display = time.time() - t_display_precedent
             if t_since_precedent_display > 1 / self._display_frequency:
                 self.ui.power_display.setText(f"{self.motor.get_user_power():.0f} W")
-                self.ui.velocity_display.setText(f"{self.motor.get_velocity():.0f} tr/min")
+                self.ui.cadence_display.setText(f"{self.motor.get_cadence():.0f} rpm")
                 self.ui.torque_display.setText(f"{self.motor.get_user_torque():.0f} N.m")
                 self.ui.turns_display.setText(f"{self.motor.get_turns():.0f} tr")
                 self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
@@ -710,21 +710,21 @@ class MotorThread(QtCore.QThread):
 
             self.feed_watchdog()
 
-            # Adapt the control of the motor accordingly to the current velocity and torque
+            # Adapt the control of the motor accordingly to the current cadence and torque
             control_mode = self.motor.get_control_mode()
-            # If the motor is in torque control, the torque input needs to be updated in function of the velocity
+            # If the motor is in torque control, the torque input needs to be updated in function of the cadence
             # because of the resisting torque.
             # Furthermore, it allows to stop the pedals by reducing the torque if the user has stopped.
             if control_mode == ControlMode.TORQUE_CONTROL:
                 self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
 
             # The power control mode is based on the torque control mode, but the torque input is calculated from the
-            # current velocity (torque_input = power / velocity and resiting torque).
+            # current cadence (torque_input = power / cadence and resiting torque).
             elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
                 self.instruction = self.motor.concentric_power_control(self.spin_box, self.ramp_instruction)
 
             # The linear control mode is based on the torque control mode, but the torque input is calculated from the
-            # current velocity (torque_input = linear_coeff * velocity and resiting torque).
+            # current cadence (torque_input = linear_coeff * cadence and resiting torque).
             elif control_mode == ControlMode.LINEAR_CONTROL:
                 self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
@@ -733,7 +733,7 @@ class MotorThread(QtCore.QThread):
                                                                       self.ramp_instruction)
 
             elif self.motor.get_control_mode() == ControlMode.STOPPING:
-                if abs(motor.get_velocity()) < 10.0:
+                if abs(motor.get_cadence()) < 10.0:
                     self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
 
@@ -744,8 +744,8 @@ class MotorThread(QtCore.QThread):
             if t_since_precedent_plot > 1 / self.plot_frequency:
                 self.time_array = np.roll(self.time_array, -1)
                 self.time_array[-1] = time.time() - self.plot_start_time
-                self.velocity_array = np.roll(self.velocity_array, -1)
-                self.velocity_array[-1] = self.motor.get_velocity()
+                self.cadence_array = np.roll(self.cadence_array, -1)
+                self.cadence_array[-1] = self.motor.get_cadence()
                 self.torque_array = np.roll(self.torque_array, -1)
                 self.torque_array[-1] = self.motor.get_user_torque()
                 self.power_array = np.roll(self.power_array, -1)

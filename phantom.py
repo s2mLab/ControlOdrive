@@ -6,7 +6,7 @@ import copy
 import threading
 import numpy as np
 
-from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_velocity
+from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
 from save_and_load import save
 
 
@@ -193,7 +193,7 @@ class Phantom:
         Parameters
         ----------
         ramp_rate: float
-            Acceleration of the pedals ((tr/min)/s)
+            Acceleration of the pedals (rpm/s)
         """
         pass
 
@@ -214,33 +214,33 @@ class Phantom:
         """
         self._relative_pos = time.time()
 
-    def velocity_control(
+    def cadence_control(
             self,
-            velocity: float = 0.0,
-            velocity_ramp_rate: float = 5,
-            control_mode: ControlMode = ControlMode.VELOCITY_CONTROL,
+            cadence: float = 0.0,
+            cadence_ramp_rate: float = 5,
+            control_mode: ControlMode = ControlMode.CADENCE_CONTROL,
     ):
         """
-        Sets the motor to a given velocity in tr/min of the pedals with velocities ramped at each change.
+        Sets the motor to a given cadence in rpm of the pedals with velocities ramped at each change.
 
         Parameters
         ----------
-        velocity: float
-            Targeted velocity in tr/min of the pedals.
-        velocity_ramp_rate: float
-            Velocity ramp rate in (tr/min)/s of the pedals.
+        cadence: float
+            Targeted cadence in rpm of the pedals.
+        cadence_ramp_rate: float
+            cadence ramp rate in rpm/s of the pedals.
         """
-        velocity = abs(velocity)
+        cadence = abs(cadence)
 
-        self._check_ramp_rate(velocity_ramp_rate)
+        self._check_ramp_rate(cadence_ramp_rate)
 
-        if self._control_mode not in control_modes_based_on_velocity:
+        if self._control_mode not in control_modes_based_on_cadence:
             self.stopping()
             self.stopped()
 
         self._control_mode = control_mode
 
-        return self.get_sign() * velocity
+        return self.get_sign() * cadence
 
     def torque_control(
             self,
@@ -310,12 +310,12 @@ class Phantom:
         -------
         The input torque (Nm) at the pedals.
         """
-        velocity = 0.0
-        if velocity == 0:
+        cadence = 0.0
+        if cadence == 0:
             return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.POWER_CONTROL)
         else:
             return self.torque_control(
-                min(abs(power) / velocity, self.hardware_and_security["torque_lim"]),
+                min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
                 resisting_torque,
                 ControlMode.POWER_CONTROL,
@@ -324,17 +324,17 @@ class Phantom:
     def eccentric_power_control(
             self,
             power: float = 0.0,
-            velocity_ramp_rate: float = 5.0,
-            velocity_max: float = 50.0):
+            cadence_ramp_rate: float = 5.0,
+            cadence_max: float = 50.0):
         """
         Parameters
         ----------
         power: float
             Power (W) at the pedals.
-        velocity_ramp_rate: float
-            Velocity ramp rate ((tr/min)/s) at the pedals.
-        velocity_max: float
-            Maximum velocity (tr/min) at the pedals, if no torque is applied or if the torque < power / velocity_max.
+        cadence_ramp_rate: float
+            cadence ramp rate (rpm/s) at the pedals.
+        cadence_max: float
+            Maximum cadence rpm at the pedals, if no torque is applied or if the torque < power / cadence_max.
 
         Returns
         -------
@@ -342,14 +342,14 @@ class Phantom:
         """
         torque = self.get_user_torque()
 
-        # If the user is not forcing against the motor, the motor goes to the maximum velocity.
+        # If the user is not forcing against the motor, the motor goes to the maximum cadence.
         if (self._direction == DirectionMode.REVERSE and torque >= 0)\
                 or (self._direction == DirectionMode.FORWARD and torque <= 0):
-            self.velocity_control(velocity_max, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
         else:
-            velocity = min(abs(power / torque) / 2 / np.pi * 60, velocity_max)
-            return self.velocity_control(velocity, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            cadence = min(abs(power / torque) / 2 / np.pi * 60, cadence_max)
+            return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
     def linear_control(
             self,
@@ -360,7 +360,7 @@ class Phantom:
         Parameters
         ----------
         linear_coeff: float
-            Linear coefficient (Nm/(tr/min)) at the pedals.
+            Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
         resisting_torque: float
@@ -371,9 +371,9 @@ class Phantom:
         -------
         The input torque (Nm) at the pedals.
         """
-        velocity = abs(self.get_velocity())  # tr/min
+        cadence = abs(self.get_cadence())  # rpm
         return self.torque_control(
-            min(velocity * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
+            min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
@@ -381,20 +381,20 @@ class Phantom:
 
     def stopping(
             self,
-            velocity_ramp_rate: float = 30,
+            cadence_ramp_rate: float = 30,
     ):
         """
         Starts the stopping sequence of the motor.
 
         Parameters
         ----------
-        velocity_ramp_rate: float
-            The ramp_rate of the deceleration ((tr/min)/s of the pedals).
+        cadence_ramp_rate: float
+            The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         self.previous_control_mode = copy.deepcopy(self._control_mode)
         self._control_mode = ControlMode.STOPPING
 
-        self._check_ramp_rate(velocity_ramp_rate)
+        self._check_ramp_rate(cadence_ramp_rate)
     def stopped(self):
         """
         Running until the motor is fully stopped. Can be executed in another thread or process.
@@ -410,7 +410,7 @@ class Phantom:
     def stop(
         self,
         vel_stop: float = 10.0,
-        velocity_ramp_rate: float = 30,
+        cadence_ramp_rate: float = 30,
     ):
         """
         Stops the motor gently.
@@ -418,20 +418,20 @@ class Phantom:
         Parameters
         ----------
         vel_stop: float
-            The velocity at which the motor will be stopped if it was turning (tr/min of the pedals).
-        velocity_ramp_rate: float
-            The ramp_rate of the deceleration ((tr/min)/s of the pedals).
+            The cadence at which the motor will be stopped if it was turning (rpm of the pedals).
+        cadence_ramp_rate: float
+            The ramp_rate of the deceleration (rpm/s of the pedals).
         """
-        if vel_stop > self.hardware_and_security["maximal_velocity_stop"]:
+        if vel_stop > self.hardware_and_security["maximal_cadence_stop"]:
             raise ValueError(
-                f"The maximal velocity at which the motor can be stopped is "
-                f"{self.hardware_and_security['maximal_velocity_stop']} tr/min for the pedals."
-                f"Stop velocity specified: {abs(vel_stop)} tr/min for the pedals"
+                f"The maximal cadence at which the motor can be stopped is "
+                f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
+                f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
             )
 
-        self.stopping(velocity_ramp_rate)
+        self.stopping(cadence_ramp_rate)
 
-        while abs(self.get_velocity()) > vel_stop:
+        while abs(self.get_cadence()) > vel_stop:
             pass
 
         self.stopped()
@@ -454,9 +454,9 @@ class Phantom:
         """
         return 20 * np.sin(time.time() - self._relative_pos)
 
-    def get_velocity(self) -> float:
+    def get_cadence(self) -> float:
         """
-        Returns the estimated velocity of the pedals in tr/min.
+        Returns the estimated cadence of the pedals in rpm.
         """
         return 20 * np.sin(time.time())
 
@@ -545,7 +545,7 @@ class Phantom:
             "motor_torque": self.get_motor_torque(),
             "user_torque": self.get_user_torque(),
             "resisting_torque": self.get_resisting_torque(),
-            "velocity": self.get_velocity(),
+            "cadence": self.get_cadence(),
             "angle": self.get_angle(),
             "turns": self.get_turns(),
             "mechanical_power": self.get_mechanical_power(),

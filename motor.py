@@ -27,7 +27,7 @@ from odrive.enums import (
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
 
-from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_velocity
+from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
 from save_and_load import save
 
 
@@ -260,7 +260,7 @@ class OdriveEncoderHall:
         # For position control only
         if pos_gain is not None:
             self.odrv0.axis0.controller.config.pos_gain = pos_gain
-        # For position and velocity control
+        # For position and cadence control
         if k_vel_gain is not None:
             self.odrv0.axis0.controller.config.vel_gain = (
                     k_vel_gain * self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.encoder.config.cpr
@@ -271,7 +271,7 @@ class OdriveEncoderHall:
                     * self.odrv0.axis0.motor.config.torque_constant
                     * self.odrv0.axis0.encoder.config.cpr
             )
-        # For position, velocity and torque control
+        # For position, cadence and torque control
         if current_gain is not None:
             self.odrv0.axis0.controller.config.current_gain = current_gain
         if current_integrator_gain is not None:
@@ -321,7 +321,7 @@ class OdriveEncoderHall:
         self.odrv0.axis0.motor.config.current_lim = self.hardware_and_security["current_lim"]
         self.odrv0.axis0.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self._reduction_ratio
 
-        # Velocity and acceleration limits
+        # cadence and acceleration limits
         self.odrv0.axis0.trap_traj.config.vel_limit = self.odrv0.axis0.controller.config.vel_limit
         self.odrv0.axis0.trap_traj.config.accel_limit = \
             self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60  # tr/s²
@@ -366,14 +366,14 @@ class OdriveEncoderHall:
         Parameters
         ----------
         ramp_rate: float
-            Acceleration of the pedals ((tr/min)/s)
+            Acceleration of the pedals (rpm/s)
         """
         if abs(ramp_rate / self._reduction_ratio / 60) > self.odrv0.axis0.trap_traj.config.accel_limit:
             raise ValueError(
                 f"The acceleration limit is "
                 f"{self.odrv0.axis0.trap_traj.config.accel_limit * self._reduction_ratio * 3600} "
-                f"tr/min² for the pedals. "
-                f"Acceleration specified: {abs(ramp_rate)} (tr/min)/s for the pedals."
+                f"rpm² for the pedals. "
+                f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
             )
 
     def turns_control(self, turns: float = 0.0):
@@ -425,50 +425,50 @@ class OdriveEncoderHall:
 
         self.odrv0.axis0.controller.input_pos = self._relative_pos + angle / 360 / self._reduction_ratio
 
-    def velocity_control(
+    def cadence_control(
             self,
-            velocity: float = 0.0,
-            velocity_ramp_rate: float = 5,
-            control_mode: ControlMode = ControlMode.VELOCITY_CONTROL,
+            cadence: float = 0.0,
+            cadence_ramp_rate: float = 5,
+            control_mode: ControlMode = ControlMode.CADENCE_CONTROL,
     ):
         """
-        Sets the motor to a given velocity in tr/min of the pedals with velocities ramped at each change.
+        Sets the motor to a given cadence in rpm of the pedals with velocities ramped at each change.
 
         Parameters
         ----------
-        velocity: float
-            Targeted velocity in tr/min of the pedals.
-        velocity_ramp_rate: float
-            Velocity ramp rate in (tr/min)/s of the pedals.
+        cadence: float
+            Targeted cadence in rpm of the pedals.
+        cadence_ramp_rate: float
+            cadence ramp rate in rpm/s of the pedals.
         control_mode: ControlMode
             Control mode of the motor.
         """
-        velocity = abs(velocity)
-        if velocity / self._reduction_ratio / 60 > self.odrv0.axis0.controller.config.vel_limit:
+        cadence = abs(cadence)
+        if cadence / self._reduction_ratio / 60 > self.odrv0.axis0.controller.config.vel_limit:
             raise ValueError(
-                f"The velocity limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
-                f"tr/min for the pedals."
-                f"Velocity specified: {velocity} tr/min for the pedals"
+                f"The cadence limit is {self.odrv0.axis0.controller.config.vel_limit * self._reduction_ratio * 60} "
+                f"rpm for the pedals."
+                f"cadence specified: {cadence} rpm for the pedals"
             )
 
-        self._check_ramp_rate(velocity_ramp_rate)
+        self._check_ramp_rate(cadence_ramp_rate)
 
-        if self._control_mode not in control_modes_based_on_velocity:
+        if self._control_mode not in control_modes_based_on_cadence:
             self.stopping()
             self.stopped()
             self.odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
-        self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 60 / self._reduction_ratio
-        self.odrv0.axis0.controller.input_vel = self.get_sign() * velocity / 60 / self._reduction_ratio
+        self.odrv0.axis0.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
+        self.odrv0.axis0.controller.input_vel = self.get_sign() * cadence / 60 / self._reduction_ratio
 
-        if self._control_mode not in control_modes_based_on_velocity:
-            # Starts the motor if the previous control mode was not already `VELOCITY_CONTROL`
+        if self._control_mode not in control_modes_based_on_cadence:
+            # Starts the motor if the previous control mode was not already `cadence_CONTROL`
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
         self._control_mode = control_mode
 
-        return - self.get_sign() * velocity
+        return - self.get_sign() * cadence
 
     def torque_control(
             self,
@@ -566,12 +566,12 @@ class OdriveEncoderHall:
         -------
         The input torque (Nm) at the pedals.
         """
-        velocity = abs(self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 2 * np.pi)  # rad/s
-        if velocity == 0:
+        cadence = abs(self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 2 * np.pi)  # rad/s
+        if cadence == 0:
             return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
         else:
             return self.torque_control(
-                min(abs(power) / velocity, self.hardware_and_security["torque_lim"]),
+                min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
                 resisting_torque,
                 ControlMode.CONCENTRIC_POWER_CONTROL,
@@ -580,17 +580,17 @@ class OdriveEncoderHall:
     def eccentric_power_control(
             self,
             power: float = 0.0,
-            velocity_ramp_rate: float = 5.0,
-            velocity_max: float = 50.0):
+            cadence_ramp_rate: float = 5.0,
+            cadence_max: float = 50.0):
         """
         Parameters
         ----------
         power: float
             Power (W) at the pedals.
-        velocity_ramp_rate: float
-            Velocity ramp rate ((tr/min)/s) at the pedals.
-        velocity_max: float
-            Maximum velocity (tr/min) at the pedals, if no torque is applied or if the torque < power / velocity_max.
+        cadence_ramp_rate: float
+            cadence ramp rate (rpm/s) at the pedals.
+        cadence_max: float
+            Maximum cadence rpm at the pedals, if no torque is applied or if the torque < power / cadence_max.
 
         Returns
         -------
@@ -598,14 +598,14 @@ class OdriveEncoderHall:
         """
         torque = self.get_user_torque()
 
-        # If the user is not forcing against the motor, the motor goes to the maximum velocity.
+        # If the user is not forcing against the motor, the motor goes to the maximum cadence.
         if (self._direction == DirectionMode.REVERSE and torque >= 0)\
                 or (self._direction == DirectionMode.FORWARD and torque <= 0):
-            self.velocity_control(velocity_max, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
         else:
-            velocity = min(abs(power / torque) / 2 / np.pi * 60, velocity_max)
-            return self.velocity_control(velocity, velocity_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
+            cadence = min(abs(power / torque) / 2 / np.pi * 60, cadence_max)
+            return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
     def linear_control(
             self,
@@ -616,7 +616,7 @@ class OdriveEncoderHall:
         Parameters
         ----------
         linear_coeff: float
-            Linear coefficient (Nm/(tr/min)) at the pedals.
+            Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
         resisting_torque: float
@@ -627,9 +627,9 @@ class OdriveEncoderHall:
         -------
         The input torque (Nm) at the pedals.
         """
-        velocity = abs(self.get_velocity())  # tr/min
+        cadence = abs(self.get_cadence())  # rpm
         return self.torque_control(
-            min(velocity * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
+            min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
@@ -637,25 +637,25 @@ class OdriveEncoderHall:
 
     def stopping(
             self,
-            velocity_ramp_rate: float = 30,
+            cadence_ramp_rate: float = 30,
     ):
         """
         Starts the stopping sequence of the motor.
 
         Parameters
         ----------
-        velocity_ramp_rate: float
-            The ramp_rate of the deceleration ((tr/min)/s of the pedals).
+        cadence_ramp_rate: float
+            The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         self.previous_control_mode = copy.deepcopy(self._control_mode)
         self._control_mode = ControlMode.STOPPING
 
-        self._check_ramp_rate(velocity_ramp_rate)
+        self._check_ramp_rate(cadence_ramp_rate)
 
-        if (self.previous_control_mode in control_modes_based_on_velocity
+        if (self.previous_control_mode in control_modes_based_on_cadence
                 or self.previous_control_mode == ControlMode.POSITION_CONTROL):
             # Gently slows down the motor.
-            self.odrv0.axis0.controller.config.vel_ramp_rate = velocity_ramp_rate / 60 / self._reduction_ratio
+            self.odrv0.axis0.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
             self.odrv0.axis0.controller.input_vel = 0.0
 
     def stopped(self):
@@ -678,7 +678,7 @@ class OdriveEncoderHall:
     def stop(
         self,
         vel_stop: float = 10.0,
-        velocity_ramp_rate: float = 30,
+        cadence_ramp_rate: float = 30,
     ):
         """
         Stops the motor gently.
@@ -686,20 +686,20 @@ class OdriveEncoderHall:
         Parameters
         ----------
         vel_stop: float
-            The velocity at which the motor will be stopped if it was turning (tr/min of the pedals).
-        velocity_ramp_rate: float
-            The ramp_rate of the deceleration ((tr/min)/s of the pedals).
+            The cadence at which the motor will be stopped if it was turning (rpm of the pedals).
+        cadence_ramp_rate: float
+            The ramp_rate of the deceleration (rpm/s of the pedals).
         """
-        if vel_stop > self.hardware_and_security["maximal_velocity_stop"]:
+        if vel_stop > self.hardware_and_security["maximal_cadence_stop"]:
             raise ValueError(
-                f"The maximal velocity at which the motor can be stopped is "
-                f"{self.hardware_and_security['maximal_velocity_stop']} tr/min for the pedals."
-                f"Stop velocity specified: {abs(vel_stop)} tr/min for the pedals"
+                f"The maximal cadence at which the motor can be stopped is "
+                f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
+                f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
             )
 
-        self.stopping(velocity_ramp_rate)
+        self.stopping(cadence_ramp_rate)
 
-        while abs(self.get_velocity()) > vel_stop:
+        while abs(self.get_cadence()) > vel_stop:
             pass
 
         self.stopped()
@@ -722,9 +722,9 @@ class OdriveEncoderHall:
         """
         return - (self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio
 
-    def get_velocity(self) -> float:
+    def get_cadence(self) -> float:
         """
-        Returns the estimated velocity of the pedals in tr/min.
+        Returns the estimated cadence of the pedals in rpm.
         """
         return - self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 60
 
@@ -744,7 +744,7 @@ class OdriveEncoderHall:
         """
         Returns the user mechanical power in W.
         """
-        return self.get_user_torque() * self.get_velocity() * 2 * np.pi / 60
+        return self.get_user_torque() * self.get_cadence() * 2 * np.pi / 60
 
     def get_iq_setpoint(self):
         """
@@ -777,10 +777,10 @@ class OdriveEncoderHall:
         Returns the resisting torque.
         """
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        velocity = self.odrv0.axis0.encoder.vel_estimate
-        if velocity != 0.0:
-            dyn_resisting_current = - self.resisting_current_coeff_proportional * velocity / abs(velocity) \
-                                    * abs(velocity) ** (1 / self.resisting_current_coeff_power)
+        cadence = self.odrv0.axis0.encoder.vel_estimate
+        if cadence != 0.0:
+            dyn_resisting_current = - self.resisting_current_coeff_proportional * cadence / abs(cadence) \
+                                    * abs(cadence) ** (1 / self.resisting_current_coeff_power)
         else:
             if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
                 dyn_resisting_current = i_measured
@@ -793,10 +793,10 @@ class OdriveEncoderHall:
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
         """
         i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        velocity = self.odrv0.axis0.encoder.vel_estimate
-        if velocity != 0.0:
-            dyn_resisting_current = - self.resisting_current_coeff_proportional * velocity / abs(velocity)\
-                                    * abs(velocity)**(1/self.resisting_current_coeff_power)
+        cadence = self.odrv0.axis0.encoder.vel_estimate
+        if cadence != 0.0:
+            dyn_resisting_current = - self.resisting_current_coeff_proportional * cadence / abs(cadence)\
+                                    * abs(cadence)**(1/self.resisting_current_coeff_power)
             i_user = i_measured - dyn_resisting_current
         else:
             if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
@@ -836,7 +836,7 @@ class OdriveEncoderHall:
             "motor_torque": self.get_motor_torque(),
             "user_torque": self.get_user_torque(),
             "resisting_torque": self.get_resisting_torque(),
-            "velocity": self.get_velocity(),
+            "cadence": self.get_cadence(),
             "angle": self.get_angle(),
             "turns": self.get_turns(),
             "mechanical_power": self.get_mechanical_power(),

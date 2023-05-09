@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1040</width>
+    <width>1060</width>
     <height>730</height>
    </rect>
   </property>
@@ -28,9 +28,9 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="4" column="0">
-     <layout class="QVBoxLayout" name="velocity_verticalLayout">
+     <layout class="QVBoxLayout" name="cadence_verticalLayout">
       <item>
-       <widget class="QLabel" name="velocity_label">
+       <widget class="QLabel" name="cadence_label">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -44,7 +44,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Velocity</string>
+         <string>Cadence</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -52,9 +52,9 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="velocity_horizontalLayout">
+       <layout class="QHBoxLayout" name="cadence_horizontalLayout">
         <item>
-         <widget class="QLabel" name="velocity_display">
+         <widget class="QLabel" name="cadence_display">
           <property name="minimumSize">
            <size>
             <width>140</width>
@@ -823,7 +823,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1040</width>
+     <width>1060</width>
      <height>22</height>
     </rect>
    </property>

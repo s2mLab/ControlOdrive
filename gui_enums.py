@@ -17,7 +17,7 @@ class GUIControlMode(StrEnum):
     """
 
     LINEAR = "Linear"
-    VELOCITY = "Velocity"
+    CADENCE = "Cadence"
     TORQUE = "Torque"
     POWER = "Power"
 

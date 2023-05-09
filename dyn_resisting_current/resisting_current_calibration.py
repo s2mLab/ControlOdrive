@@ -26,7 +26,7 @@ for instruction in range(-65, 66, 5):
             motor.set_training_mode("Eccentric")
         motor.velocity_control(instruction)
 
-        print(f"Waiting to stabilize at {instruction} tr/min...")
+        print(f"Waiting to stabilize at {instruction} rpm...")
 
         # Wait for to reach the instruction
         while not(instruction - 1 < motor.get_velocity() < instruction + 1):
@@ -41,7 +41,7 @@ for instruction in range(-65, 66, 5):
             motor.save_data_to_file(f"data_from_dyn_calibration_{rd}", instruction=instruction)
             t1 = time.time()
 
-        print(f"Stabilized at {instruction} tr/min.")
+        print(f"Stabilized at {instruction} rpm.")
 
         iq_measured = []
         vel_estimate = []
