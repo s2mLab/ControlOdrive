@@ -648,7 +648,6 @@ class OdriveEncoderHall:
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         self.previous_control_mode = copy.deepcopy(self._control_mode)
-        self._control_mode = ControlMode.STOPPING
 
         self._check_ramp_rate(cadence_ramp_rate)
 
@@ -657,6 +656,8 @@ class OdriveEncoderHall:
             # Gently slows down the motor.
             self.odrv0.axis0.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
             self.odrv0.axis0.controller.input_vel = 0.0
+
+        self._control_mode = ControlMode.STOPPING
 
     def stopped(self):
         """
