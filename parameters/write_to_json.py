@@ -48,7 +48,8 @@ dictionary = {
     "requested_current_range": 25.0,  # > current_lim + current_lim_margin nut as little as possible
     "current_control_bandwidth": 100.0,  # Not sure of this value
     "current_lim": 500 / 48,  # 500W / 48V # Not sure of this value
-    "torque_lim": 100.0,  # torque applied by the user TODO: choose a torque to protect the user.
+    "torque_lim": 46.0,  # torque applied by the user
+    "power_lim": 500.0,  # Motor power
     "watchdog_timeout": 0.1,  # Chosen arbitrarily
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91

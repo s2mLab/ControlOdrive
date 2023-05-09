@@ -270,9 +270,7 @@ class App(QtWidgets.QMainWindow):
 
         control_mode = self.ui.control_comboBox.currentText()
         if control_mode == GUIControlMode.POWER.value:
-            power_max = int(
-                self.motor.hardware_and_security["pedals_vel_limit"] * self.motor.hardware_and_security["torque_lim"])
-            self.ui.instruction_spinBox.setRange(0, power_max)
+            self.ui.instruction_spinBox.setRange(0, self.motor.hardware_and_security["power_lim"])
             self.ui.instruction_spinBox.setSingleStep(power_step)
             self.ui.units_label.setText("W")
 
@@ -309,7 +307,7 @@ class App(QtWidgets.QMainWindow):
             self.ui.acceleration_units_label.setText("rpm/s")
 
         elif control_mode == GUIControlMode.TORQUE.value:
-            self.ui.instruction_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_lim"]))
+            self.ui.instruction_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_lim"] - 1))
             self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_ramp_rate_lim"]))
             self.ui.instruction_spinBox.setSingleStep(torque_step)
             self.ui.acceleration_spinBox.setSingleStep(torque_step)
