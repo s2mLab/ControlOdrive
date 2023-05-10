@@ -11,7 +11,11 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/XP_participantX(2).bio")
+data = load("XP/XP_participantX(4).bio")
+
+time = np.asarray(data["time"])
+dt = time[1:] - time[:-1]
+print(dt.mean(), dt.std())
 
 # Moving average
 window_length = 20

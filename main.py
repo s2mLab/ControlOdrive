@@ -3,7 +3,7 @@ Script to control the ergocycle through a graphical user interface.
 """
 import os
 import sys
-
+import time
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import *
@@ -11,11 +11,13 @@ import pyqtgraph as pg
 
 from ergocycle_gui import Ui_MainWindow
 
-from motor import *
-# from phantom import Phantom
+# from motor import *
+from phantom import Phantom
 
 from utils import (
-    traduce_error
+    traduce_error,
+    PlotWidget,
+    SignalThread,
 )
 
 from enums import (
@@ -34,85 +36,6 @@ from gui_enums import (
     GUIControlMode,
     StopwatchStates,
 )
-
-
-class PlotWidget(pg.PlotWidget):
-    def __init__(self, parent=None, name=None, y_label=None, color="b"):
-        super().__init__(parent=parent)
-
-        # Set background color to white
-        self.setBackground('w')
-
-        # Set x and y axis labels
-        self.setLabel('bottom', 'Time since last control start (s)', color='k')
-        self.setLabel('left', y_label, color='k')
-
-        # Create a legend
-        self.legend = self.addLegend(offset=(1, 1))
-        self.legend.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
-        self._instruction_curve = self.plot([], [], pen=pg.mkPen('k', width=2), name='Instruction')
-        self._data_curve = self.plot([], [], pen=pg.mkPen(color, width=2), name=name)
-        self.removeItem(self._instruction_curve)
-
-        # Set color of legend text to black
-        self.legend.labelTextColor = pg.mkColor('k')
-
-        # Set axes color
-        axis = self.getAxis('bottom')
-        axis.setPen(pg.mkPen('k'))
-        axis.setTextPen('k')
-
-        axis = self.getAxis('left')
-        axis.setPen(pg.mkPen('k'))
-        axis.setTextPen('k')
-
-        # Set the grid
-        self.showGrid(x=False, y=True, alpha=0.5)
-
-    def update_plot(
-            self,
-            time_array: np.ndarray,
-            data_array: np.ndarray,
-            spin_box_array: np.ndarray = None,
-    ):
-        """
-        Update the plot with the new data.
-
-        Parameters
-        ----------
-        time_array: np.ndarray
-            Time values to plot.
-        data_array: np.ndarray
-            Data to plot.
-        spin_box_array: np.ndarray
-            Spin box values to plot.
-        """
-        self._data_curve.setData(time_array, data_array)
-        min_array = np.min(data_array)
-        max_array = np.max(data_array)
-
-        if spin_box_array is not None:
-            min_array = min(min_array, np.min(spin_box_array))
-            max_array = max(max_array, np.max(spin_box_array))
-            self._instruction_curve.setData(time_array, spin_box_array)
-
-        self.setXRange(time_array[0], time_array[-1])
-        if min_array > - 10 and max_array < 10:
-            self.setYRange(-10, 10)
-        else:
-            self.setYRange(min(min_array, 0), max(max_array, 0))
-
-    def add_instruction(self):
-        """
-        Add the instruction to the plot.
-        """
-        self.addItem(self._instruction_curve)
-
-    def remove_instruction(self):
-        """
-        Remove the instruction from the plot.
-        """
-        self.removeItem(self._instruction_curve)
 
 
 class App(QtWidgets.QMainWindow):
@@ -176,11 +99,18 @@ class App(QtWidgets.QMainWindow):
         self.ui.angle_reset_pushButton.setStyleSheet(f"background-color: {self._color_blue.name()}")
 
         # Saving
+        self.saving = False
+        self.watchdog_frequency = 2  # Hz
+        self.watchdog_thread = SignalThread(self.watchdog_frequency)
+        self.watchdog_thread.signal.connect(self._save_data)
+        self.watchdog_thread.start()
         self.ui.save_lineEdit.textChanged.connect(self._check_text)
         self.ui.save_st_pushButton.clicked.connect(self._save_start_stop)
         self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
 
         # Comments
+        self.comment_to_save = False
+        self.comment = ""
         self.ui.comments_save_pushButton.clicked.connect(self._comments_save)
         self.ui.comments_save_pushButton.setEnabled(False)
         self.ui.comments_lineEdit.setEnabled(False)
@@ -201,6 +131,7 @@ class App(QtWidgets.QMainWindow):
         """
         Emergency stop. Stop the motor and close the GUI.
         """
+        self.watchdog_thread.stop()
         self.motor_thread.run = False
         self.close()
 
@@ -208,6 +139,7 @@ class App(QtWidgets.QMainWindow):
         """
         Stop the motor on close.
         """
+        self.watchdog_thread.stop()
         self.motor_thread.run = False
         event.accept()
 
@@ -433,20 +365,20 @@ class App(QtWidgets.QMainWindow):
         Start or stop saving the data to a file.
         """
         # Choosing the file name at the beginning of the saving.
-        self.motor_thread.file_name = f"XP/{self.ui.save_lineEdit.text()}"
+        self.file_name = f"XP/{self.ui.save_lineEdit.text()}"
         ext = ".bio"
-        if os.path.isfile(f"{self.motor_thread.file_name}{ext}"):
+        if os.path.isfile(f"{self.file_name}{ext}"):
             # File already exists, add a suffix to the filename
             i = 1
-            while os.path.isfile(f"{self.motor_thread.file_name}({i}){ext}"):
+            while os.path.isfile(f"{self.file_name}({i}){ext}"):
                 i += 1
-            self.motor_thread.file_name = f"{self.motor_thread.file_name}({i})"
+            self.file_name = f"{self.file_name}({i})"
 
-        self.motor_thread.saving = not self.motor_thread.saving
-        self.ui.save_lineEdit.setEnabled(not self.motor_thread.saving)
-        self.ui.comments_save_pushButton.setEnabled(self.motor_thread.saving)
-        self.ui.comments_lineEdit.setEnabled(self.motor_thread.saving)
-        if self.motor_thread.saving:
+        self.saving = not self.saving
+        self.ui.save_lineEdit.setEnabled(not self.saving)
+        self.ui.comments_save_pushButton.setEnabled(self.saving)
+        self.ui.comments_lineEdit.setEnabled(self.saving)
+        if self.saving:
             self.ui.save_st_pushButton.setText("Stop saving")
             self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_red.name()}")
             self.ui.comments_save_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
@@ -459,8 +391,8 @@ class App(QtWidgets.QMainWindow):
         """
         Indicates that the comment needs to be saved and clear the comment line edit.
         """
-        self.motor_thread.comment_to_save = True
-        self.motor_thread.comment = self.ui.comments_lineEdit.text()
+        self.comment_to_save = True
+        self.comment = self.ui.comments_lineEdit.text()
         self.ui.comments_lineEdit.setText("")
 
     def _stopwatch_start_stop(self):
@@ -570,11 +502,33 @@ class App(QtWidgets.QMainWindow):
             torque_spin_box_array,
         )
 
+    def _save_data(self):
+        # self.motor.odrv0.axis0.watchdog_feed()
+        if self.saving:
+            # Save data
+            if self.comment_to_save:
+                comment = self.comment
+                self.comment_to_save = False
+            else:
+                comment = ""
+            self.motor.save_data_to_file(
+                self.file_name,
+                spin_box=self.motor_thread.spin_box,
+                instruction=self.motor_thread.instruction,
+                ramp_instruction=self.motor_thread.ramp_instruction,
+                comment=comment,
+                stopwatch=self.motor_thread.stopwatch,
+                lap=self.motor_thread.lap,
+            )
+            # self.motor.odrv0.axis0.watchdog_feed()
+
 
 class MotorThread(QtCore.QThread):
+    """
+    Thread that controls the motor. It is separated from the GUI thread to avoid freezing the GUI when the motor is
+    running.
+    """
     plot_update_signal = QtCore.pyqtSignal(name="plot_update_signal")
-    plot_instruction_add_signal = QtCore.pyqtSignal(name="plot_instruction_add_signal")
-    plot_instruction_remove_signal = QtCore.pyqtSignal(name="plot_instruction_remove_signal")
 
     def __init__(self, ui: Ui_MainWindow, odrive_motor):
         super(MotorThread, self).__init__(parent=None)
@@ -588,8 +542,6 @@ class MotorThread(QtCore.QThread):
         self.motor_started = False
 
         # Saving
-        self.saving = False
-        self.file_name = ""
         self.instruction = 0.0
         self.ramp_instruction = 0.0
         self.spin_box = 0.0
@@ -603,8 +555,8 @@ class MotorThread(QtCore.QThread):
         self.stopwatch_pause_time = 0.0
         self.stopwatch_lap_time = 0.0
         self.stopwatch_state = StopwatchStates.STOPPED
-        self._stopwatch = 0.0
-        self._lap = 0.0
+        self.stopwatch = 0.0
+        self.lap = 0.0
 
         # Data
         self._display_frequency = 4  # Hz
@@ -620,71 +572,39 @@ class MotorThread(QtCore.QThread):
         self.power_array = np.zeros(self.size_arrays)
         self.spin_box_array = None
 
-    def feed_watchdog(self):
-        """
-        Feed the watchdog of the motor. This method is not necessary in itself, but it allows to test the GUI without an
-        Odrive connected by commenting the line.
-        """
-        self.motor.odrv0.axis0.watchdog_feed()
-
     def run(self):
         """
         Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
         It updates the command and the display, saves the data and feeds the watchdog.
         """
-        t_plot_precedent = t_display_precedent = t_save_precedent = time.time()
+        t_plot_precedent = t_display_precedent = time.time()
         self.plot_start_time = time.time()
         date_time = QtCore.QDateTime()
 
         while self.run:
-            self.feed_watchdog()
-
             # Date
             current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
             self.ui.date_label.setText(current_time)
 
             # Stopwatch
             if self.stopwatch_state == StopwatchStates.RUNNING:
-                self._stopwatch = time.time() - self.stopwatch_start_time
-                self._lap = time.time() - self.stopwatch_lap_time
+                self.stopwatch = time.time() - self.stopwatch_start_time
+                self.lap = time.time() - self.stopwatch_lap_time
             elif self.stopwatch_state == StopwatchStates.PAUSED:
-                self._stopwatch = self.stopwatch_pause_time - self.stopwatch_start_time
-                self._lap = self.stopwatch_pause_time - self.stopwatch_lap_time
+                self.stopwatch = self.stopwatch_pause_time - self.stopwatch_start_time
+                self.lap = self.stopwatch_pause_time - self.stopwatch_lap_time
             elif self.stopwatch_state == StopwatchStates.STOPPED:
-                self._stopwatch = 0.0
-                self._lap = 0.0
+                self.stopwatch = 0.0
+                self.lap = 0.0
 
-            minutes = int(self._stopwatch // 60)  # get the integer part of the quotient
-            seconds = int(self._stopwatch % 60)  # get the integer part of the remainder
+            minutes = int(self.stopwatch // 60)  # get the integer part of the quotient
+            seconds = int(self.stopwatch % 60)  # get the integer part of the remainder
             milliseconds = int(
-                (self._stopwatch - int(self._stopwatch)) * 100)  # get the milliseconds component
+                (self.stopwatch - int(self.stopwatch)) * 100)  # get the milliseconds component
             self.ui.stopwatch_lcdNumber.display(f"{minutes:02d}:{seconds:02d}.{milliseconds:02d}")
-            minutes = int(self._lap // 60)  # get the integer part of the quotient
-            seconds = int(self._lap % 60)  # get the integer part of the remainder
+            minutes = int(self.lap // 60)  # get the integer part of the quotient
+            seconds = int(self.lap % 60)  # get the integer part of the remainder
             self.ui.lap_lcdNumber.display(f"{minutes:02d}:{seconds:02d}")
-
-            self.feed_watchdog()
-
-            # Save data
-            t_since_precedent_save = time.time() - t_save_precedent
-            if self.saving and t_since_precedent_save > 1 / self._save_frequency:
-                if self.comment_to_save:
-                    comment = self.comment
-                    self.comment_to_save = False
-                else:
-                    comment = ""
-                self.motor.save_data_to_file(
-                    self.file_name,
-                    spin_box=self.spin_box,
-                    instruction=self.instruction,
-                    ramp_instruction=self.ramp_instruction,
-                    comment=comment,
-                    stopwatch=self._stopwatch,
-                    lap=self._lap,
-                )
-                t_save_precedent = time.time()
-
-                self.feed_watchdog()
 
             # Display data
             t_since_precedent_display = time.time() - t_display_precedent
@@ -696,17 +616,15 @@ class MotorThread(QtCore.QThread):
                 self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
                 t_display_precedent = time.time()
 
-            self.ui.errors_label.setText(
-                f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
-                f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
-                f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
-                f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
-                f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
-                f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
-                f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
-            )
-
-            self.feed_watchdog()
+            # self.ui.errors_label.setText(
+            #     f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
+            #     f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
+            #     f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
+            #     f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
+            #     f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
+            #     f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
+            #     f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
+            # )
 
             # Adapt the control of the motor accordingly to the current cadence and torque
             control_mode = self.motor.get_control_mode()
@@ -716,8 +634,8 @@ class MotorThread(QtCore.QThread):
             if control_mode == ControlMode.TORQUE_CONTROL:
                 self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
 
-            # The power control mode is based on the torque control mode, but the torque input is calculated from the
-            # current cadence (torque_input = power / cadence and resiting torque).
+            # The concentric power control mode is based on the torque control mode, but the torque input is calculated
+            # from the current cadence (torque_input = f(power / cadence, resiting torque)).
             elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
                 self.instruction = self.motor.concentric_power_control(self.spin_box, self.ramp_instruction)
 
@@ -726,6 +644,8 @@ class MotorThread(QtCore.QThread):
             elif control_mode == ControlMode.LINEAR_CONTROL:
                 self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
+            # The concentric power control mode is based on the cadence control mode, but the cadence input is
+            # calculated from the current torque (cadence_input = f(power / torque, resiting torque)).
             elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
                 self.instruction = self.motor.eccentric_power_control(self.spin_box,
                                                                       self.ramp_instruction)
@@ -734,8 +654,6 @@ class MotorThread(QtCore.QThread):
                 if abs(motor.get_cadence()) < 10.0:
                     self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
-
-            self.feed_watchdog()
 
             # Plot data
             t_since_precedent_plot = time.time() - t_plot_precedent
@@ -760,7 +678,7 @@ class MotorThread(QtCore.QThread):
 
 
 if __name__ == "__main__":
-    motor = OdriveEncoderHall(enable_watchdog=True, external_watchdog=True)
+    motor = Phantom(enable_watchdog=True, external_watchdog=True)
     app = QApplication(sys.argv)
     gui = App(motor)
     gui.show()
