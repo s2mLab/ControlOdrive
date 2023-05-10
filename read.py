@@ -11,7 +11,7 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/XP_participantX(5).bio")
+data = load("XP/XP_participantX(2).bio")
 
 # Moving average
 window_length = 20
@@ -29,10 +29,6 @@ smoothed_electrical_power = np.convolve(data['electrical_power'], kernel, mode='
 for time, comment in zip(data["time"], data['comments']):
     if comment != "":
         print(f"{time}: {comment}")
-
-time = np.asarray(data["time"])
-dt = time[1:] - time[:-1]
-print(dt.mean(), dt.std())
 
 # Stopwatch
 plt.figure()
