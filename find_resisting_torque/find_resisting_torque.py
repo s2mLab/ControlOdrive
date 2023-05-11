@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from motor import *
 
 # Initialisation
-motor = OdriveEncoderHall()
+motor = MotorController()
 
 # Set the control mode
 motor.torque_control(0.0, resisting_torque_current=0.0)

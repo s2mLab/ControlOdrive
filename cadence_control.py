@@ -5,7 +5,7 @@ from motor import *
 from save_and_load import load
 
 # Initialisation
-motor = OdriveEncoderHall()
+motor = MotorController()
 
 # Data saving
 t0 = time.time()

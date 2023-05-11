@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from motor import *
 
 # Initialisation
-motor = OdriveEncoderHall()
+motor = MotorController()
 
 resisting_current = []
 motor_velocity = []

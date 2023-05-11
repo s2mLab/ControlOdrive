@@ -31,7 +31,7 @@ from enums import ControlMode, DirectionMode, control_modes_based_on_torque, con
 from save_and_load import save
 
 
-class OdriveEncoderHall:
+class MotorController:
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
     Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 the all the
@@ -831,20 +831,11 @@ class OdriveEncoderHall:
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,
             "time": time.time() - self.t0,
-            #"iq_setpoint": self.get_iq_setpoint(),
-            #"iq_measured": self.get_iq_measured(),
-            #"measured_torque": self.get_measured_torque(),
-            #"motor_torque": self.get_motor_torque(),
             "user_torque": self.get_user_torque(),
-            #"resisting_torque": self.get_resisting_torque(),
             "cadence": self.get_cadence(),
             "angle": self.get_angle(),
             "turns": self.get_turns(),
-            #"mechanical_power": self.get_mechanical_power(),
-            #"electrical_power": self.get_electrical_power(),
             "user_power": self.get_user_power(),
-            #"vbus": self.odrv0.vbus_voltage,
-            #"ibus": self.odrv0.ibus,
             "error": self.odrv0.error,
             "axis_error": self.odrv0.axis0.error,
             "controller_error": self.odrv0.axis0.controller.error,
@@ -855,9 +846,18 @@ class OdriveEncoderHall:
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
             "direction": self._direction.value,
-            #"resistor_current": self.odrv0.brake_resistor_current,
-            #"brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
-            #"brake_resistor_armed": self.odrv0.brake_resistor_armed,
+            # "iq_setpoint": self.get_iq_setpoint(),
+            # "iq_measured": self.get_iq_measured(),
+            # "measured_torque": self.get_measured_torque(),
+            # "motor_torque": self.get_motor_torque(),
+            # "resisting_torque": self.get_resisting_torque(),
+            # "mechanical_power": self.get_mechanical_power(),
+            # "electrical_power": self.get_electrical_power(),
+            # "vbus": self.odrv0.vbus_voltage,
+            # "ibus": self.odrv0.ibus,
+            # "resistor_current": self.odrv0.brake_resistor_current,
+            # "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
+            # "brake_resistor_armed": self.odrv0.brake_resistor_armed,
         }
 
         save(data, file_path)

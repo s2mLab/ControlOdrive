@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from motor import *
 
 # Initialisation
-motor = OdriveEncoderHall()
+motor = MotorController()
 motor.zero_position_calibration()
 
 # Variables to plot
