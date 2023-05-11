@@ -285,7 +285,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         if self._gui_control_mode == GUIControlMode.POWER:
             if self._training_mode == TrainingMode.CONCENTRIC.value:
                 self.motor_thread.spin_box = self.ui.instruction_spinBox.value()
-                self.motor_thread.instruction = self.motor.linear_control(
+                self.motor_thread.instruction = self.motor.concentric_power_control(
                     self.motor_thread.spin_box, self.motor_thread.ramp_instruction
                 )
             elif self._training_mode == TrainingMode.ECCENTRIC.value:
