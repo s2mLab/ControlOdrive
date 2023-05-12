@@ -516,7 +516,7 @@ class MotorController:
                 resisting_torque = self.get_resisting_torque()
 
             if torque != 0.0:
-                torque = abs(torque) + self.get_sign() * resisting_torque
+                torque = abs(torque) - self.get_sign() * resisting_torque
             else:
                 torque = 0.0
 
