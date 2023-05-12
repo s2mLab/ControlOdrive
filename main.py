@@ -99,18 +99,11 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         self.ui.angle_reset_pushButton.setStyleSheet(f"background-color: {self._color_blue.name()}")
 
         # Saving
-        self.saving = False
-        self.watchdog_frequency = 10  # Hz
-        self.watchdog_thread = SignalThread(self.watchdog_frequency)
-        self.watchdog_thread.signal.connect(self._save_data)
-        self.watchdog_thread.start()
         self.ui.save_lineEdit.textChanged.connect(self._check_text)
         self.ui.save_st_pushButton.clicked.connect(self._save_start_stop)
         self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
 
         # Comments
-        self.comment_to_save = False
-        self.comment = ""
         self.ui.comments_save_pushButton.clicked.connect(self._comments_save)
         self.ui.comments_save_pushButton.setEnabled(False)
         self.ui.comments_lineEdit.setEnabled(False)
@@ -365,14 +358,14 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         Start or stop saving the data to a file.
         """
         # Choosing the file name at the beginning of the saving.
-        self.file_name = f"XP/{self.ui.save_lineEdit.text()}"
+        self.motor_thread.file_name = f"XP/{self.ui.save_lineEdit.text()}"
         ext = ".bio"
-        if os.path.isfile(f"{self.file_name}{ext}"):
+        if os.path.isfile(f"{self.motor_thread.file_name}{ext}"):
             # File already exists, add a suffix to the filename
             i = 1
-            while os.path.isfile(f"{self.file_name}({i}){ext}"):
+            while os.path.isfile(f"{self.motor_thread.file_name}({i}){ext}"):
                 i += 1
-            self.file_name = f"{self.file_name}({i})"
+            self.motor_thread.file_name = f"{self.motor_thread.file_name}({i})"
 
         self.saving = not self.saving
         self.ui.save_lineEdit.setEnabled(not self.saving)
@@ -391,8 +384,8 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         """
         Indicates that the comment needs to be saved and clear the comment line edit.
         """
-        self.comment_to_save = True
-        self.comment = self.ui.comments_lineEdit.text()
+        self.motor_thread.comment_to_save = True
+        self.motor_thread.comment = self.ui.comments_lineEdit.text()
         self.ui.comments_lineEdit.setText("")
 
     def _stopwatch_start_stop(self):
@@ -502,27 +495,6 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             torque_spin_box_array,
         )
 
-    def _save_data(self):
-        self.motor_thread.watchdog_feed()
-
-        if self.saving:
-            # Save data
-            if self.comment_to_save:
-                comment = self.comment
-                self.comment_to_save = False
-            else:
-                comment = ""
-            self.motor.save_data_to_file(
-                self.file_name,
-                spin_box=self.motor_thread.spin_box,
-                instruction=self.motor_thread.instruction,
-                ramp_instruction=self.motor_thread.ramp_instruction,
-                comment=comment,
-                stopwatch=self.motor_thread.stopwatch,
-                lap=self.motor_thread.lap,
-            )
-            self.motor_thread.watchdog_feed()
-
 
 class MotorDisplayThread(QtCore.QThread):
     """
@@ -548,8 +520,8 @@ class MotorDisplayThread(QtCore.QThread):
         self.spin_box = 0.0
 
         # Comments
-        self.comment_to_save = False
-        self.comment = ""
+        self.motor_thread.comment_to_save = False
+        self.motor_thread.comment = ""
 
         # Stopwatch
         self.stopwatch_start_time = 0.0
@@ -577,6 +549,12 @@ class MotorDisplayThread(QtCore.QThread):
         self.watchdog_prec = time.time()
         self.dt = []
 
+        # Saving
+        self.saving = False
+        self.comment_to_save = False
+        self.comment = ""
+        self.file_name = ""
+
     def watchdog_feed(self):
         t = time.time()
         self.dt.append(t - self.watchdog_prec)
@@ -594,6 +572,24 @@ class MotorDisplayThread(QtCore.QThread):
 
         while self.run:
             self.watchdog_feed()
+
+            if self.saving:
+                # Save data
+                if self.comment_to_save:
+                    comment = self.comment
+                    self.comment_to_save = False
+                else:
+                    comment = ""
+                self.motor.save_data_to_file(
+                    self.file_name,
+                    spin_box=self.spin_box,
+                    instruction=self.instruction,
+                    ramp_instruction=self.ramp_instruction,
+                    comment=comment,
+                    stopwatch=self.stopwatch,
+                    lap=self.lap,
+                )
+                self.watchdog_feed()
 
             # Date
             current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
