@@ -554,6 +554,9 @@ class MotorDisplayThread(QtCore.QThread):
         self.file_name = ""
 
     def watchdog_feed(self):
+        """
+        Feed the watchdog of the motor.
+        """
         t = time.time()
         self.dt.append(t - self.watchdog_prec)
         self.watchdog_prec = t
@@ -578,7 +581,7 @@ class MotorDisplayThread(QtCore.QThread):
                     self.comment_to_save = False
                 else:
                     comment = ""
-                self.motor.save_data_to_file(
+                self.motor.minimal_save_data_to_file(
                     self.file_name,
                     spin_box=self.spin_box,
                     instruction=self.instruction,

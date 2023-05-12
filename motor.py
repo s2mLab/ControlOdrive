@@ -30,8 +30,10 @@ from odrive.enums import (
 from enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
 from save_and_load import save
 
+from motor_computations import MotorComputations
 
-class MotorController:
+
+class MotorController(MotorComputations):
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
     Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 the all the
@@ -47,10 +49,6 @@ class MotorController:
             gains_path: str = "parameters/gains.json",
             file_path: str = None,
     ):
-
-        with open(hardware_and_security_path, "r") as hardware_and_security_file:
-            self.hardware_and_security = json.load(hardware_and_security_file)
-
         self._watchdog_is_ready = False
         self._external_watchdog = external_watchdog
         self._watchdog_timeout = self.hardware_and_security["watchdog_timeout"]
@@ -60,17 +58,12 @@ class MotorController:
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
-        self._reduction_ratio = self.hardware_and_security["reduction_ratio"]
-
         self._control_mode = ControlMode.STOP
         self._relative_pos = 0
         self._direction = DirectionMode.FORWARD
         self.previous_control_mode = ControlMode.STOP
 
         self._gains_path = gains_path
-
-        self.resisting_current_coeff_proportional = self.hardware_and_security["resisting_current_coeff_proportional"]
-        self.resisting_current_coeff_power = self.hardware_and_security["resisting_current_coeff_power"]
 
         if file_path:
             self.file_path = file_path
@@ -715,7 +708,7 @@ class MotorController:
         """
         Returns the estimated angle in degrees. A calibration is needed to know the 0.
         """
-        return - ((self.odrv0.axis0.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio * 360) % 360
+        return self.compute_angle(self.get_turns())
 
     def get_turns(self):
         """
@@ -727,7 +720,7 @@ class MotorController:
         """
         Returns the estimated cadence of the pedals in rpm.
         """
-        return - self.odrv0.axis0.encoder.vel_estimate * self._reduction_ratio * 60
+        return self.compute_cadence(self.odrv0.axis0.encoder.vel_estimate)
 
     def get_electrical_power(self):
         """
@@ -745,7 +738,7 @@ class MotorController:
         """
         Returns the user mechanical power in W.
         """
-        return self.get_user_torque() * self.get_cadence() * 2 * np.pi / 60
+        return self.compute_user_torque(self.get_user_torque(), self.get_cadence())
 
     def get_iq_setpoint(self):
         """
@@ -777,34 +770,18 @@ class MotorController:
         """
         Returns the resisting torque.
         """
-        i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        cadence = self.odrv0.axis0.encoder.vel_estimate
-        if cadence != 0.0:
-            dyn_resisting_current = - self.resisting_current_coeff_proportional * cadence / abs(cadence) \
-                                    * abs(cadence) ** (1 / self.resisting_current_coeff_power)
-        else:
-            if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
-                dyn_resisting_current = i_measured
-            else:
-                dyn_resisting_current = self.hardware_and_security["resisting_torque_current"]
-        return - self.odrv0.axis0.motor.config.torque_constant * dyn_resisting_current / self._reduction_ratio
+        return self.compute_resisting_torque(
+            self.odrv0.axis0.motor.current_control.Iq_measured,
+            self.odrv0.axis0.encoder.vel_estimate,)
 
     def get_user_torque(self):
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
         """
-        i_measured = self.odrv0.axis0.motor.current_control.Iq_measured
-        cadence = self.odrv0.axis0.encoder.vel_estimate
-        if cadence != 0.0:
-            dyn_resisting_current = - self.resisting_current_coeff_proportional * cadence / abs(cadence)\
-                                    * abs(cadence)**(1/self.resisting_current_coeff_power)
-            i_user = i_measured - dyn_resisting_current
-        else:
-            if abs(i_measured) <= self.hardware_and_security["resisting_torque_current"]:
-                i_user = 0.0
-            else:
-                i_user = i_measured
-        return - self.odrv0.axis0.motor.config.torque_constant * i_user / self._reduction_ratio
+        return self.compute_user_torque(
+            self.odrv0.axis0.motor.current_control.Iq_measured,
+            self.odrv0.axis0.encoder.vel_estimate
+        )
 
     def save_data_to_file(
             self,
@@ -846,18 +823,66 @@ class MotorController:
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
             "direction": self._direction.value,
-            # "iq_setpoint": self.get_iq_setpoint(),
-            # "iq_measured": self.get_iq_measured(),
-            # "measured_torque": self.get_measured_torque(),
-            # "motor_torque": self.get_motor_torque(),
-            # "resisting_torque": self.get_resisting_torque(),
-            # "mechanical_power": self.get_mechanical_power(),
-            # "electrical_power": self.get_electrical_power(),
-            # "vbus": self.odrv0.vbus_voltage,
-            # "ibus": self.odrv0.ibus,
-            # "resistor_current": self.odrv0.brake_resistor_current,
-            # "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
-            # "brake_resistor_armed": self.odrv0.brake_resistor_armed,
+            "iq_setpoint": self.get_iq_setpoint(),
+            "iq_measured": self.get_iq_measured(),
+            "measured_torque": self.get_measured_torque(),
+            "motor_torque": self.get_motor_torque(),
+            "resisting_torque": self.get_resisting_torque(),
+            "mechanical_power": self.get_mechanical_power(),
+            "electrical_power": self.get_electrical_power(),
+            "vbus": self.odrv0.vbus_voltage,
+            "ibus": self.odrv0.ibus,
+            "resistor_current": self.odrv0.brake_resistor_current,
+            "brake_resistor_saturated": self.odrv0.brake_resistor_saturated,
+            "brake_resistor_armed": self.odrv0.brake_resistor_armed,
+
+        }
+
+        save(data, file_path)
+
+    def minimal_save_data_to_file(
+            self,
+            file_path: str,
+            spin_box: float = None,
+            instruction: float = None,
+            ramp_instruction: float = None,
+            comment: str = "",
+            stopwatch: float = 0.0,
+            lap: float = 0.0,
+    ):
+        """
+        Saves data.
+        """
+        if self.first_save:
+            self.t0 = time.time()
+            self.first_save = False
+
+        data = {
+            "time": time.time() - self.t0,
+
+            "spin_box": spin_box,
+            "instruction": instruction,
+            "ramp_instruction": ramp_instruction,
+
+            "comments": comment,
+            "stopwatch": stopwatch,
+            "lap": lap,
+
+            "state": self.odrv0.axis0.current_state,
+            "control_mode": self._control_mode.value,
+            "direction": self._direction.value,
+
+            "vel_estimate": self.odrv0.axis0.encoder.vel_estimate,
+            "turns": self.get_turns(),
+            "iq_measured": self.odrv0.axis0.motor.current_control.Iq_measured,
+
+            "error": self.odrv0.error,
+            "axis_error": self.odrv0.axis0.error,
+            "controller_error": self.odrv0.axis0.controller.error,
+            "encoder_error": self.odrv0.axis0.encoder.error,
+            "motor_error": self.odrv0.axis0.motor.error,
+            "sensorless_estimator_error": self.odrv0.axis0.sensorless_estimator.error,
+            "can_error": self.odrv0.can.error,
         }
 
         save(data, file_path)
