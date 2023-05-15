@@ -73,3 +73,9 @@ class MotorComputations:
             else:
                 i_user = i_measured
         return - self.hardware_and_security["torque_constant"] * i_user / self._reduction_ratio
+
+    def compute_motor_torque(self, iq_measured):
+        """
+        Returns the measured motor torque. Can be called without any odrive connected.
+        """
+        return self.hardware_and_security["torque_constant"] * iq_measured / self._reduction_ratio

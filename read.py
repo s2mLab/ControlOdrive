@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from save_and_load import load
+from save_and_load import read
 
 from enums import (
+    ControlMode,
     ODriveMotorError,
     ODriveSensorlessEstimatorError,
     ODriveError,
@@ -11,231 +12,130 @@ from enums import (
     ODriveControllerError,
 )
 
-data = load("XP/Torque(1).bio")
+from utils import traduce_error
 
-# Moving average
-window_length = 20
-# /!\ bias because the time steps are not the same
-kernel = np.ones(window_length) / window_length
-smoothed_cadence = np.convolve(data['cadence'], kernel, mode='valid')
-# smoothed_i_measured = np.convolve(data['iq_measured'], kernel, mode='valid')
-# smoothed_i_setpoint = np.convolve(data['iq_setpoint'], kernel, mode='valid')
-# smoothed_motor_torque = np.convolve(data['motor_torque'], kernel, mode='valid')
-smoothed_user_torque = np.convolve(data['user_torque'], kernel, mode='valid')
-smoothed_user_power = np.convolve(data['user_power'], kernel, mode='valid')
-# smoothed_mechanical_power = np.convolve(data['mechanical_power'], kernel, mode='valid')
-# smoothed_electrical_power = np.convolve(data['electrical_power'], kernel, mode='valid')
+data = read("XP/Check_new_save.bio", 100, 100)
 
-# for time, comment in zip(data["time"], data['comments']):
-#     if comment != "":
-#         print(f"{time}: {comment}")
+# Comments
+for time, comment in zip(data["time"], data['comments']):
+    if comment != "":
+        print(f"{time}: {comment}")
 
-time = np.asarray(data["time"])
-dt = time[1:] - time[:-1]
-print(dt.mean(), dt.std())
+# Cadence
+instruction_for_cadence = np.zeros(len(data["instruction"]))
+instruction_for_cadence[:] = np.nan
+instruction_for_cadence[data["control_mode"] == ControlMode.CADENCE_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.CADENCE_CONTROL.value]
+instruction_for_cadence[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
 
-# Stopwatch
 plt.figure()
-plt.title("Stopwatch")
-plt.ylabel("Time (s)")
+plt.title("Cadence")
+plt.ylabel("Cadence (rpm)")
 plt.xlabel("Time (s)")
 
-# plt.plot(data['time'], data['stopwatch'], label="Stopwatch")
-# plt.plot(data['time'], data['lap'], label="Lap")
-
-plt.legend()
-
-# cadence
-plt.figure()
-plt.title("cadence")
-plt.ylabel("cadence (rpm)")
-plt.xlabel("Time (s)")
-
-plt.plot(data['time'], data['cadence'], label="cadence")
+plt.plot(data["time"], data["cadence"], label="Cadence")
 plt.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_cadence,
+    data["time_for_smoothed"],
+    data["smoothed_cadence"],
     label="Smoothed cadence"
 )
-plt.plot(data['time'], np.asarray(data['instruction']), label="Instruction")
+plt.plot(data["time"], instruction_for_cadence, label="Instruction")
 
 plt.legend()
-
-# Instructions
-plt.figure()
-plt.title("Instructions")
-plt.ylabel("Instruction")
-plt.xlabel("Time (s)")
-
-plt.plot(data['time'], data['ramp_instruction'], label="Ramp instruction")
-plt.plot(data['time'], data['instruction'], label="Instruction")
-plt.plot(data['time'], data['spin_box'], label="Spin box")
-
-plt.legend()
-
-# Currents
-# plt.figure()
-#
-# plt.title("Currents")
-#
-# plt.ylabel("Current (A)")
-# plt.xlabel("Time (s)")
-#
-# plt.plot(data['time'], np.asarray(data['iq_measured']), label="Iq measured")
-# plt.plot(data['time'], np.asarray(data['iq_setpoint']), label="Iq setpoint")
-#
-# plt.legend(loc="upper right")
-
-# # Currents
-# fig, ax1 = plt.subplots()
-#
-# plt.title("Currents and cadence")
-#
-# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-# ax1.set_xlabel('Time (s)')
-# ax1.set_ylabel('Current (A)')
-# ax2.set_ylabel('cadence (rpm)')
-#
-# ax2.plot(data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_cadence, label="Smoothed cadence", color='k')
-# ax1.plot(data['time'], data["iq_measured"], label="Iq measured")
-# ax1.plot(data['time'], data["iq_setpoint"], label="Iq setpoint")
-# ax1.plot(data['time'], data["resistor_current"], label="Brake resistor")
-#
-# fig.legend(loc="upper right")
 
 # Torques
+instruction_for_torque = np.zeros(len(data["instruction"]))
+instruction_for_torque[:] = np.nan
+instruction_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
+instruction_for_torque[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
+instruction_for_torque[data["control_mode"] == ControlMode.LINEAR_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.LINEAR_CONTROL.value]
+
+spinbox_for_torque = np.zeros(len(data["instruction"]))
+spinbox_for_torque[:] = np.nan
+spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
+
 fig, ax1 = plt.subplots()
 
 # ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Torque (Nm)')
-# ax2.set_ylabel('cadence (rpm)')
+# ax2.set_ylabel('Cadence (rpm)')
 
 plt.title("Torques")
 
 # ax2.plot(
-#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)], smoothed_cadence,
+#     time_for_smoothed, smoothed_cadence,
 #     label="Smoothed cadence",
 #     color='k'
 # )
-# ax1.plot(
-#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-#     smoothed_motor_torque,
-#     label="Smoothed motor torque"
-# )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_user_torque,
+    data["time_for_smoothed"],
+    data["smoothed_motor_torque"],
+    label="Smoothed motor torque"
+)
+ax1.plot(
+    data["time_for_smoothed"],
+    data["smoothed_user_torque"],
     label="Smoothed user torque"
 )
 ax1.plot(
-    data['time'],
-    data['spin_box'],
+    data["time_for_smoothed"],
+    data["smoothed_resisting_torque"],
+    label="Smoothed resisting torque"
+)
+ax1.plot(
+    data["time"],
+    spinbox_for_torque,
     label="Spin box"
 )
 ax1.plot(
-    data['time'],
-    - np.asarray(data['instruction']) - np.asarray(data['resisting_torque']),
-    label="instruction + resisting torque",
-)
-ax1.plot(
-    data['time'],
-    - np.asarray(data['instruction']),
+    data["time"],
+    instruction_for_torque,
     label="Instruction",
 )
-# sb = np.asarray(data['spin_box'])[int(window_length / 2) - 1: int(- window_length / 2)]
-# smoothed_cadence[smoothed_cadence == 0] = 1
-# ax1.plot(
-#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-#     sb / (smoothed_cadence * 2 * np.pi / 60),
-#     label="Recalculated torque",
-# )
-#ax1.plot(
-#    data['time'],
-#    np.asarray(data['spin_box']),
-#    label="Spin box",
-#)
-#ax1.plot(
-#    data['time'],
-#    np.asarray(data['spin_box']) * np.asarray(data['cadence']),
-#    label="Spin box * cadence",
-#)
 
 fig.legend(loc="upper right")
 
 # Powers
+spinbox_for_power = np.zeros(len(data["instruction"]))
+spinbox_for_power[:] = np.nan
+spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
+spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = \
+    data["instruction"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
+
 fig, ax1 = plt.subplots()
 plt.title("Powers")
 
 ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Powers(W)')
-ax2.set_ylabel('cadence (rpm)')
+ax2.set_ylabel('Cadence (rpm)')
 
-# ax1.plot(
-#     data['time'],
-#     data['electrical_power'],
-#     label="Electrical power"
-# )
-# ax1.plot(
-#     data['time'],
-#     data['mechanical_power'],
-#     label="Mechanical power (user + resisting torque)"
-# )
 ax1.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_user_power,
+    data["time_for_smoothed"],
+    data["smoothed_user_power"],
     label="User power"
 )
 ax1.plot(
-    data['time'],
-    data['spin_box'],
+    data["time"],
+    spinbox_for_power,
     label="Spin_box"
 )
 ax2.plot(
-    data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-    smoothed_cadence,
+    data["time_for_smoothed"],
+    data["smoothed_cadence"],
     label="Smoothed cadence",
     color='k')
 
 fig.legend(loc="upper right")
 
-# # vbus
-# fig, ax1 = plt.subplots()
-#
-# plt.title("vbus and cadence of the pedal")
-#
-# ax2 = ax1.twinx()
-# ax1.set_xlabel('Time (s)')
-# ax1.set_ylabel('vbus (V)')
-# ax2.set_ylabel('cadence (rpm)')
-#
-# ax1.plot(data['time'], data["vbus"], label="vbus")
-# ax2.plot(
-#     data['time'][int(window_length / 2) - 1: int(- window_length / 2)],
-#     smoothed_cadence, label="Smoothed cadence of the pedals",
-#     color="k"
-# )
-#
-# fig.legend()
-#
-# # ibus
-# fig, ax1 = plt.subplots()
-#
-# fig.suptitle("ibus, resistor current and saturation of the brake resistor")
-#
-# ax2 = ax1.twinx()
-# ax1.set_xlabel('Time (s)')
-# ax1.set_ylabel('Current (A)')
-# ax2.set_ylabel('Brake resistor saturated')
-#
-# ax1.plot(data['time'], data["ibus"], label="ibus")
-# ax1.plot(data['time'], data["resistor_current"], label="Resistor current")
-# ax2.plot(data['time'], data["brake_resistor_saturated"], label="Brake resistor saturated", color="green")
-#
-# fig.legend(loc="upper right")
-#
-# # Errors
+# Errors
 # plt.figure()
 #
 # plt.title("Errors")
@@ -247,28 +147,13 @@ fig.legend(loc="upper right")
 # plt.plot(data["motor_error"], label="Motor error")
 # plt.plot(data["sensorless_estimator_error"], label="Sensorless estimator error")
 # plt.plot(data["can_error"], label="Can error")
-#
-#
-def _traduce_error(decim_number, odrive_enum):
-    hex_number = "{0:x}".format(decim_number)
-    res = ""
-    for i, j in enumerate(hex_number[::-1]):
-        if j != '0':
-            for member in odrive_enum.__members__.values():
-                if member.value == "0x" + format(int(j) * 16 ** int(i), f"0{8}X"):
-                    res += member.name
-                    res += ", "
-    return res
-
 
 print(
-    f"{_traduce_error(data['error'][-1], ODriveError)}"
-    f"{_traduce_error(data['axis_error'][-1], ODriveAxisError)}"
-    f"{_traduce_error(data['controller_error'][-1], ODriveControllerError)}"
-    f"{_traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
-    f"{_traduce_error(data['motor_error'][-1], ODriveMotorError)}"
-    f"{_traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}")
-
-plt.legend()
+    f"{traduce_error(data['error'][-1], ODriveError)}"
+    f"{traduce_error(data['axis_error'][-1], ODriveAxisError)}"
+    f"{traduce_error(data['controller_error'][-1], ODriveControllerError)}"
+    f"{traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
+    f"{traduce_error(data['motor_error'][-1], ODriveMotorError)}"
+    f"{traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}")
 
 plt.show()

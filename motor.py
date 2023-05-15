@@ -753,19 +753,11 @@ class MotorController(MotorComputations):
         """
         return self.odrv0.axis0.motor.current_control.Iq_measured
 
-    def get_measured_torque(self):
-        """
-        Returns the measured torque.
-        """
-        return - self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
-            / self._reduction_ratio
-
     def get_motor_torque(self):
         """
         Returns the measured torque.
         """
-        return self.odrv0.axis0.motor.config.torque_constant * self.odrv0.axis0.motor.current_control.Iq_measured \
-            / self._reduction_ratio
+        return self.compute_motor_torque(self.odrv0.axis0.motor.current_control.Iq_measured)
 
     def get_resisting_torque(self):
         """
@@ -850,6 +842,7 @@ class MotorController(MotorComputations):
             comment: str = "",
             stopwatch: float = 0.0,
             lap: float = 0.0,
+            training_mode: str = "",
     ):
         """
         Saves data.
@@ -872,6 +865,7 @@ class MotorController(MotorComputations):
             "state": self.odrv0.axis0.current_state,
             "control_mode": self._control_mode.value,
             "direction": self._direction.value,
+            "training_mode": training_mode,
 
             "vel_estimate": self.odrv0.axis0.encoder.vel_estimate,
             "turns": self.get_turns(),

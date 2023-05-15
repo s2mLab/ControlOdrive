@@ -265,6 +265,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                 self._angle_reset()
             self._control_display()
             self._plot_add_instruction()
+            self.motor_thread.training_mode = self.ui.training_comboBox.currentText()
             self.motor_thread.plot_start_time = time.time()
             self.motor_thread.time_array = np.linspace(
                 - self.motor_thread.size_arrays / self.motor_thread.plot_frequency, 0, self.motor_thread.size_arrays
@@ -516,6 +517,7 @@ class MotorDisplayThread(QtCore.QThread):
         self.instruction = 0.0
         self.ramp_instruction = 0.0
         self.spin_box = 0.0
+        self.training_mode = self.ui.training_comboBox.currentText()
 
         # Comments
         self.comment_to_save = False
@@ -587,6 +589,7 @@ class MotorDisplayThread(QtCore.QThread):
                     comment=comment,
                     stopwatch=self.stopwatch,
                     lap=self.lap,
+                    training_mode=self.training_mode
                 )
                 self.watchdog_feed()
 
@@ -662,7 +665,7 @@ class MotorDisplayThread(QtCore.QThread):
                 self.instruction = self.motor.eccentric_power_control(self.spin_box,
                                                                       self.ramp_instruction)
 
-            elif self.motor.get_control_mode() == ControlMode.STOPPING:
+            elif control_mode == ControlMode.STOPPING:
                 if abs(motor.get_cadence()) < 10.0:
                     self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
