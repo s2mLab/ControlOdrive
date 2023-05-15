@@ -125,19 +125,17 @@ def interpolate_data(data, frequency=10):
                     "sensorless_estimator_error", "can_error"]
     for key in keys_nearest:
         data_interpolated[key] = np.zeros(len(time), dtype=type(np.asarray(data[key]).dtype))
-    i = 0
     i_prec = 0
     i_next = 1
-    for t in time:
+    for i, t in enumerate(time):
         while data["time"][i_next] < t:
             i_prec += 1
             i_next += 1
-        for key in ["state", "control_mode", "direction", "comments"]:
+        for key in keys_nearest:
             if data["time"][i_next] - t < t - data["time"][i_prec]:
                 data_interpolated[key][i] = data[key][i_next]
             else:
                 data_interpolated[key][i] = data[key][i_prec]
-        i += 1
     return data_interpolated
 
 
