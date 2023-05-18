@@ -324,13 +324,12 @@ class MotorController(MotorComputations):
 
     def get_sign(self):
         """
-        Set the sign of the rotation depending on the mode (eccentric or concentric).
-        # TODO: track ecc cons
+        Set the sign of the rotation depending on the rotation direction (reverse or forward).
         """
         if self._direction == DirectionMode.FORWARD:
-            return -1
-        else:
             return 1
+        else:
+            return - 1
 
     def set_direction(self, mode: str):
         """
@@ -454,7 +453,7 @@ class MotorController(MotorComputations):
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
         self.odrv0.axis0.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
-        self.odrv0.axis0.controller.input_vel = self.get_sign() * cadence / 60 / self._reduction_ratio
+        self.odrv0.axis0.controller.input_vel = - self.get_sign() * cadence / 60 / self._reduction_ratio
 
         if self._control_mode not in control_modes_based_on_cadence:
             # Starts the motor if the previous control mode was not already `cadence_CONTROL`
@@ -462,11 +461,11 @@ class MotorController(MotorComputations):
 
         self._control_mode = control_mode
 
-        return - self.get_sign() * cadence
+        return self.get_sign() * cadence
 
     def torque_control(
             self,
-            torque: float = 0.0,
+            user_torque: float = 0.0,
             torque_ramp_rate: float = 2.0,
             resisting_torque: float = None,
             control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
@@ -476,8 +475,8 @@ class MotorController(MotorComputations):
 
         Parameters
         ----------
-        torque: float
-            Torque (Nm) at the pedals.
+        user_torque: float
+            Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
         resisting_torque: float
@@ -491,30 +490,30 @@ class MotorController(MotorComputations):
         The input torque (Nm) at the pedals.
         """
         # If the user is not pedaling yet or if he has stopped pedaling, the motor is stopped.
-        if ((self._direction == DirectionMode.FORWARD and self.odrv0.axis0.encoder.vel_estimate >= 0)
-                or (self._direction == DirectionMode.REVERSE and self.odrv0.axis0.encoder.vel_estimate <= 0)):
-            input_torque_motor = 0.0
+        vel_estimate = self.odrv0.axis0.encoder.vel_estimate
+        # `vel_estimate` is negative if pedaling forward, positive if pedaling backward
+        if ((self._direction == DirectionMode.FORWARD and vel_estimate >= 0)
+                or (self._direction == DirectionMode.REVERSE and vel_estimate <= 0)):
+            input_motor_torque = motor_torque = 0.0
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
             # TODO: Check if the torque ramp rate is correct
             torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
 
-            if abs(torque * self._reduction_ratio) > self.odrv0.axis0.motor.config.torque_lim:
+            if abs(user_torque * self._reduction_ratio) > self.odrv0.axis0.motor.config.torque_lim:
                 raise ValueError(
                     f"The torque limit is {self.odrv0.axis0.motor.config.torque_lim / self._reduction_ratio} Nm."
-                    f"Torque specified: {torque} Nm"
+                    f"Torque specified: {user_torque} Nm"
                 )
 
             if resisting_torque is None:
-                resisting_torque = self.get_resisting_torque()
+                resisting_torque = self.compute_resisting_torque(
+                    self.odrv0.axis0.motor.current_control.Iq_measured, vel_estimate
+                )
 
-            if torque != 0.0:
-                torque = abs(torque) - self.get_sign() * resisting_torque
-            else:
-                torque = 0.0
-
-            input_torque_motor = - self.get_sign() * abs(torque * self._reduction_ratio)
+            motor_torque = - self.get_sign() * abs(user_torque) - resisting_torque
+            input_motor_torque = motor_torque * self._reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
@@ -525,19 +524,19 @@ class MotorController(MotorComputations):
             self.odrv0.axis0.controller.config.enable_torque_mode_vel_limit = True
 
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
-            self.odrv0.axis0.controller.input_torque = input_torque_motor
+            self.odrv0.axis0.controller.input_torque = input_motor_torque
 
             # Starts the motor
             self.odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
         else:
             self.odrv0.axis0.controller.config.torque_ramp_rate = torque_ramp_rate_motor
-            self.odrv0.axis0.controller.input_torque = input_torque_motor
+            self.odrv0.axis0.controller.input_torque = input_motor_torque
 
-        # In case the previous control mode was based on torque control but was
-        # not `TORQUE_CONTROL`, self._control_mode is updated.
+        # In case the previous control mode was based on torque control but was not `TORQUE_CONTROL`,
+        # self._control_mode is updated.
         self._control_mode = control_mode
 
-        return - input_torque_motor / self._reduction_ratio  # Nm at the pedals
+        return motor_torque  # Nm at the pedals
 
     def concentric_power_control(
             self,
