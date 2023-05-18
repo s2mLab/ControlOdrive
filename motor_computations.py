@@ -64,7 +64,8 @@ class MotorComputations:
         i_measured : float
             The measured current in A.
         vel_estimate : float
-            The estimated velocity of the motor in turn/s.
+            The estimated velocity of the motor in turn/s. `vel_estimate` is negative if pedaling forward, positive if
+            pedaling backward.
 
         Returns
         -------
@@ -72,14 +73,12 @@ class MotorComputations:
             The resisting torque due to solid frictions in Nm at the pedals.
         """
         if vel_estimate != 0.0:
-            dyn_resisting_current = - self.resisting_current_coeff_proportional * vel_estimate / abs(vel_estimate) \
+            resisting_current = self.resisting_current_coeff_proportional * vel_estimate / abs(vel_estimate) \
                                     * abs(vel_estimate) ** (1 / self.resisting_current_coeff_power)
         else:
-            if abs(i_measured) <= self._resisting_torque_current:
-                dyn_resisting_current = i_measured
-            else:
-                dyn_resisting_current = self._resisting_torque_current
-        return - self._torque_constant * dyn_resisting_current / self._reduction_ratio
+            # As the motor is not moving, all current is dissipated as heat and corresponds to the resisting current.
+            resisting_current = i_measured
+        return self._torque_constant * resisting_current / self._reduction_ratio
 
     def compute_user_torque(
             self,
@@ -104,13 +103,13 @@ class MotorComputations:
         return - self.compute_resisting_torque(i_measured, vel_estimate) - \
             self._torque_constant * i_measured / self._reduction_ratio
 
-    def compute_motor_torque(self, iq_measured):
+    def compute_motor_torque(self, i_measured):
         """
         Returns the measured motor torque.
 
         Parameters
         ----------
-        iq_measured : float
+        i_measured : float
             The measured current in A.
 
         Returns
@@ -118,7 +117,7 @@ class MotorComputations:
         motor_torque : float
             The measured motor torque in Nm at the pedals.
         """
-        return self._torque_constant * iq_measured / self._reduction_ratio
+        return self._torque_constant * i_measured / self._reduction_ratio
 
     @staticmethod
     def compute_user_power(user_torque, cadence):

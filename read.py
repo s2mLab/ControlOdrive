@@ -14,7 +14,7 @@ from enums import (
 
 from utils import traduce_error
 
-data = read("XP/Check_new_save.bio", 100, 100)
+data = read("XP/XP_torque.bio", 100, 100)
 
 # Comments
 for time, comment in zip(data["time"], data['comments']):
@@ -54,25 +54,25 @@ instruction_for_torque[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONT
 instruction_for_torque[data["control_mode"] == ControlMode.LINEAR_CONTROL.value] = \
     data["instruction"][data["control_mode"] == ControlMode.LINEAR_CONTROL.value]
 
-spinbox_for_torque = np.zeros(len(data["instruction"]))
+spinbox_for_torque = np.zeros(len(data["spin_box"]))
 spinbox_for_torque[:] = np.nan
 spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = \
-    data["instruction"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
+    data["spin_box"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
 
 fig, ax1 = plt.subplots()
 
-# ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Torque (Nm)')
-# ax2.set_ylabel('Cadence (rpm)')
+ax2.set_ylabel('Cadence (rpm)')
 
 plt.title("Torques")
 
-# ax2.plot(
-#     time_for_smoothed, smoothed_cadence,
-#     label="Smoothed cadence",
-#     color='k'
-# )
+ax2.plot(
+    data["time_for_smoothed"], data['smoothed_cadence'],
+    label="Smoothed cadence",
+    color='k'
+)
 ax1.plot(
     data["time_for_smoothed"],
     data["smoothed_motor_torque"],

@@ -491,7 +491,7 @@ class MotorController(MotorComputations):
         """
         # If the user is not pedaling yet or if he has stopped pedaling, the motor is stopped.
         vel_estimate = self.odrv0.axis0.encoder.vel_estimate
-        # `vel_estimate` is negative if pedaling forward, positive if pedaling backward
+        # `vel_estimate` is negative if pedaling forward, positive if pedaling backward.
         if ((self._direction == DirectionMode.FORWARD and vel_estimate >= 0)
                 or (self._direction == DirectionMode.REVERSE and vel_estimate <= 0)):
             input_motor_torque = motor_torque = 0.0
