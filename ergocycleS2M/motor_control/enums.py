@@ -16,7 +16,8 @@ class ControlMode(StrEnum):
     ECCENTRIC_POWER_CONTROL = "Eccentric power control"
 
 
-control_modes_based_on_torque = ControlMode.TORQUE_CONTROL + ControlMode.CONCENTRIC_POWER_CONTROL + ControlMode.LINEAR_CONTROL
+control_modes_based_on_torque = \
+    ControlMode.TORQUE_CONTROL + ControlMode.CONCENTRIC_POWER_CONTROL + ControlMode.LINEAR_CONTROL
 control_modes_based_on_cadence = ControlMode.CADENCE_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
 
 

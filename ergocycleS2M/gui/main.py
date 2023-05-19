@@ -5,30 +5,24 @@ python -m PyQt5.uic.pyuic -x ergocycle_gui.ui -o ergocycle_gui.py
 """
 import os
 import sys
+import time
+import numpy as np
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import *
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
 
-from ergocycleS2M.motor_control.motor import *
+from ergocycleS2M import MotorController
 # from ergocycleS2M import Phantom
 
 from ergocycleS2M.utils import (
-    traduce_error,
     PlotWidget,
 )
 
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     DirectionMode,
-    ODriveMotorError,
-    ODriveSensorlessEstimatorError,
-    ODriveError,
-    ODriveAxisError,
-    ODriveEncoderError,
-    ODriveControllerError,
-    ODriveCanError,
 )
 from ergocycleS2M.gui.gui_enums import (
     TrainingMode,
@@ -559,7 +553,7 @@ class MotorDisplayThread(QtCore.QThread):
         t = time.time()
         self.dt.append(t - self.watchdog_prec)
         self.watchdog_prec = t
-        self.motor.odrv0.axis0.watchdog_feed()
+        self.motor.watchdog_feed()
 
     def run(self):
         """
@@ -628,15 +622,7 @@ class MotorDisplayThread(QtCore.QThread):
                 self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
                 t_display_precedent = time.time()
 
-                self.ui.errors_label.setText(
-                    f"{traduce_error(self.motor.odrv0.error, ODriveError)}"
-                    f"{traduce_error(self.motor.odrv0.axis0.error, ODriveAxisError)}"
-                    f"{traduce_error(self.motor.odrv0.axis0.controller.error, ODriveControllerError)}"
-                    f"{traduce_error(self.motor.odrv0.axis0.encoder.error, ODriveEncoderError)}"
-                    f"{traduce_error(self.motor.odrv0.axis0.motor.error, ODriveMotorError)}"
-                    f"{traduce_error(self.motor.odrv0.axis0.sensorless_estimator.error, ODriveSensorlessEstimatorError)}"
-                    f"{traduce_error(self.motor.odrv0.can.error, ODriveCanError)}"
-                )
+                self.ui.errors_label.setText(self.motor.get_errors())
 
                 self.watchdog_feed()
 

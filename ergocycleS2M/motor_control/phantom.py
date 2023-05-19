@@ -5,15 +5,18 @@ import json
 import copy
 import numpy as np
 
-from .enums import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
 from ergocycleS2M import save
 
-from pathlib import Path
+from .motor_computations import MotorComputations
+from .enums import (
+    ControlMode,
+    control_modes_based_on_torque,
+    control_modes_based_on_cadence,
+    DirectionMode,
+)
 
-json_path = Path(__file__).parent.parent / 'parameters/hardware_and_security.json'
 
-
-class Phantom:
+class Phantom(MotorComputations):
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
     Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 the all the
@@ -25,14 +28,10 @@ class Phantom:
             self,
             enable_watchdog=True,
             external_watchdog: bool = False,
-            hardware_and_security_path: str = json_path,
             gains_path: str = "parameters/gains.json",
             file_path: str = None,
     ):
-
-        with open(hardware_and_security_path, "r") as hardware_and_security_file:
-            self.hardware_and_security = json.load(hardware_and_security_file)
-
+        super(Phantom, self).__init__()
         self._watchdog_is_ready = False
         self._external_watchdog = external_watchdog
         self._watchdog_timeout = self.hardware_and_security["watchdog_timeout"]
@@ -41,17 +40,12 @@ class Phantom:
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
-        self._reduction_ratio = self.hardware_and_security["reduction_ratio"]
-
         self._control_mode = ControlMode.STOP
         self._relative_pos = 0
         self._direction = DirectionMode.FORWARD
         self.previous_control_mode = ControlMode.STOP
 
         self._gains_path = gains_path
-
-        self.resisting_current_coeff_proportional = self.hardware_and_security["resisting_current_coeff_proportional"]
-        self.resisting_current_coeff_power = self.hardware_and_security["resisting_current_coeff_power"]
 
         if file_path:
             self.file_path = file_path
@@ -94,9 +88,22 @@ class Phantom:
         watchdog_is_ready: bool
             Indicates if the watchdog is enabled or not
         """
-        pass
+        if enable_watchdog:
+            return True
+        else:
+            return False
 
-    def _watchdog_feed(self):
+    def _internal_watchdog_feed(self):
+        """
+        Feeds the watchdog. To be called by a daemon thread.
+        """
+        while True:
+            time.sleep(self._watchdog_feed_time)
+
+    def watchdog_feed(self):
+        """
+        Feeds the watchdog. To be called by the user.
+        """
         pass
 
     def calibration(self, mechanical_load: bool = True):
@@ -150,7 +157,18 @@ class Phantom:
         current_integrator_gain: float
         bandwidth: float
         """
-        pass
+        if not custom:
+            with open(self._gains_path, "r") as gain_file:
+                gains = json.load(gain_file)
+
+            pos_gain = gains["pos_gain"]
+            k_vel_gain = gains["k_vel_gain"]
+            k_vel_integrator_gain = gains["k_vel_integrator_gain"]
+            current_gain = None
+            current_integrator_gain = None
+            bandwidth = gains["bandwidth"]
+
+        self.save_configuration()
 
     def hardware_and_security_configuration(self):
         """
@@ -160,13 +178,12 @@ class Phantom:
 
     def get_sign(self):
         """
-        Set the sign of the rotation depending on the mode (eccentric or concentric).
-        # TODO: track ecc cons
+        Set the sign of the rotation depending on the rotation direction (reverse or forward).
         """
         if self._direction == DirectionMode.FORWARD:
-            return -1
-        else:
             return 1
+        else:
+            return - 1
 
     def set_direction(self, mode: str):
         """
@@ -215,7 +232,18 @@ class Phantom:
         """
         Calibration for the 0 deg.
         """
-        self._relative_pos = time.time()
+        pass
+
+    def position_control(self, angle: float = 0.0):
+        """
+        Leads the motors to the indicated angle.
+
+        Parameters
+        ----------
+        angle: float
+            The angle the motor must go to ([-180.0, 360.0] deg)
+        """
+        pass
 
     def cadence_control(
             self,
@@ -232,6 +260,8 @@ class Phantom:
             Targeted cadence in rpm of the pedals.
         cadence_ramp_rate: float
             cadence ramp rate in rpm/s of the pedals.
+        control_mode: ControlMode
+            Control mode of the motor.
         """
         cadence = abs(cadence)
 
@@ -247,7 +277,7 @@ class Phantom:
 
     def torque_control(
             self,
-            torque: float = 0.0,
+            user_torque: float = 0.0,
             torque_ramp_rate: float = 2.0,
             resisting_torque: float = None,
             control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
@@ -257,8 +287,8 @@ class Phantom:
 
         Parameters
         ----------
-        torque: float
-            Torque (Nm) at the pedals.
+        user_torque: float
+            Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
         resisting_torque: float
@@ -271,28 +301,30 @@ class Phantom:
         -------
         The input torque (Nm) at the pedals.
         """
-        if resisting_torque is None:
-            resisting_torque = self.get_resisting_torque()
-
-        if torque != 0.0:
-            torque = abs(torque) + self.get_sign() * resisting_torque
+        # If the user is not pedaling yet or if he has stopped pedaling, the motor is stopped.
+        vel_estimate = self.odrv0.axis0.encoder.vel_estimate
+        # `vel_estimate` is negative if pedaling forward, positive if pedaling backward.
+        if ((self._direction == DirectionMode.FORWARD and vel_estimate >= 0)
+                or (self._direction == DirectionMode.REVERSE and vel_estimate <= 0)):
+            input_motor_torque = motor_torque = 0.0
+            torque_ramp_rate_motor = 100.0
+        # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            torque = 0.0
-
-        input_torque_motor = - self.get_sign() * abs(torque * self._reduction_ratio)
+            # TODO: Check if the torque ramp rate is correct
+            torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
             self.stopping()
             self.stopped()
 
-        # In case the previous control mode was based on torque control but was
-        # not `TORQUE_CONTROL`, self._control_mode is updated.
+        # In case the previous control mode was based on torque control but was not `TORQUE_CONTROL`,
+        # self._control_mode is updated.
         self._control_mode = control_mode
 
-        return input_torque_motor / self._reduction_ratio  # Nm at the pedals
+        return motor_torque  # Nm at the pedals
 
-    def power_control(
+    def concentric_power_control(
             self,
             power: float = 0.0,
             torque_ramp_rate: float = 2.0,
@@ -313,15 +345,15 @@ class Phantom:
         -------
         The input torque (Nm) at the pedals.
         """
-        cadence = 0.0
+        cadence = 0.0  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.POWER_CONTROL)
+            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
         else:
             return self.torque_control(
                 min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
                 resisting_torque,
-                ControlMode.POWER_CONTROL,
+                ControlMode.CONCENTRIC_POWER_CONTROL,
             )
 
     def eccentric_power_control(
@@ -395,9 +427,11 @@ class Phantom:
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         self.previous_control_mode = copy.deepcopy(self._control_mode)
-        self._control_mode = ControlMode.STOPPING
 
         self._check_ramp_rate(cadence_ramp_rate)
+
+        self._control_mode = ControlMode.STOPPING
+
     def stopped(self):
         """
         Running until the motor is fully stopped. Can be executed in another thread or process.
@@ -439,17 +473,17 @@ class Phantom:
 
         self.stopped()
 
-    def get_reduction_ratio(self):
-        return self._reduction_ratio
-
     def get_control_mode(self):
+        """
+        Returns the current control mode.
+        """
         return self._control_mode
 
     def get_angle(self):
         """
         Returns the estimated angle in degrees. A calibration is needed to know the 0.
         """
-        return 20 * np.sin(time.time() - self._relative_pos)
+        return self.compute_angle(self.get_turns())
 
     def get_turns(self):
         """
@@ -461,7 +495,7 @@ class Phantom:
         """
         Returns the estimated cadence of the pedals in rpm.
         """
-        return 20 * np.sin(time.time())
+        return self.compute_cadence(20 * np.sin(time.time()))
 
     def get_electrical_power(self):
         """
@@ -479,7 +513,7 @@ class Phantom:
         """
         Returns the user mechanical power in W.
         """
-        return 20 * np.sin(time.time())
+        return self.compute_user_torque(self.get_user_torque(), self.get_cadence())
 
     def get_iq_setpoint(self):
         """
@@ -503,19 +537,32 @@ class Phantom:
         """
         Returns the measured torque.
         """
-        return 20 * np.sin(time.time())
+        return self.compute_motor_torque(20 * np.sin(time.time()))
 
     def get_resisting_torque(self):
         """
         Returns the resisting torque.
         """
-        return 20 * np.sin(time.time())
+        return self.compute_resisting_torque(
+            20 * np.sin(time.time()),
+            20 * np.sin(time.time()),
+        )
+
 
     def get_user_torque(self):
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
         """
-        return 20 * np.sin(time.time())
+        return self.compute_user_torque(
+            20 * np.sin(time.time()),
+            20 * np.sin(time.time()),
+        )
+
+    def get_errors(self):
+        """
+        Returns the errors.
+        """
+        return ""
 
     def save_data_to_file(
             self,
@@ -542,18 +589,20 @@ class Phantom:
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,
             "time": time.time() - self.t0,
+            "user_torque": self.get_user_torque(),
+            "cadence": self.get_cadence(),
+            "angle": self.get_angle(),
+            "turns": self.get_turns(),
+            "user_power": self.get_user_power(),
+            "control_mode": self._control_mode.value,
+            "direction": self._direction.value,
             "iq_setpoint": self.get_iq_setpoint(),
             "iq_measured": self.get_iq_measured(),
             "measured_torque": self.get_measured_torque(),
             "motor_torque": self.get_motor_torque(),
-            "user_torque": self.get_user_torque(),
             "resisting_torque": self.get_resisting_torque(),
-            "cadence": self.get_cadence(),
-            "angle": self.get_angle(),
-            "turns": self.get_turns(),
             "mechanical_power": self.get_mechanical_power(),
             "electrical_power": self.get_electrical_power(),
-            "user_power": self.get_user_power(),
         }
 
         save(data, file_path)

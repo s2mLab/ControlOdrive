@@ -7,7 +7,6 @@ import threading
 import numpy as np
 
 import odrive
-import fibre.libfibre
 from odrive.enums import (
     AXIS_STATE_ENCODER_INDEX_SEARCH,
     AXIS_STATE_FULL_CALIBRATION_SEQUENCE,
@@ -26,11 +25,26 @@ from odrive.enums import (
     SENSORLESS_ESTIMATOR_ERROR_NONE,
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
+import fibre.libfibre
 
-from ergocycleS2M import ControlMode, DirectionMode, control_modes_based_on_torque, control_modes_based_on_cadence
-from ergocycleS2M import save
-
-from ergocycleS2M import MotorComputations
+from ergocycleS2M import (
+    save,
+    traduce_error,
+    ODriveMotorError,
+    ODriveSensorlessEstimatorError,
+    ODriveError,
+    ODriveAxisError,
+    ODriveEncoderError,
+    ODriveControllerError,
+    ODriveCanError,
+)
+from .motor_computations import MotorComputations
+from .enums import (
+    ControlMode,
+    control_modes_based_on_torque,
+    control_modes_based_on_cadence,
+    DirectionMode,
+)
 
 
 class MotorController(MotorComputations):
@@ -45,7 +59,6 @@ class MotorController(MotorComputations):
             self,
             enable_watchdog=True,
             external_watchdog: bool = False,
-            hardware_and_security_path: str = "parameters/hardware_and_security.json",
             gains_path: str = "parameters/gains.json",
             file_path: str = None,
     ):
@@ -133,14 +146,14 @@ class MotorController(MotorComputations):
             if watchdog_timeout:
                 self._watchdog_timeout = watchdog_timeout
             if not self._external_watchdog:
-                watchdog = threading.Thread(target=self._watchdog_feed, name="Watchdog", daemon=True)
+                watchdog = threading.Thread(target=self._internal_watchdog_feed, name="Watchdog", daemon=True)
                 watchdog.start()
             print("Waiting to enable the watchdog...")
             self.odrv0.axis0.config.watchdog_timeout = self._watchdog_timeout
             self.odrv0.axis0.config.enable_watchdog = True
             # Some errors may occur at the instant the watchdog is enabled, the sleep time is to let these errors pass.
-            # As all the code is on the same thread (except for `_watchdog_feed`), not anything else will happen until
-            # the watchdog is fully enabled.
+            # As all the code is on the same thread (except for `_internal_watchdog_feed`), not anything else will
+            # happen until the watchdog is fully enabled.
             time.sleep(3 * self._watchdog_timeout)  # 3 was chosen arbitrarily
             # Clears only the `AXIS_ERROR_WATCHDOG_TIMER_EXPIRED`, if there is another error on the axis, we are not
             # able to conserve know it as `odrv0.axis0.error` can only be on one state.
@@ -152,14 +165,19 @@ class MotorController(MotorComputations):
         else:
             return False
 
-    def _watchdog_feed(self):
+    def _internal_watchdog_feed(self):
         """
         Feeds the watchdog. To be called by a daemon thread.
         """
         while True:
             self.odrv0.axis0.watchdog_feed()
-            # self.save_data_to_file(self.file_path)
             time.sleep(self._watchdog_feed_time)
+
+    def watchdog_feed(self):
+        """
+        Feeds the watchdog. To be called by the user.
+        """
+        self.odrv0.axis0.watchdog_feed()
 
     def calibration(self, mechanical_load: bool = True):
         """
@@ -592,7 +610,7 @@ class MotorController(MotorComputations):
         torque = self.get_user_torque()
 
         # If the user is not forcing against the motor, the motor goes to the maximum cadence.
-        if (self._direction == DirectionMode.REVERSE and torque >= 0)\
+        if (self._direction == DirectionMode.REVERSE and torque >= 0) \
                 or (self._direction == DirectionMode.FORWARD and torque <= 0):
             self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
@@ -670,9 +688,9 @@ class MotorController(MotorComputations):
         return True
 
     def stop(
-        self,
-        vel_stop: float = 10.0,
-        cadence_ramp_rate: float = 30,
+            self,
+            vel_stop: float = 10.0,
+            cadence_ramp_rate: float = 30,
     ):
         """
         Stops the motor gently.
@@ -764,7 +782,8 @@ class MotorController(MotorComputations):
         """
         return self.compute_resisting_torque(
             self.odrv0.axis0.motor.current_control.Iq_measured,
-            self.odrv0.axis0.encoder.vel_estimate,)
+            self.odrv0.axis0.encoder.vel_estimate,
+        )
 
     def get_user_torque(self):
         """
@@ -774,6 +793,19 @@ class MotorController(MotorComputations):
             self.odrv0.axis0.motor.current_control.Iq_measured,
             self.odrv0.axis0.encoder.vel_estimate
         )
+
+    def get_errors(self):
+        """
+        Returns the errors.
+        """
+        error_text = f"{traduce_error(self.odrv0.error, ODriveError)} " \
+                     f"{traduce_error(self.odrv0.error, ODriveSensorlessEstimatorError)} " \
+                     f"{traduce_error(self.odrv0.axis0.error, ODriveAxisError)} " \
+                     f"{traduce_error(self.odrv0.axis0.error, ODriveEncoderError)} " \
+                     f"{traduce_error(self.odrv0.axis0.controller.error, ODriveControllerError)} " \
+                     f"{traduce_error(self.odrv0.axis0.motor.error, ODriveMotorError)} " \
+                     f"{traduce_error(self.odrv0.can.error, ODriveCanError)}"
+        return error_text
 
     def save_data_to_file(
             self,
@@ -817,7 +849,6 @@ class MotorController(MotorComputations):
             "direction": self._direction.value,
             "iq_setpoint": self.get_iq_setpoint(),
             "iq_measured": self.get_iq_measured(),
-            "measured_torque": self.get_measured_torque(),
             "motor_torque": self.get_motor_torque(),
             "resisting_torque": self.get_resisting_torque(),
             "mechanical_power": self.get_mechanical_power(),

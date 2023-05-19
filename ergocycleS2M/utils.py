@@ -1,7 +1,7 @@
 import time
+import numpy as np
 from enum import Enum
 
-import numpy as np
 from PyQt5 import QtGui, QtCore
 import pyqtgraph as pg
 

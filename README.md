@@ -1,5 +1,25 @@
 # ControlOdrive
 I'm not sure `odrive` can be used on the last version of Python, so I have not updated it from ``
+## Package installation
+To install the package, write in a terminal:
+```commandline
+python setup.py install
+```
+You might need the `sudo` command:
+```commandline
+sudo python setup.py install
+```
+Please note that you must have registered your hardware information in the `hardware_and_security.json` file.
+If any information needs to be changed, the package must be reinstalled.
+Then, you will be able to start the ergocycle with the command :
+```commandline
+start_ergocycle
+```
+and to read any saved data with the command:
+```commandline
+read_ergocycle_file file_name
+```
+You must be in the right directory to run this last command, or you have to indicate the path to the file.
 ## Hardware
 ### Relays
 The relays are not controlled by the Odrive, they are there to ensure that when the power source that powers the Odrive is sut down, the current cannot go into it.
