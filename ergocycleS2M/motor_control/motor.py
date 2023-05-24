@@ -27,19 +27,21 @@ from odrive.enums import (
 )
 import fibre.libfibre
 
-from ergocycleS2M import (
+from ergocycleS2M.data_processing.save_and_load import (
     save,
     traduce_error,
-    ODriveMotorError,
-    ODriveSensorlessEstimatorError,
+)
+from ergocycleS2M.motor_control.enums import (
     ODriveError,
     ODriveAxisError,
     ODriveEncoderError,
     ODriveControllerError,
+    ODriveSensorlessEstimatorError,
+    ODriveMotorError,
     ODriveCanError,
 )
-from .motor_computations import MotorComputations
-from .enums import (
+from motor_computations import MotorComputations
+from enums import (
     ControlMode,
     control_modes_based_on_torque,
     control_modes_based_on_cadence,

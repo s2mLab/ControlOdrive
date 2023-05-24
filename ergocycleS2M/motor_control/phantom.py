@@ -5,10 +5,10 @@ import json
 import copy
 import numpy as np
 
-from ergocycleS2M import save
+from ergocycleS2M.data_processing.save_and_load import save
 
-from .motor_computations import MotorComputations
-from .enums import (
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.motor_control.enums import (
     ControlMode,
     control_modes_based_on_torque,
     control_modes_based_on_cadence,

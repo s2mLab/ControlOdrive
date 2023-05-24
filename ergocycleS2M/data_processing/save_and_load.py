@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Tuple
 
-from ergocycleS2M.motor_control import MotorComputations
-from ..motor_control.enums import (
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.motor_control.enums import (
     ControlMode,
     ODriveError,
     ODriveAxisError,

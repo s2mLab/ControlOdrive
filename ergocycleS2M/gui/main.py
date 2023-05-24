@@ -5,6 +5,7 @@ python -m PyQt5.uic.pyuic -x ergocycle_gui.ui -o ergocycle_gui.py
 """
 import os
 import sys
+
 import time
 import numpy as np
 
@@ -13,8 +14,8 @@ from PyQt5.QtWidgets import *
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
 
-from ergocycleS2M import MotorController
-# from ergocycleS2M import Phantom
+# from ergocycleS2M import MotorController
+from ergocycleS2M.motor_control.phantom import Phantom
 
 from ergocycleS2M.utils import (
     PlotWidget,
@@ -680,7 +681,7 @@ class MotorDisplayThread(QtCore.QThread):
 
 
 def main():
-    motor = MotorController(enable_watchdog=True, external_watchdog=True)
+    motor = Phantom(enable_watchdog=True, external_watchdog=True)
     app = QApplication(sys.argv)
     gui = ErgocycleApplication(motor)
     gui.show()
