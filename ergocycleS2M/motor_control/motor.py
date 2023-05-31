@@ -7,7 +7,6 @@ import numpy as np
 import time
 import threading
 
-import fibre.libfibre
 import odrive
 from odrive.enums import (
     AXIS_STATE_ENCODER_INDEX_SEARCH,
@@ -27,6 +26,7 @@ from odrive.enums import (
     SENSORLESS_ESTIMATOR_ERROR_NONE,
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED,
 )
+import fibre.libfibre
 
 from ergocycleS2M.data_processing.save import save
 from ergocycleS2M.motor_control.enums import (
@@ -58,7 +58,7 @@ class MotorController(MotorComputations):
         self,
         enable_watchdog=True,
         external_watchdog: bool = False,
-        gains_path: str = "parameters/gains.json",
+        gains_path: str = "ergocycleS2M/parameters/gains.json",
         file_path: str = None,
     ):
         super(MotorController, self).__init__()

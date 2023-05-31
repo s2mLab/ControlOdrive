@@ -31,7 +31,7 @@
     "reduction_ratio": 0.02442002442002442,
     "pedals_accel_lim": 31,
     "torque_ramp_rate_lim": 5,
-    "maximal_velocity_stop": 31,
+    "maximal_cadence_stop": 31,
     "resisting_current_coeff_proportional": 0.30410943285312964,
     "resisting_current_coeff_power": 3.1170966448909727
 }
