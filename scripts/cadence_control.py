@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 
 from ergocycleS2M.motor_control.motor import *
-from ergocycleS2M.data_processing import load
+from ergocycleS2M.data_processing.load import load
 
 # Initialisation
 motor = MotorController()
