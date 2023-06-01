@@ -1,3 +1,6 @@
+"""
+This module contains the enums used in the motor control. The control modes, the direction modes and the ODrive errors.
+"""
 from ergocycleS2M.utils import StrEnum
 
 
@@ -16,8 +19,10 @@ class ControlMode(StrEnum):
     ECCENTRIC_POWER_CONTROL = "Eccentric power control"
 
 
-control_modes_based_on_torque = \
+# Thanks to the StrEnum, we can use the following syntax:
+control_modes_based_on_torque = (
     ControlMode.TORQUE_CONTROL + ControlMode.CONCENTRIC_POWER_CONTROL + ControlMode.LINEAR_CONTROL
+)
 control_modes_based_on_cadence = ControlMode.CADENCE_CONTROL + ControlMode.ECCENTRIC_POWER_CONTROL
 
 
@@ -31,6 +36,10 @@ class DirectionMode(StrEnum):
 
 
 class ODriveError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     ODRIVE_ERROR_NONE = "0x00000000"
     ODRIVE_ERROR_CONTROL_ITERATION_MISSED = "0x00000001"
     ODRIVE_ERROR_DC_BUS_UNDER_VOLTAGE = "0x00000002"
@@ -43,6 +52,10 @@ class ODriveError(StrEnum):
 
 
 class ODriveAxisError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     AXIS_ERROR_NONE = "0x00000000"
     AXIS_ERROR_INVALID_STATE = "0x00000001"
     AXIS_ERROR_WATCHDOG_TIMER_EXPIRED = "0x00000800"
@@ -55,6 +68,10 @@ class ODriveAxisError(StrEnum):
 
 
 class ODriveControllerError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     CONTROLLER_ERROR_NONE = "0x00000000"
     CONTROLLER_ERROR_OVERSPEED = "0x00000001"
     CONTROLLER_ERROR_INVALID_INPUT_MODE = "0x00000002"
@@ -67,6 +84,10 @@ class ODriveControllerError(StrEnum):
 
 
 class ODriveEncoderError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     ENCODER_ERROR_NONE = "0x00000000"
     ENCODER_ERROR_UNSTABLE_GAIN = "0x00000001"
     ENCODER_ERROR_CPR_POLEPAIRS_MISMATCH = "0x00000002"
@@ -81,6 +102,10 @@ class ODriveEncoderError(StrEnum):
 
 
 class ODriveMotorError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     MOTOR_ERROR_NONE = "0x00000000"
     MOTOR_ERROR_PHASE_RESISTANCE_OUT_OF_RANGE = "0x00000001"
     MOTOR_ERROR_PHASE_INDUCTANCE_OUT_OF_RANGE = "0x00000002"
@@ -112,11 +137,19 @@ class ODriveMotorError(StrEnum):
 
 
 class ODriveSensorlessEstimatorError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     SENSORLESS_ESTIMATOR_ERROR_NONE = "0x00000000"
     SENSORLESS_ESTIMATOR_ERROR_UNSTABLE_GAIN = "0x00000001"
     SENSORLESS_ESTIMATOR_ERROR_UNKNOWN_CURRENT_MEASUREMENT = "0x00000002"
 
 
 class ODriveCanError(StrEnum):
+    """
+    See https://docs.odriverobotics.com/v/0.5.5/fibre_types/com_odriverobotics_ODrive.html? to have more information.
+    """
+
     CAN_ERROR_NONE = "0x00000000"
     CAN_ERROR_DUPLICATE_CAN_IDS = "0x00000001"

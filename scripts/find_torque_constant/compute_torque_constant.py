@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 length = 0.17
 g = 9.81
-r = 8/36*10/91
+r = 8 / 36 * 10 / 91
 
 # weight_torque_at_motor is the torque produced by the weight + the pedals multiplied by r
 weight_torque_at_motor = []
@@ -28,7 +28,7 @@ for side in ("left", "right"):
 
         # Subtraction of the current corresponding to the resisting torque -> the remaining current is the util current
         iq_setpoint[abs(iq_setpoint) < resisting_current] = 0.0
-        iq_setpoint[iq_setpoint <= - resisting_current] += resisting_current
+        iq_setpoint[iq_setpoint <= -resisting_current] += resisting_current
         iq_setpoint[iq_setpoint >= resisting_current] -= resisting_current
 
         positions[positions > 337.0] -= 360.0  # for the means to be accurate
@@ -46,7 +46,7 @@ for side in ("left", "right"):
             P = P[T < (i + 1) * 12 - dt]
 
             iq_util.append(np.mean(C))
-            weight_torque_at_motor.append(- m * length * g * np.sin(np.mean(P)/180*np.pi) * r)
+            weight_torque_at_motor.append(-m * length * g * np.sin(np.mean(P) / 180 * np.pi) * r)
 
 torque_constant, b = np.polyfit(iq_util, weight_torque_at_motor, 1)
 print(torque_constant, b)

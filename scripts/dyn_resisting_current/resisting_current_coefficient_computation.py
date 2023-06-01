@@ -18,13 +18,12 @@ motor_velocity = np.asarray(i_v["motor_velocity"]) / 60 / hardware_and_security[
 
 
 def lost_current(
-    x,
-    resisting_current_coeff_proportional,
-    resisting_current_coeff_power,
-    resisting_current_coeff_offset
+    x, resisting_current_coeff_proportional, resisting_current_coeff_power, resisting_current_coeff_offset
 ):
-    return - resisting_current_coeff_proportional * x / abs(x) * abs(x)**(1/resisting_current_coeff_power)\
+    return (
+        -resisting_current_coeff_proportional * x / abs(x) * abs(x) ** (1 / resisting_current_coeff_power)
         + resisting_current_coeff_offset
+    )
 
 
 popt, _ = curve_fit(lost_current, motor_velocity, resisting_current, p0=[1, 3, 0])

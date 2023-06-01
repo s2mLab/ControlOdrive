@@ -1,4 +1,8 @@
+"""
+The enums used by the GUI.
+"""
 from enum import Enum
+
 from ergocycleS2M.utils import StrEnum
 
 

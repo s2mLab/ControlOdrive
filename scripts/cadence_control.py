@@ -29,11 +29,11 @@ motor.stop()
 
 data = load("cadence_control_example.bio")
 
-t = np.asarray(data['time'])
+t = np.asarray(data["time"])
 
 # Plot
-plt.plot(t, data['cadence'], label="cadence")
-plt.plot(t, np.min([list(ramp_rate * t), data['instruction']], axis=0), label="Instruction")
+plt.plot(t, data["cadence"], label="cadence")
+plt.plot(t, np.min([list(ramp_rate * t), data["instruction"]], axis=0), label="Instruction")
 plt.title("Ramped cadence control")
 plt.xlabel("Time (s)")
 plt.ylabel("cadence (rpm)")

@@ -1,19 +1,19 @@
-""" This code helps to configure, calibrate and use an Odrive with a TSDZ2 motor."""
-
+"""
+This code is used to test the GUI mechanics without any ODrive connected. It may not be up-to-date.
+"""
 import time
 import json
 import copy
 import numpy as np
 
 from ergocycleS2M.data_processing.save import save
-
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     control_modes_based_on_torque,
     control_modes_based_on_cadence,
     DirectionMode,
 )
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
 
 
 class Phantom(MotorComputations):
@@ -25,11 +25,11 @@ class Phantom(MotorComputations):
     """
 
     def __init__(
-            self,
-            enable_watchdog=True,
-            external_watchdog: bool = False,
-            gains_path: str = "parameters/gains.json",
-            file_path: str = None,
+        self,
+        enable_watchdog=True,
+        external_watchdog: bool = False,
+        gains_path: str = "parameters/gains.json",
+        file_path: str = None,
     ):
         super(Phantom, self).__init__()
         self._watchdog_is_ready = False
@@ -137,14 +137,14 @@ class Phantom(MotorComputations):
         print("Configuration done")
 
     def gains_configuration(
-            self,
-            custom: bool,
-            pos_gain: float = None,
-            k_vel_gain: float = None,
-            k_vel_integrator_gain: float = None,
-            current_gain: float = None,
-            current_integrator_gain: float = None,
-            bandwidth: float = None,
+        self,
+        custom: bool,
+        pos_gain: float = None,
+        k_vel_gain: float = None,
+        k_vel_integrator_gain: float = None,
+        current_gain: float = None,
+        current_integrator_gain: float = None,
+        bandwidth: float = None,
     ):
         """
         custom: bool
@@ -183,7 +183,7 @@ class Phantom(MotorComputations):
         if self._direction == DirectionMode.FORWARD:
             return 1
         else:
-            return - 1
+            return -1
 
     def set_direction(self, mode: str):
         """
@@ -246,10 +246,10 @@ class Phantom(MotorComputations):
         pass
 
     def cadence_control(
-            self,
-            cadence: float = 0.0,
-            cadence_ramp_rate: float = 5,
-            control_mode: ControlMode = ControlMode.CADENCE_CONTROL,
+        self,
+        cadence: float = 0.0,
+        cadence_ramp_rate: float = 5,
+        control_mode: ControlMode = ControlMode.CADENCE_CONTROL,
     ):
         """
         Sets the motor to a given cadence in rpm of the pedals with velocities ramped at each change.
@@ -276,11 +276,11 @@ class Phantom(MotorComputations):
         return self.get_sign() * cadence
 
     def torque_control(
-            self,
-            user_torque: float = 0.0,
-            torque_ramp_rate: float = 2.0,
-            resisting_torque: float = None,
-            control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
+        self,
+        user_torque: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        resisting_torque: float = None,
+        control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
     ):
         """
         Set the odrive in torque control, choose the torque and start the motor.
@@ -302,10 +302,11 @@ class Phantom(MotorComputations):
         The input torque (Nm) at the pedals.
         """
         # If the user is not pedaling yet or if he has stopped pedaling, the motor is stopped.
-        vel_estimate = self.odrv0.axis0.encoder.vel_estimate
+        vel_estimate = 0.0
         # `vel_estimate` is negative if pedaling forward, positive if pedaling backward.
-        if ((self._direction == DirectionMode.FORWARD and vel_estimate >= 0)
-                or (self._direction == DirectionMode.REVERSE and vel_estimate <= 0)):
+        if (self._direction == DirectionMode.FORWARD and vel_estimate >= 0) or (
+            self._direction == DirectionMode.REVERSE and vel_estimate <= 0
+        ):
             input_motor_torque = motor_torque = 0.0
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
@@ -325,10 +326,8 @@ class Phantom(MotorComputations):
         return motor_torque  # Nm at the pedals
 
     def concentric_power_control(
-            self,
-            power: float = 0.0,
-            torque_ramp_rate: float = 2.0,
-            resisting_torque: float = None):
+        self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+    ):
         """
         # TODO add docstring in all to explain to call in a thread.
         Parameters
@@ -356,11 +355,7 @@ class Phantom(MotorComputations):
                 ControlMode.CONCENTRIC_POWER_CONTROL,
             )
 
-    def eccentric_power_control(
-            self,
-            power: float = 0.0,
-            cadence_ramp_rate: float = 5.0,
-            cadence_max: float = 50.0):
+    def eccentric_power_control(self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0):
         """
         Parameters
         ----------
@@ -378,19 +373,16 @@ class Phantom(MotorComputations):
         torque = self.get_user_torque()
 
         # If the user is not forcing against the motor, the motor goes to the maximum cadence.
-        if (self._direction == DirectionMode.REVERSE and torque >= 0)\
-                or (self._direction == DirectionMode.FORWARD and torque <= 0):
+        if (self._direction == DirectionMode.REVERSE and torque >= 0) or (
+            self._direction == DirectionMode.FORWARD and torque <= 0
+        ):
             self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
         else:
             cadence = min(abs(power / torque) / 2 / np.pi * 60, cadence_max)
             return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
-    def linear_control(
-            self,
-            linear_coeff: float = 0.0,
-            torque_ramp_rate: float = 2.0,
-            resisting_torque: float = None):
+    def linear_control(self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None):
         """
         Parameters
         ----------
@@ -415,8 +407,8 @@ class Phantom(MotorComputations):
         )
 
     def stopping(
-            self,
-            cadence_ramp_rate: float = 30,
+        self,
+        cadence_ramp_rate: float = 30,
     ):
         """
         Starts the stopping sequence of the motor.
@@ -548,7 +540,6 @@ class Phantom(MotorComputations):
             20 * np.sin(time.time()),
         )
 
-
     def get_user_torque(self):
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
@@ -565,14 +556,14 @@ class Phantom(MotorComputations):
         return ""
 
     def save_data_to_file(
-            self,
-            file_path: str,
-            spin_box: float = None,
-            instruction: float = None,
-            ramp_instruction: float = None,
-            comment: str = "",
-            stopwatch: float = 0.0,
-            lap: float = 0.0,
+        self,
+        file_path: str,
+        spin_box: float = None,
+        instruction: float = None,
+        ramp_instruction: float = None,
+        comment: str = "",
+        stopwatch: float = 0.0,
+        lap: float = 0.0,
     ):
         """
         Saves data.
@@ -608,15 +599,15 @@ class Phantom(MotorComputations):
         save(data, file_path)
 
     def minimal_save_data_to_file(
-            self,
-            file_path: str,
-            spin_box: float = None,
-            instruction: float = None,
-            ramp_instruction: float = None,
-            comment: str = "",
-            stopwatch: float = 0.0,
-            lap: float = 0.0,
-            training_mode: str = "",
+        self,
+        file_path: str,
+        spin_box: float = None,
+        instruction: float = None,
+        ramp_instruction: float = None,
+        comment: str = "",
+        stopwatch: float = 0.0,
+        lap: float = 0.0,
+        training_mode: str = "",
     ):
         """
         Saves data.
@@ -627,19 +618,15 @@ class Phantom(MotorComputations):
 
         data = {
             "time": time.time() - self.t0,
-
             "spin_box": spin_box,
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,
-
             "comments": comment,
             "stopwatch": stopwatch,
             "lap": lap,
-
             "control_mode": self._control_mode.value,
             "direction": self._direction.value,
             "training_mode": training_mode,
-
             "turns": self.get_turns(),
         }
 

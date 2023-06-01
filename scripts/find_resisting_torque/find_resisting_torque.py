@@ -27,7 +27,7 @@ motor.set_training_mode(mode)
 instruction = 2
 torque_ramp_rate = 5
 
-motor.torque_control(instruction, torque_ramp_rate/10)
+motor.torque_control(instruction, torque_ramp_rate / 10)
 
 while t1 - t0 < 10:
     t1 = time.time()

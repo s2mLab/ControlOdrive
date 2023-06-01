@@ -27,7 +27,7 @@ for instruction in range(-65, 66, 5):
         print(f"Waiting to stabilize at {instruction} rpm...")
 
         # Wait for to reach the instruction
-        while not(instruction - 1 < motor.get_velocity() < instruction + 1):
+        while not (instruction - 1 < motor.get_velocity() < instruction + 1):
             pass
 
         t0 = time.time()
@@ -55,7 +55,7 @@ for instruction in range(-65, 66, 5):
                 motor.save_data_to_file(f"data_from_dyn_calibration_{rd}", instruction=instruction)
                 iq_measured.append(motor.get_iq_measured())
                 vel_estimate.append(motor.odrv0.axis0.encoder.vel_estimate)
-                t_next += 1/fs
+                t_next += 1 / fs
 
         resisting_current.append(np.mean(iq_measured))
         motor_velocity.append(np.mean(vel_estimate))

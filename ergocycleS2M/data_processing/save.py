@@ -7,7 +7,11 @@ from pathlib import Path
 
 
 def save(data_dict, data_path):
-    """This function adds data to a pickle file. It not open the file, but appends the data to the end, so it's fast.
+    """
+    This function adds data to a pickle file. It appends the data to the end, so it's fast.
+    Copied and adapted from
+    https://github.com/pyomeca/biosiglive/blob/a9ac18d288e6cadd1bd3d38f9fc4a1584a789065/biosiglive/file_io/save_and_load.py
+
     Parameters
     ----------
     data_dict : dict

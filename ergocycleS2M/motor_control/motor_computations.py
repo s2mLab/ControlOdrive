@@ -1,18 +1,17 @@
 """
-This file contains the computations that can be done with the motor data without any odrive connected.
+This file contains the computations that can be done with the motor data. With without any odrive connected.
 """
-
 import json
 import numpy as np
 
 from pathlib import Path
 
-json_path = Path(__file__).parent.parent / 'parameters/hardware_and_security.json'
+json_path = Path(__file__).parent.parent / "parameters/hardware_and_security.json"
 
 
 class MotorComputations:
     """
-    This class contains the computations that can be done with the motor data without any odrive connected.
+    This class contains the computations that can be done with the motor data. With or without any odrive connected.
     """
 
     def __init__(self, hardware_and_security_path: str = json_path):
@@ -27,7 +26,7 @@ class MotorComputations:
         self._resisting_torque_current = self.hardware_and_security["resisting_torque_current"]
 
     @staticmethod
-    def compute_angle(turns: float):
+    def compute_angle(turns: float) -> float:
         """
         Returns the estimated angle in degrees.
 
@@ -43,7 +42,7 @@ class MotorComputations:
         """
         return (turns * 360) % 360
 
-    def compute_cadence(self, vel_estimate: float):
+    def compute_cadence(self, vel_estimate: float) -> float:
         """
         Returns the estimated cadence of the pedals in rpm.
 
@@ -57,9 +56,9 @@ class MotorComputations:
         cadence : float
             The estimated cadence of the pedals in rpm.
         """
-        return - vel_estimate * self._reduction_ratio * 60
+        return -vel_estimate * self._reduction_ratio * 60
 
-    def compute_resisting_torque(self, i_measured, vel_estimate):
+    def compute_resisting_torque(self, i_measured: float, vel_estimate: float) -> float:
         """
         Returns the resisting torque.
 
@@ -77,18 +76,22 @@ class MotorComputations:
             The resisting torque due to solid frictions in Nm at the pedals.
         """
         if vel_estimate != 0.0:
-            resisting_current = self.resisting_current_coeff_proportional * vel_estimate / abs(vel_estimate) \
-                                    * abs(vel_estimate) ** (1 / self.resisting_current_coeff_power)
+            resisting_current = (
+                self.resisting_current_coeff_proportional
+                * vel_estimate
+                / abs(vel_estimate)
+                * abs(vel_estimate) ** (1 / self.resisting_current_coeff_power)
+            )
         else:
             # As the motor is not moving, all current is dissipated as heat and corresponds to the resisting current.
             resisting_current = i_measured
         return self._torque_constant * resisting_current / self._reduction_ratio
 
     def compute_user_torque(
-            self,
-            i_measured,
-            vel_estimate,
-    ):
+        self,
+        i_measured: float,
+        vel_estimate: float,
+    ) -> float:
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor torque).
 
@@ -104,10 +107,12 @@ class MotorComputations:
         user_torque : float
             The measured user torque in Nm at the pedals.
         """
-        return - self.compute_resisting_torque(i_measured, vel_estimate) - \
-            self._torque_constant * i_measured / self._reduction_ratio
+        return (
+            -self.compute_resisting_torque(i_measured, vel_estimate)
+            - self._torque_constant * i_measured / self._reduction_ratio
+        )
 
-    def compute_motor_torque(self, i_measured):
+    def compute_motor_torque(self, i_measured: float) -> float:
         """
         Returns the measured motor torque.
 
@@ -124,7 +129,7 @@ class MotorComputations:
         return self._torque_constant * i_measured / self._reduction_ratio
 
     @staticmethod
-    def compute_user_power(user_torque, cadence):
+    def compute_user_power(user_torque: float, cadence: float) -> float:
         """
         Returns the user power in W.
 

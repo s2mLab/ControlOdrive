@@ -1,16 +1,14 @@
 """
 All the functions needed to load data, process it and plot it.
 """
-import copy
-import pickle
 import argparse
-import numpy as np
+import copy
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pickle
 from pathlib import Path
 from typing import Tuple
 
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     ODriveError,
@@ -20,17 +18,22 @@ from ergocycleS2M.motor_control.enums import (
     ODriveSensorlessEstimatorError,
     ODriveMotorError,
 )
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.utils import traduce_error
 
 
-def load(filename, number_of_line=None):
-    """This function reads data from a pickle file to concatenate them into one dictionary.
+def load(filename: str, number_of_line: int = None) -> dict:
+    """
+    This function reads data from a pickle file to concatenate them into one dictionary. Copied and adapted from
+    https://github.com/pyomeca/biosiglive/blob/a9ac18d288e6cadd1bd3d38f9fc4a1584a789065/biosiglive/file_io/save_and_load.py
+
     Parameters
     ----------
     filename : str
         The path to the file.
     number_of_line : int
-        The number of lines to read. If None, all lines are read.
+        The number of lines to read. If None, all lines are read. Not tested in this project.
+
     Returns
     -------
     data : dict
@@ -68,10 +71,12 @@ def load(filename, number_of_line=None):
 
 
 def compute_data(
-        vel_estimate, turns, iq_measured
+    vel_estimate: np.ndarray,
+    turns: np.ndarray,
+    iq_measured: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Computes the data of interest from the raw data saved.
+    Computes the data of interest from raw data saved.
 
     Parameters
     ----------
@@ -80,11 +85,11 @@ def compute_data(
     turns: np.ndarray
         The turns done by the motor since the last reset in tr.
     iq_measured: np.ndarray
-        The current measured in the motor.
+        The current measured in the motor in A.
 
     Returns
     -------
-    The data of interest.
+    The data of interest (user_torque, cadence, angle, user_power, resisting_torque, motor_torque).
     """
     motor_object = MotorComputations()
 
@@ -106,30 +111,37 @@ def compute_data(
     return user_torque, cadence, angle, user_power, resisting_torque, motor_torque
 
 
-def interpolate_data(data, frequency=10):
+def interpolate_data(data: dict, frequency: float = 10) -> dict:
     """
     This function interpolates the data to have a constant frequency.
 
     Parameters
     ----------
-    frequency : int
-        The frequency of the data.
     data : dict
         The data read from the file.
+    frequency : float
+        The desired frequency of the data.
+
+    Returns
+    -------
+    data_interpolated : dict
+        The data interpolated at the desired frequency.
     """
     data_interpolated = {}
     time = data_interpolated["time"] = np.interp(
-        np.linspace(0, data["time"][-1], num=int(data["time"][-1] * frequency)),
-        data["time"],
-        data["time"]
+        np.linspace(0, data["time"][-1], num=int(data["time"][-1] * frequency)), data["time"], data["time"]
     )
 
     # For the following keys, we interpolate the data with np.interp which is a linear interpolation.
+    linear_interpolation_keys = ["vel_estimate", "turns", "iq_measured", "stopwatch", "lap"]
     for key in data.keys():
-        if key in ["vel_estimate", "turns", "iq_measured", "stopwatch", "lap"]:
-            data_interpolated[key] = np.interp(np.linspace(0, data["time"][-1], num=int(data["time"][-1] * frequency)),
-                                               data["time"], data[key])
+        if key in linear_interpolation_keys:
+            data_interpolated[key] = np.interp(
+                np.linspace(0, data["time"][-1], num=int(data["time"][-1] * frequency)), data["time"], data[key]
+            )
 
+    # For the stopwatch and lap, we set the values to 0 when the stopwatch has stopped (if not the interpolation may
+    # have created decreasing ramps).
     for i in range(len(data["time"])):
         if data["stopwatch"][i] != 0 and data["stopwatch"][i + 1] == 0:
             i_interpolated_0 = np.where(time > data["time"][i])[0][0]
@@ -138,29 +150,48 @@ def interpolate_data(data, frequency=10):
                 data_interpolated["stopwatch"][j] = 0.0
                 data_interpolated["lap"][j] = 0.0
 
-    # For the other keys, we take the nearest value
-    keys_nearest = ["state", "control_mode", "direction", "comments", "spin_box", "instruction", "ramp_instruction",
-                    "error", "axis_error", "controller_error", "encoder_error", "motor_error",
-                    "sensorless_estimator_error", "can_error"]
-    for key in keys_nearest:
+    # For the other keys, which are strings, instructions or errors, we take the nearest value.
+    nearest_keys = [
+        "state",
+        "control_mode",
+        "direction",
+        "comments",
+        "spin_box",
+        "instruction",
+        "ramp_instruction",
+        "error",
+        "axis_error",
+        "controller_error",
+        "encoder_error",
+        "motor_error",
+        "sensorless_estimator_error",
+        "can_error",
+    ]
+    # Create the arrays.
+    for key in nearest_keys:
         data_interpolated[key] = np.zeros(len(time), dtype=type(np.asarray(data[key]).dtype))
+
     i_prev = 0
     i_next = 1
+    # Select the nearest value at each instant.
     for i, t in enumerate(time):
+        # Select the two values iterations around the time t.
         while data["time"][i_next] < t:
             i_prev += 1
             i_next += 1
-        for key in keys_nearest:
+        # Choose the nearest value to the time t and register it in the interpolated data.
+        for key in nearest_keys:
             if data["time"][i_next] - t < t - data["time"][i_prev]:
                 data_interpolated[key][i] = data[key][i_next]
             else:
                 data_interpolated[key][i] = data[key][i_prev]
+
     return data_interpolated
 
 
-def smooth_data(data, window_length):
+def smooth_data(data: dict, window_length: int) -> dict:
     """
-    This function smooths the data with a moving average filter.
+    This function smooths the data with a moving average filter. To be used after the interpolation.
 
     Parameters
     ----------
@@ -168,30 +199,55 @@ def smooth_data(data, window_length):
         The data read from the file and already interpolated.
     window_length : int
         The length of the window for the moving average filter.
-    """
-    kernel = np.ones(window_length) / window_length
-    smoothed_data = copy.deepcopy(data)
-    for key in ['iq_measured', 'user_torque', 'cadence', 'user_power', 'resisting_torque', 'motor_torque']:
-        smoothed_data[f"smoothed_{key}"] = np.convolve(data[key], kernel, mode='valid')
 
-    smoothed_data["time_for_smoothed"] = data["time"][window_length // 2:-window_length // 2 + 1]
+    Returns
+    -------
+    smoothed_data : dict
+        The data smoothed with a moving average filter or the data itself if window_length is 0.
+    """
+    if window_length == 0:
+        smoothed_data = copy.deepcopy(data)
+        smoothed_data["time_for_smoothed"] = data["time"]
+    else:
+        kernel = np.ones(window_length) / window_length
+        smoothed_data = copy.deepcopy(data)
+        for key in ["iq_measured", "user_torque", "cadence", "user_power", "resisting_torque", "motor_torque"]:
+            smoothed_data[f"smoothed_{key}"] = np.convolve(data[key], kernel, mode="valid")
+
+        smoothed_data["time_for_smoothed"] = data["time"][window_length // 2 : -window_length // 2 + 1]
 
     return smoothed_data
 
 
-def read(data_path, sample_frequency, window_length, ):
+def read(data_path: str, sample_frequency: float, window_length: int) -> dict:
     """
-    This function reads the data from the file and interpolates them.
-    :param data_path:
-    :param sample_frequency:
-    :param window_length:
-    :return:
+    This function reads the data from the file and interpolates them and then smooth it.
+
+    Parameters
+    ----------
+    data_path: str
+         The path to the data file, has to be a `.bio` file.
+    sample_frequency: float
+        The frequency at which the data will be interpolated from the original data.
+    window_length:
+        The length of the window for the moving average filter.
+
+    Returns
+    -------
+    data: dict
+        The data interpolated at the desired frequency and smoothed with a moving average filter of the desired window
+        length.
     """
     data = load(data_path)
     data_interpolated = interpolate_data(data, frequency=sample_frequency)
-    (data_interpolated["user_torque"], data_interpolated["cadence"], data_interpolated["angle"],
-     data_interpolated["user_power"], data_interpolated["resisting_torque"], data_interpolated["motor_torque"]) \
-        = compute_data(data_interpolated["vel_estimate"], data_interpolated["turns"], data_interpolated["iq_measured"])
+    (
+        data_interpolated["user_torque"],
+        data_interpolated["cadence"],
+        data_interpolated["angle"],
+        data_interpolated["user_power"],
+        data_interpolated["resisting_torque"],
+        data_interpolated["motor_torque"],
+    ) = compute_data(data_interpolated["vel_estimate"], data_interpolated["turns"], data_interpolated["iq_measured"])
     smoothed_data = smooth_data(data_interpolated, window_length)
     return smoothed_data
 
@@ -209,17 +265,19 @@ def plot_data(data: dict, plot_errors: bool = False):
     """
 
     # Comments
-    for time, comment in zip(data["time"], data['comments']):
+    for time, comment in zip(data["time"], data["comments"]):
         if comment != "":
             print(f"{time}: {comment}")
 
     # Cadence
     instruction_for_cadence = np.zeros(len(data["instruction"]))
     instruction_for_cadence[:] = np.nan
-    instruction_for_cadence[data["control_mode"] == ControlMode.CADENCE_CONTROL.value] = \
-        data["instruction"][data["control_mode"] == ControlMode.CADENCE_CONTROL.value]
-    instruction_for_cadence[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = \
-        data["instruction"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
+    instruction_for_cadence[data["control_mode"] == ControlMode.CADENCE_CONTROL.value] = data["instruction"][
+        data["control_mode"] == ControlMode.CADENCE_CONTROL.value
+    ]
+    instruction_for_cadence[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = data["instruction"][
+        data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
+    ]
 
     plt.figure()
     plt.title("Cadence")
@@ -227,11 +285,7 @@ def plot_data(data: dict, plot_errors: bool = False):
     plt.xlabel("Time (s)")
 
     plt.plot(data["time"], data["cadence"], label="Cadence")
-    plt.plot(
-        data["time_for_smoothed"],
-        data["smoothed_cadence"],
-        label="Smoothed cadence"
-    )
+    plt.plot(data["time_for_smoothed"], data["smoothed_cadence"], label="Smoothed cadence")
     plt.plot(data["time"], instruction_for_cadence, label="Instruction")
 
     plt.legend()
@@ -239,52 +293,36 @@ def plot_data(data: dict, plot_errors: bool = False):
     # Torques
     instruction_for_torque = np.zeros(len(data["instruction"]))
     instruction_for_torque[:] = np.nan
-    instruction_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = \
-        data["instruction"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
-    instruction_for_torque[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = \
-        data["instruction"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
-    instruction_for_torque[data["control_mode"] == ControlMode.LINEAR_CONTROL.value] = \
-        data["instruction"][data["control_mode"] == ControlMode.LINEAR_CONTROL.value]
+    instruction_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = data["instruction"][
+        data["control_mode"] == ControlMode.TORQUE_CONTROL.value
+    ]
+    instruction_for_torque[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = data["instruction"][
+        data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
+    ]
+    instruction_for_torque[data["control_mode"] == ControlMode.LINEAR_CONTROL.value] = data["instruction"][
+        data["control_mode"] == ControlMode.LINEAR_CONTROL.value
+    ]
 
     spinbox_for_torque = np.zeros(len(data["spin_box"]))
     spinbox_for_torque[:] = np.nan
-    spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = \
-        data["spin_box"][data["control_mode"] == ControlMode.TORQUE_CONTROL.value]
+    spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = data["spin_box"][
+        data["control_mode"] == ControlMode.TORQUE_CONTROL.value
+    ]
 
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('Torque (Nm)')
-    ax2.set_ylabel('Cadence (rpm)')
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Torque (Nm)")
+    ax2.set_ylabel("Cadence (rpm)")
 
     plt.title("Torques")
 
-    ax2.plot(
-        data["time_for_smoothed"], data['smoothed_cadence'],
-        label="Smoothed cadence",
-        color='k'
-    )
-    ax1.plot(
-        data["time_for_smoothed"],
-        data["smoothed_motor_torque"],
-        label="Smoothed motor torque"
-    )
-    ax1.plot(
-        data["time_for_smoothed"],
-        data["smoothed_user_torque"],
-        label="Smoothed user torque"
-    )
-    ax1.plot(
-        data["time_for_smoothed"],
-        data["smoothed_resisting_torque"],
-        label="Smoothed resisting torque"
-    )
-    ax1.plot(
-        data["time"],
-        spinbox_for_torque,
-        label="Spin box"
-    )
+    ax2.plot(data["time_for_smoothed"], data["smoothed_cadence"], label="Smoothed cadence", color="k")
+    ax1.plot(data["time_for_smoothed"], data["smoothed_motor_torque"], label="Smoothed motor torque")
+    ax1.plot(data["time_for_smoothed"], data["smoothed_user_torque"], label="Smoothed user torque")
+    ax1.plot(data["time_for_smoothed"], data["smoothed_resisting_torque"], label="Smoothed resisting torque")
+    ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
     ax1.plot(
         data["time"],
         instruction_for_torque,
@@ -296,34 +334,24 @@ def plot_data(data: dict, plot_errors: bool = False):
     # Powers
     spinbox_for_power = np.zeros(len(data["spin_box"]))
     spinbox_for_power[:] = np.nan
-    spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = \
-        data["spin_box"][data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value]
-    spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = \
-        data["spin_box"][data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value]
+    spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = data["spin_box"][
+        data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
+    ]
+    spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = data["spin_box"][
+        data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
+    ]
 
     fig, ax1 = plt.subplots()
     plt.title("Powers")
 
     ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('Powers(W)')
-    ax2.set_ylabel('Cadence (rpm)')
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Powers(W)")
+    ax2.set_ylabel("Cadence (rpm)")
 
-    ax1.plot(
-        data["time_for_smoothed"],
-        data["smoothed_user_power"],
-        label="User power"
-    )
-    ax1.plot(
-        data["time"],
-        spinbox_for_power,
-        label="Spin_box"
-    )
-    ax2.plot(
-        data["time_for_smoothed"],
-        data["smoothed_cadence"],
-        label="Smoothed cadence",
-        color='k')
+    ax1.plot(data["time_for_smoothed"], data["smoothed_user_power"], label="User power")
+    ax1.plot(data["time"], spinbox_for_power, label="Spin_box")
+    ax2.plot(data["time_for_smoothed"], data["smoothed_cadence"], label="Smoothed cadence", color="k")
 
     fig.legend(loc="upper right")
 
@@ -347,7 +375,8 @@ def plot_data(data: dict, plot_errors: bool = False):
         f"{traduce_error(data['controller_error'][-1], ODriveControllerError)}"
         f"{traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
         f"{traduce_error(data['motor_error'][-1], ODriveMotorError)}"
-        f"{traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}")
+        f"{traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}"
+    )
 
     plt.show()
 

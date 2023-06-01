@@ -3,32 +3,26 @@ Script to control the ergocycle through a graphical user interface.
 
 python -m PyQt5.uic.pyuic -x ergocycle_gui.ui -o ergocycle_gui.py
 """
+import numpy as np
 import os
 import sys
-
 import time
-import numpy as np
-
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import *
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
-
-from ergocycleS2M.motor_control.motor import MotorController
-# from ergocycleS2M.motor_control.phantom import Phantom
-
-from ergocycleS2M.utils import (
-    PlotWidget,
-)
-
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     DirectionMode,
 )
+from ergocycleS2M.motor_control.motor import MotorController
+# from ergocycleS2M.motor_control.phantom import Phantom
 from ergocycleS2M.gui.gui_enums import (
-    TrainingMode,
     GUIControlMode,
     StopwatchStates,
+    TrainingMode,
+)
+from ergocycleS2M.gui.gui_utils import (
+    PlotWidget,
 )
 
 
@@ -44,12 +38,12 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         self._gui_control_mode = GUIControlMode.POWER
         self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g")
         self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
-        self.plot_power.getAxis('bottom').setStyle(tickLength=0)
-        self.plot_power.getAxis('bottom').setVisible(False)
+        self.plot_power.getAxis("bottom").setStyle(tickLength=0)
+        self.plot_power.getAxis("bottom").setVisible(False)
         self.plot_cadence = PlotWidget(self, name="cadence", y_label="cadence rpm", color="r")
         self.ui.cadence_horizontalLayout.insertWidget(0, self.plot_cadence)
-        self.plot_cadence.getAxis('bottom').setStyle(tickLength=0)
-        self.plot_cadence.getAxis('bottom').setVisible(False)
+        self.plot_cadence.getAxis("bottom").setStyle(tickLength=0)
+        self.plot_cadence.getAxis("bottom").setVisible(False)
         self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b")
         self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
 
@@ -132,9 +126,9 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         """
         Check if the text is correct for a file name.
         """
-        new_text = ''
+        new_text = ""
         for char in text:
-            if char.isalnum() or char in ('_', '-'):
+            if char.isalnum() or char in ("_", "-"):
                 new_text += char
         if new_text != text:
             cursor_pos = self.ui.save_lineEdit.cursorPosition()
@@ -153,16 +147,17 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             index = 0
         self.ui.control_comboBox.clear()
         if training_mode == TrainingMode.CONCENTRIC.value:
-            self.ui.control_comboBox.addItems([
-                GUIControlMode.POWER.value,
-                GUIControlMode.CADENCE.value,
-                GUIControlMode.LINEAR.value,
-                GUIControlMode.TORQUE.value])
+            self.ui.control_comboBox.addItems(
+                [
+                    GUIControlMode.POWER.value,
+                    GUIControlMode.CADENCE.value,
+                    GUIControlMode.LINEAR.value,
+                    GUIControlMode.TORQUE.value,
+                ]
+            )
             self.ui.direction_comboBox.setCurrentText(DirectionMode.FORWARD.value)
         elif training_mode == TrainingMode.ECCENTRIC.value:
-            self.ui.control_comboBox.addItems([
-                GUIControlMode.POWER.value,
-                GUIControlMode.CADENCE.value])
+            self.ui.control_comboBox.addItems([GUIControlMode.POWER.value, GUIControlMode.CADENCE.value])
             self.ui.direction_comboBox.setCurrentText(DirectionMode.REVERSE.value)
             # If the GUIControlMode corresponding to the precedent index was LINEAR or TORQUE, set the GUIControlMode to
             # POWER.
@@ -262,7 +257,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             self.motor_thread.training_mode = self.ui.training_comboBox.currentText()
             self.motor_thread.plot_start_time = time.time()
             self.motor_thread.time_array = np.linspace(
-                - self.motor_thread.size_arrays / self.motor_thread.plot_frequency, 0, self.motor_thread.size_arrays
+                -self.motor_thread.size_arrays / self.motor_thread.plot_frequency, 0, self.motor_thread.size_arrays
             )
 
         # Update instructions and the control depending on the control mode.
@@ -276,7 +271,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                 )
             elif self._training_mode == TrainingMode.ECCENTRIC.value:
                 # In eccentric mode, the sign is inverted because the user's power is negative
-                self.motor_thread.spin_box = - self.ui.instruction_spinBox.value()
+                self.motor_thread.spin_box = -self.ui.instruction_spinBox.value()
                 self.motor_thread.instruction = self.motor.eccentric_power_control(
                     self.motor_thread.spin_box, self.motor_thread.ramp_instruction
                 )
@@ -292,9 +287,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         elif self._gui_control_mode == GUIControlMode.CADENCE:
             self.motor_thread.instruction = self.motor.get_sign() * self.ui.instruction_spinBox.value()
             self.motor_thread.spin_box = self.motor_thread.instruction
-            self.motor.cadence_control(
-                self.motor_thread.spin_box, self.motor_thread.ramp_instruction
-            )
+            self.motor.cadence_control(self.motor_thread.spin_box, self.motor_thread.ramp_instruction)
 
         elif self._gui_control_mode == GUIControlMode.TORQUE:
             self.motor_thread.spin_box = self.motor.get_sign() * self.ui.instruction_spinBox.value()
@@ -387,8 +380,8 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         """
         if self.motor_thread.stopwatch_state == StopwatchStates.PAUSED:
             self.motor_thread.stopwatch_state = StopwatchStates.RUNNING
-            self.motor_thread.stopwatch_start_time += (time.time() - self.motor_thread.stopwatch_pause_time)
-            self.motor_thread.stopwatch_lap_time += (time.time() - self.motor_thread.stopwatch_pause_time)
+            self.motor_thread.stopwatch_start_time += time.time() - self.motor_thread.stopwatch_pause_time
+            self.motor_thread.stopwatch_lap_time += time.time() - self.motor_thread.stopwatch_pause_time
 
         elif self.motor_thread.stopwatch_state == StopwatchStates.RUNNING:
             self.motor_thread.stopwatch_state = StopwatchStates.PAUSED
@@ -420,21 +413,21 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         if self.motor_thread.stopwatch_state == StopwatchStates.PAUSED:
             self.ui.stopwatch_lap_reset_pushButton.setText("Reset")
             self.ui.stopwatch_start_stop_pushButton.setText("Start")
-            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_green.name()}')
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
 
         elif self.motor_thread.stopwatch_state == StopwatchStates.RUNNING:
             self.ui.stopwatch_lap_reset_pushButton.setEnabled(True)
             self.ui.stopwatch_lap_reset_pushButton.setText("Lap")
             self.ui.stopwatch_start_stop_pushButton.setText("Stop")
-            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f'background-color: {self._color_blue.name()}')
-            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_red.name()}')
+            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f"background-color: {self._color_blue.name()}")
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f"background-color: {self._color_red.name()}")
 
         elif self.motor_thread.stopwatch_state == StopwatchStates.STOPPED:
             self.ui.stopwatch_lap_reset_pushButton.setEnabled(False)
             self.ui.stopwatch_lap_reset_pushButton.setText("Lap")
             self.ui.stopwatch_start_stop_pushButton.setText("Start")
-            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f'background-color: {self._color_default.name()}')
-            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f'background-color: {self._color_green.name()}')
+            self.ui.stopwatch_lap_reset_pushButton.setStyleSheet(f"background-color: {self._color_default.name()}")
+            self.ui.stopwatch_start_stop_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
 
     def _plot_add_instruction(self):
         """
@@ -494,6 +487,7 @@ class MotorDisplayThread(QtCore.QThread):
     Thread that controls the motor. It is separated from the GUI thread to avoid freezing the GUI when the motor is
     running.
     """
+
     plot_update_signal = QtCore.pyqtSignal(name="plot_update_signal")
 
     def __init__(self, ui: Ui_MainWindow, odrive_motor):
@@ -533,14 +527,14 @@ class MotorDisplayThread(QtCore.QThread):
         self.plot_start_time = 0.0
         self.plot_frequency = 2  # Hz
         self.size_arrays = 10 * self.plot_frequency  # 10 seconds
-        self.time_array = np.linspace(- self.size_arrays / self.plot_frequency, 0, self.size_arrays)
+        self.time_array = np.linspace(-self.size_arrays / self.plot_frequency, 0, self.size_arrays)
         self.cadence_array = np.zeros(self.size_arrays)
         self.torque_array = np.zeros(self.size_arrays)
         self.power_array = np.zeros(self.size_arrays)
         self.spin_box_array = None
 
         # Watchdog
-        self.watchdog_prec = time.time()
+        self.watchdog_prev = time.time()
         self.dt = []
 
         # Saving
@@ -552,8 +546,8 @@ class MotorDisplayThread(QtCore.QThread):
         Feed the watchdog of the motor.
         """
         t = time.time()
-        self.dt.append(t - self.watchdog_prec)
-        self.watchdog_prec = t
+        self.dt.append(t - self.watchdog_prev)
+        self.watchdog_prev = t
         self.motor.watchdog_feed()
 
     def run(self):
@@ -583,12 +577,12 @@ class MotorDisplayThread(QtCore.QThread):
                     comment=comment,
                     stopwatch=self.stopwatch,
                     lap=self.lap,
-                    training_mode=self.training_mode
+                    training_mode=self.training_mode,
                 )
                 self.watchdog_feed()
 
             # Date
-            current_time = date_time.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
+            current_time = date_time.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
             self.ui.date_label.setText(current_time)
 
             # Stopwatch
@@ -604,8 +598,7 @@ class MotorDisplayThread(QtCore.QThread):
 
             minutes = int(self.stopwatch // 60)  # get the integer part of the quotient
             seconds = int(self.stopwatch % 60)  # get the integer part of the remainder
-            milliseconds = int(
-                (self.stopwatch - int(self.stopwatch)) * 100)  # get the milliseconds component
+            milliseconds = int((self.stopwatch - int(self.stopwatch)) * 100)  # get the milliseconds component
             self.ui.stopwatch_lcdNumber.display(f"{minutes:02d}:{seconds:02d}.{milliseconds:02d}")
             minutes = int(self.lap // 60)  # get the integer part of the quotient
             seconds = int(self.lap % 60)  # get the integer part of the remainder
@@ -648,8 +641,7 @@ class MotorDisplayThread(QtCore.QThread):
             # The concentric power control mode is based on the cadence control mode, but the cadence input is
             # calculated from the current torque (cadence_input = f(power / torque, resiting torque)).
             elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
-                self.instruction = self.motor.eccentric_power_control(self.spin_box,
-                                                                      self.ramp_instruction)
+                self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
 
             elif control_mode == ControlMode.STOPPING:
                 if abs(self.motor.get_cadence()) < 10.0:
@@ -681,8 +673,11 @@ class MotorDisplayThread(QtCore.QThread):
 
 
 def main():
+    """
+    Main function to run the application.
+    """
     motor = MotorController(enable_watchdog=True, external_watchdog=True)
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     gui = ErgocycleApplication(motor)
     gui.show()
     gui.motor.config_watchdog(True, 0.3)
@@ -690,6 +685,7 @@ def main():
     app.run = False
     dt = np.asarray(gui.motor_thread.dt)
     import matplotlib.pyplot as plt
+
     plt.plot(dt)
     plt.show()
     print(np.mean(dt), np.max(dt))

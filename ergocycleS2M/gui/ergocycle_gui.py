@@ -37,7 +37,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.cadence_display.setFont(font)
-        self.cadence_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.cadence_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.cadence_display.setObjectName("cadence_display")
         self.cadence_horizontalLayout.addWidget(self.cadence_display)
         self.cadence_verticalLayout.addLayout(self.cadence_horizontalLayout)
@@ -61,7 +61,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.power_display.setFont(font)
-        self.power_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.power_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.power_display.setObjectName("power_display")
         self.power_horizontalLayout.addWidget(self.power_display)
         self.power_verticalLayout.addLayout(self.power_horizontalLayout)
@@ -270,7 +270,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.torque_display.setFont(font)
-        self.torque_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.torque_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.torque_display.setObjectName("torque_display")
         self.torque_horizontalLayout.addWidget(self.torque_display)
         self.torque_verticalLayout.addLayout(self.torque_horizontalLayout)
@@ -287,7 +287,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.turns_display.setFont(font)
-        self.turns_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.turns_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.turns_display.setObjectName("turns_display")
         self.turns_horizontalLayout.addWidget(self.turns_display)
         self.angle_label = QtWidgets.QLabel(self.centralwidget)
@@ -299,7 +299,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.angle_display.setFont(font)
-        self.angle_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.angle_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.angle_display.setObjectName("angle_display")
         self.turns_horizontalLayout.addWidget(self.angle_display)
         self.gridLayout_2.addLayout(self.turns_horizontalLayout, 2, 0, 1, 1)
@@ -351,6 +351,7 @@ class Ui_MainWindow(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
