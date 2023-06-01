@@ -6,6 +6,7 @@ import json
 import numpy as np
 import time
 import threading
+from pathlib import Path
 
 import odrive
 from odrive.enums import (
@@ -46,6 +47,9 @@ from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.utils import traduce_error
 
 
+parameters_path = Path(__file__).resolve().parent.parent / "parameters"
+
+
 class MotorController(MotorComputations):
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
@@ -58,7 +62,7 @@ class MotorController(MotorComputations):
         self,
         enable_watchdog=True,
         external_watchdog: bool = False,
-        gains_path: str = "ergocycleS2M/parameters/gains.json",
+        gains_path: str = str(parameters_path / "gains.json"),
         file_path: str = None,
     ):
         super(MotorController, self).__init__()

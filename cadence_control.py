@@ -40,7 +40,7 @@ t = np.asarray(data["time"])
 # Plot
 _, cadence, *_ = compute_data(data["vel_estimate"], data["turns"], data["iq_measured"])
 plt.plot(t, cadence, label="Pedals cadence")
-plt.plot(t, - np.min([list(ramp_rate * t), data["instruction"]], axis=0), label="Instruction")
+plt.plot(t, -np.min([list(ramp_rate * t), data["instruction"]], axis=0), label="Instruction")
 plt.title("Ramped cadence control")
 plt.xlabel("Time (s)")
 plt.ylabel("Cadence (rpm)")

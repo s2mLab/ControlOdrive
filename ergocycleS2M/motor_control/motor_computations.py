@@ -6,7 +6,7 @@ import numpy as np
 
 from pathlib import Path
 
-json_path = Path(__file__).parent.parent / "parameters/hardware_and_security.json"
+json_path = Path(__file__).resolve().parent.parent / "parameters/hardware_and_security.json"
 
 
 class MotorComputations:

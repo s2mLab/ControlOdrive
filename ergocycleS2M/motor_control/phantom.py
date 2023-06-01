@@ -5,6 +5,7 @@ import time
 import json
 import copy
 import numpy as np
+from pathlib import Path
 
 from ergocycleS2M.data_processing.save import save
 from ergocycleS2M.motor_control.enums import (
@@ -14,6 +15,9 @@ from ergocycleS2M.motor_control.enums import (
     DirectionMode,
 )
 from ergocycleS2M.motor_control.motor_computations import MotorComputations
+
+
+parameters_path = Path(__file__).resolve().parent.parent / "parameters"
 
 
 class Phantom(MotorComputations):
@@ -28,7 +32,7 @@ class Phantom(MotorComputations):
         self,
         enable_watchdog=True,
         external_watchdog: bool = False,
-        gains_path: str = "parameters/gains.json",
+        gains_path: str = str(parameters_path / "gains.json"),
         file_path: str = None,
     ):
         super(Phantom, self).__init__()

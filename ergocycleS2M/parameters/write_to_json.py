@@ -56,7 +56,7 @@ dictionary = {
     "reduction_ratio": 8 / 36 * 10 / 91,
     "pedals_accel_lim": 31,  # (rpm)/s of the pedals
     "torque_ramp_rate_lim": 5,  # Nm/s
-    "maximal_velocity_stop": 31,  # tr/s of the pedals
+    "maximal_cadence_stop": 31,  # tr/s of the pedals
     "resisting_current_coeff_proportional": hardware_and_security["resisting_current_coeff_proportional"],
     "resisting_current_coeff_power": hardware_and_security["resisting_current_coeff_power"],
 }
