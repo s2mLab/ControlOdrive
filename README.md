@@ -1,6 +1,15 @@
-# ControlOdrive
+# Ergocycle S2M
 I'm not sure `odrive` can be used on the last version of Python, so I have not updated it from ``
+## Run with an IDE or from a terminal
+If you are not sure what configuration is currently saved in the ODrive it is better to run first the 
+`initial_calibration.py` file. The pinched noise is totally normal even if it seems unbearable.
+If no error has been detected, you are good to go!
+Run the `main.py` file. You should see the GUI appear.
+If you want a simple understanding of the code, you can read and run the `cadence_control.py` file.
 ## Package installation
+/!\ Once the package is installed the imports will be from the package, not from the files in the repository.
+If you are developing and doing a lot of changes, it is better to uninstall the package and run the files from an IDE
+or a terminal.
 To install the package, write in a terminal:
 ```commandline
 python setup.py install
@@ -17,9 +26,8 @@ start_ergocycle
 ```
 and to read any saved data with the command:
 ```commandline
-read_ergocycle_file file_name
+read_ergocycle_file file_path
 ```
-You must be in the right directory to run this last command, or you have to indicate the path to the file.
 ## Hardware
 ### Relays
 The relays are not controlled by the Odrive, they are there to ensure that when the power source that powers the Odrive is sut down, the current cannot go into it.
@@ -33,7 +41,6 @@ The reduction ratio is then Ze/Zs = ws/we = 8/36*10/91
 ## Firmware/Software
 2022/02/09:
 - Firmware: 0.5.5, *a priori* the last firmware available for the Odrive v3.6 56V (end of life)
-  - /!\ I updated the firmware od only one board
   - To update the firmware on the Raspberry, use `sudo odrivetool dfu path/to/firmware/file.elf`
 - Software: odrive 0.6.3.post0, the latest version at this time
   - To update the software on the Raspberry, use `pip install odrive==0.6.3.post0`
@@ -51,21 +58,6 @@ The script `find_resisting_torque/resisting/torque.py` allows to compute the cur
 torque from `.json` files obtained with the `find_resisting_torque/find_resisting_torque.py` on the motor. _A priori_
 the motor won't turn if it as less current than this `resisting_current`.
 #### Torque constant
-Supposedly,
-
-$\tau_{motor}$ = `torque_constant * iq_setpoint`
-
-`weight_torque_at_motor = torque_constant * iq_util`
-
-`iq_setpoint = iq_util + resisting_current`
-
-`weight_torque_at_motor = - length *  m * g *` $\sin (\theta)$ `* reduction_ratio`
-
-`torque_constant = - length *  m * g *` $\sin (\theta)$ `* reduction_ratio / iq_util`
-
-Now that we know the current corresponding to the resisting torque, we can calculate the `torque constant`. The script 
-`find_torque_constant/compute_torque_constant.py` allows to compute `torque constant` from `.json` files obtained with
-the `find_torque_constant/find_torque_constant.py` on the motor.
 ## Troubleshooting
 ### Calibration
 Every calibration must be done without mechanical load nor watchdog since the motor has to reboot several times.
@@ -138,4 +130,4 @@ torque_lim: inf (float)
 ```
 ### Position control and velocity control
 Setting the `odrv0.axis0.controller.config.control_mode`, the `odrv0.axis0.controller.config.input_mode` and the 
-`odrv0.axis0.requested_state` must be done only one and not between each change of position or velocity !
+`odrv0.axis0.requested_state` must be done only once and not between each change of position or velocity !
