@@ -15,6 +15,7 @@ from ergocycleS2M.motor_control.enums import (
     DirectionMode,
 )
 from ergocycleS2M.motor_control.motor import MotorController
+
 # from ergocycleS2M.motor_control.phantom import Phantom
 from ergocycleS2M.gui.gui_enums import (
     GUIControlMode,
