@@ -155,9 +155,9 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
         "state",
         "control_mode",
         "direction",
-        "spin_box",
+        #"spin_box",
         "instruction",
-        "ramp_instruction",
+        #"ramp_instruction",
         "error",
         "axis_error",
         "controller_error",
@@ -320,11 +320,11 @@ def plot_data(data: dict, plot_errors: bool = False):
         data["control_mode"] == ControlMode.LINEAR_CONTROL.value
     ]
 
-    spinbox_for_torque = np.zeros(len(data["spin_box"]))
-    spinbox_for_torque[:] = np.nan
-    spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = data["spin_box"][
-        data["control_mode"] == ControlMode.TORQUE_CONTROL.value
-    ]
+    #spinbox_for_torque = np.zeros(len(data["spin_box"]))
+    #spinbox_for_torque[:] = np.nan
+    #spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = data["spin_box"][
+    #    data["control_mode"] == ControlMode.TORQUE_CONTROL.value
+    #]
 
     fig, ax1 = plt.subplots()
 
@@ -339,7 +339,7 @@ def plot_data(data: dict, plot_errors: bool = False):
     ax1.plot(data["time_for_smoothed"], data["smoothed_motor_torque"], label="Smoothed motor torque")
     ax1.plot(data["time_for_smoothed"], data["smoothed_user_torque"], label="Smoothed user torque")
     ax1.plot(data["time_for_smoothed"], data["smoothed_resisting_torque"], label="Smoothed resisting torque")
-    ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
+    #ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
     ax1.plot(
         data["time"],
         instruction_for_torque,
@@ -349,14 +349,14 @@ def plot_data(data: dict, plot_errors: bool = False):
     fig.legend(loc="upper right")
 
     # Powers
-    spinbox_for_power = np.zeros(len(data["spin_box"]))
-    spinbox_for_power[:] = np.nan
-    spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = data["spin_box"][
-        data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
-    ]
-    spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = data["spin_box"][
-        data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
-    ]
+    #spinbox_for_power = np.zeros(len(data["spin_box"]))
+    #spinbox_for_power[:] = np.nan
+    #spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = data["spin_box"][
+    #    data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
+    #]
+    #spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = data["spin_box"][
+    #    data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
+    #]
 
     fig, ax1 = plt.subplots()
     plt.title("Powers")
@@ -367,7 +367,7 @@ def plot_data(data: dict, plot_errors: bool = False):
     ax2.set_ylabel("Cadence (rpm)")
 
     ax1.plot(data["time_for_smoothed"], data["smoothed_user_power"], label="User power")
-    ax1.plot(data["time"], spinbox_for_power, label="Spin_box")
+    #ax1.plot(data["time"], spinbox_for_power, label="Spin_box")
     ax2.plot(data["time_for_smoothed"], data["smoothed_cadence"], label="Smoothed cadence", color="k")
 
     fig.legend(loc="upper right")
