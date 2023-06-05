@@ -37,14 +37,12 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
 
         # Plot
         self._gui_control_mode = GUIControlMode.POWER
-        self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g")
+        self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g", show_x_axis=False)
         self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
         self.plot_power.getAxis("bottom").setStyle(tickLength=0)
-        self.plot_power.getAxis("bottom").setVisible(False)
-        self.plot_cadence = PlotWidget(self, name="cadence", y_label="cadence rpm", color="r")
+        self.plot_cadence = PlotWidget(self, name="Cadence", y_label="Cadence (rpm)", color="r", show_x_axis=False)
         self.ui.cadence_horizontalLayout.insertWidget(0, self.plot_cadence)
         self.plot_cadence.getAxis("bottom").setStyle(tickLength=0)
-        self.plot_cadence.getAxis("bottom").setVisible(False)
         self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b")
         self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
 
@@ -62,6 +60,10 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         self._color_default = self.ui.angle_reset_pushButton.palette().color(
             self.ui.angle_reset_pushButton.backgroundRole()
         )
+        self._color_grey = QtGui.QColor(220, 220, 220)
+        self.ui.power_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
+        self.ui.cadence_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
+        self.ui.torque_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
 
         # Security
         self.ui.emergency_pushButton.clicked.connect(self.emergency_stop)
@@ -185,6 +187,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         if control_mode == GUIControlMode.POWER.value:
             self.ui.instruction_spinBox.setRange(0, self.motor.hardware_and_security["power_lim"])
             self.ui.instruction_spinBox.setSingleStep(power_step)
+            self.ui.instruction_label.setText("Power instruction")
             self.ui.units_label.setText("W")
 
             training_mode = self.ui.training_comboBox.currentText()
@@ -192,11 +195,13 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                 self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["torque_ramp_rate_lim"]))
                 self.ui.acceleration_spinBox.setSingleStep(torque_step)
                 self.ui.acceleration_spinBox.setValue(torque_ramp)
+                self.ui.ramp_label.setText("Torque ramp")
                 self.ui.acceleration_units_label.setText("N.m/s")
             elif training_mode == TrainingMode.ECCENTRIC.value:
                 self.ui.acceleration_spinBox.setRange(0, int(self.motor.hardware_and_security["pedals_accel_lim"]) - 1)
                 self.ui.acceleration_spinBox.setSingleStep(vel_step)
                 self.ui.acceleration_spinBox.setValue(vel_ramp)
+                self.ui.ramp_label.setText("Cadence ramp")
                 self.ui.acceleration_units_label.setText("rpm/s")
             else:
                 raise ValueError(f"{training_mode} training has not been implemented yet.")
@@ -207,7 +212,9 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             self.ui.instruction_spinBox.setSingleStep(linear_step)
             self.ui.acceleration_spinBox.setSingleStep(torque_step)
             self.ui.acceleration_spinBox.setValue(torque_ramp)
+            self.ui.instruction_label.setText("Linear coefficient")
             self.ui.units_label.setText("N.m/rpm")
+            self.ui.ramp_label.setText("Torque ramp")
             self.ui.acceleration_units_label.setText("N.m/s")
 
         elif control_mode == GUIControlMode.CADENCE.value:
@@ -216,7 +223,9 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             self.ui.instruction_spinBox.setSingleStep(vel_step)
             self.ui.acceleration_spinBox.setSingleStep(vel_step)
             self.ui.acceleration_spinBox.setValue(vel_ramp)
+            self.ui.instruction_label.setText("Cadence instruction")
             self.ui.units_label.setText("rpm")
+            self.ui.ramp_label.setText("Cadence ramp")
             self.ui.acceleration_units_label.setText("rpm/s")
 
         elif control_mode == GUIControlMode.TORQUE.value:
@@ -225,7 +234,9 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             self.ui.instruction_spinBox.setSingleStep(torque_step)
             self.ui.acceleration_spinBox.setSingleStep(torque_step)
             self.ui.acceleration_spinBox.setValue(torque_ramp)
+            self.ui.instruction_label.setText("Torque instruction")
             self.ui.units_label.setText("N.m")
+            self.ui.ramp_label.setText("Torque ramp")
             self.ui.acceleration_units_label.setText("N.m/s")
 
         else:
@@ -610,9 +621,12 @@ class MotorDisplayThread(QtCore.QThread):
             # Display data
             t_since_precedent_display = time.time() - t_display_precedent
             if t_since_precedent_display > 1 / self._display_frequency:
-                self.ui.power_display.setText(f"{self.motor.get_user_power():.0f} W")
-                self.ui.cadence_display.setText(f"{self.motor.get_cadence():.0f} rpm")
-                self.ui.torque_display.setText(f"{self.motor.get_user_torque():.0f} N.m")
+                self.ui.current_power_display.setText(f"{self.motor.get_user_power():.0f} W")
+                self.ui.average_power_display.setText(f"{np.mean(self.power_array):.0f} W")
+                self.ui.current_cadence_display.setText(f"{self.motor.get_cadence():.0f} rpm")
+                self.ui.average_cadence_display.setText(f"{np.mean(self.cadence_array):.0f} rpm")
+                self.ui.current_torque_display.setText(f"{self.motor.get_user_torque():.0f} N.m")
+                self.ui.average_torque_display.setText(f"{np.mean(self.torque_array):.0f} N.m")
                 self.ui.turns_display.setText(f"{self.motor.get_turns():.0f} tr")
                 self.ui.angle_display.setText(f"{self.motor.get_angle():.0f} °")
                 t_display_precedent = time.time()

@@ -11,14 +11,15 @@ class PlotWidget(pg.PlotWidget):
     Custom plot widget.
     """
 
-    def __init__(self, parent=None, name=None, y_label=None, color="b"):
+    def __init__(self, parent=None, name=None, y_label=None, color="b", show_x_axis=True):
         super().__init__(parent=parent)
 
         # Set background color to white
         self.setBackground("w")
 
         # Set x and y axis labels
-        self.setLabel("bottom", "Time since last control start (s)", color="k")
+        if show_x_axis:
+            self.setLabel("bottom", "Time since last control start (s)", color="k")
         self.setLabel("left", y_label, color="k")
 
         # Create a legend
@@ -32,16 +33,17 @@ class PlotWidget(pg.PlotWidget):
         self.legend.labelTextColor = pg.mkColor("k")
 
         # Set axes color
-        axis = self.getAxis("bottom")
-        axis.setPen(pg.mkPen("k"))
-        axis.setTextPen("k")
+        x_axis = self.getAxis("bottom")
+        x_axis.setStyle(showValues=show_x_axis)
+        x_axis.setPen(pg.mkPen("k"))
+        x_axis.setTextPen("k")
 
-        axis = self.getAxis("left")
-        axis.setPen(pg.mkPen("k"))
-        axis.setTextPen("k")
+        y_axis = self.getAxis("left")
+        y_axis.setPen(pg.mkPen("k"))
+        y_axis.setTextPen("k")
 
         # Set the grid
-        self.showGrid(x=False, y=True, alpha=0.5)
+        self.showGrid(x=True, y=True, alpha=0.5)
 
     def update_plot(
         self,
