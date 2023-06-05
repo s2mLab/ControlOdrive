@@ -128,7 +128,7 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
         The data interpolated at the desired frequency.
     """
     data_interpolated = {}
-    time = data_interpolated["time"] = np.interp(
+    time_for_interpolated = data_interpolated["time"] = np.interp(
         np.linspace(0, data["time"][-1], num=int(data["time"][-1] * frequency)), data["time"], data["time"]
     )
 
@@ -142,10 +142,10 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
 
     # For the stopwatch and lap, we set the values to 0 when the stopwatch has stopped (if not the interpolation may
     # have created decreasing ramps).
-    for i in range(len(data["time"])):
+    for i in range(len(data["time"]) - 1):
         if data["stopwatch"][i] != 0 and data["stopwatch"][i + 1] == 0:
-            i_interpolated_0 = np.where(time > data["time"][i])[0][0]
-            i_interpolated_1 = np.where(time > data["time"][i + 1])[0][0]
+            i_interpolated_0 = np.where(time_for_interpolated > data["time"][i])[0][0]
+            i_interpolated_1 = np.where(time_for_interpolated > data["time"][i + 1])[0][0]
             for j in range(i_interpolated_0, i_interpolated_1):
                 data_interpolated["stopwatch"][j] = 0.0
                 data_interpolated["lap"][j] = 0.0
@@ -155,7 +155,6 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
         "state",
         "control_mode",
         "direction",
-        "comments",
         "spin_box",
         "instruction",
         "ramp_instruction",
@@ -169,13 +168,13 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
     ]
     # Create the arrays.
     for key in nearest_keys:
-        data_interpolated[key] = np.zeros(len(time), dtype=type(np.asarray(data[key]).dtype))
+        data_interpolated[key] = np.zeros(len(time_for_interpolated), dtype=type(np.asarray(data[key]).dtype))
 
     i_prev = 0
     i_next = 1
     # Select the nearest value at each instant.
-    for i, t in enumerate(time):
-        # Select the two values iterations around the time t.
+    for i, t in enumerate(time_for_interpolated):
+        # Select the two iterations of the original data around the time t.
         while data["time"][i_next] < t:
             i_prev += 1
             i_next += 1
@@ -185,6 +184,24 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
                 data_interpolated[key][i] = data[key][i_next]
             else:
                 data_interpolated[key][i] = data[key][i_prev]
+
+    # For the comments, the comment is registered at the nearest time to the comment time in the new time array.
+    # Create the arrays.
+    data_interpolated["comments"] = np.zeros(len(time_for_interpolated), dtype=np.asarray(data["comments"]).dtype)
+
+    i_prev = 0
+    i_next = 1
+    for i, t in enumerate(data["time"]):
+        if data["comments"][i] != "":
+            # Select the time just before and just after the time comment.
+            while time_for_interpolated[i_next] < t:
+                i_prev += 1
+                i_next += 1
+            # Choose the nearest time and register the comment at that time in the interpolated data.
+            if time_for_interpolated[i_next] - t < t - time_for_interpolated[i_prev]:
+                data_interpolated["comments"][i_next] = data["comments"][i]
+            else:
+                data_interpolated["comments"][i_prev] = data["comments"][i]
 
     return data_interpolated
 
@@ -267,7 +284,7 @@ def plot_data(data: dict, plot_errors: bool = False):
     # Comments
     for time, comment in zip(data["time"], data["comments"]):
         if comment != "":
-            print(f"{time}: {comment}")
+            print(f"{time:.0f}: {comment}")
 
     # Cadence
     instruction_for_cadence = np.zeros(len(data["instruction"]))
@@ -402,3 +419,7 @@ def read_from_terminal():
 
     # Plot the data
     plot_data(data)
+
+
+if __name__ == "__main__":
+    plot_data(read("/home/mickaelbegon/Documents/Stage_Amandine/ControlOdrive/XP/Test_anais.bio", 100, 100))
