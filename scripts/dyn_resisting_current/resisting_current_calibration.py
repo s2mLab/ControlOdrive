@@ -1,77 +1,72 @@
 """
 This script is used to sample the current corresponding to the resisting torque of the motor at different velocities.
 """
-import random
 import matplotlib.pyplot as plt
+import random
+import time
 
-from ergocycleS2M.motor_control.motor import *
+from ergocycleS2M.data_processing.load import plot_data, read
+from ergocycleS2M.motor_control.enums import DirectionMode
+from ergocycleS2M.motor_control.motor import MotorController
 
 # Initialisation
 motor = MotorController()
+motor.set_direction(DirectionMode.REVERSE)
 
-resisting_current = []
-motor_velocity = []
+rd = random.randint(0, 100)
 
-fs = 50
+file_name = f"data_from_dyn_calibration_{rd}.bio"
 
-rd = random.randint(0, 1000)
 
-for instruction in range(-65, 66, 5):
-    if instruction == 0:
+def calibration(instruction):
+    """
+    This function is used to sample the current corresponding to the resisting torque of the motor at different
+    cadences.
+
+    Parameters
+    ----------
+    instruction
+        The instruction in rpm.
+    """
+    if instruction > 0:
+        motor.set_direction(DirectionMode.FORWARD)
+    motor.cadence_control(instruction)
+
+    print(f"Waiting to stabilize at {instruction} rpm...")
+
+    # Wait for to reach the instruction
+    while not (instruction - 1 < motor.get_cadence() < instruction + 1):
         pass
+
+    t0 = time.time()
+    t1 = time.time()
+
+    # Wait for 1 second to stabilize at the instructed velocity (can't be done with a time.sleep() because of the
+    # watchdog thread)
+    while t1 - t0 < 1.0:
+        motor.minimal_save_data_to_file(file_name, instruction=instruction)
+        t1 = time.time()
+
+    print(f"Stabilized at {instruction} rpm.")
+
+    t0 = time.time()
+    t1 = time.time()
+    t_next = 0
+
+    # Save the data as frequently as possible during 5 turns
+    while t1 - t0 < abs(instruction) / 60 * 5:
+        motor.minimal_save_data_to_file(file_name, instruction=instruction)
+
+
+for ins in range(-65, 66, 5):
+    if ins == 0:
+        calibration(-1)
+        calibration(1)
     else:
-        if instruction > 0:
-            motor.set_training_mode("Eccentric")
-        motor.velocity_control(instruction)
-
-        print(f"Waiting to stabilize at {instruction} rpm...")
-
-        # Wait for to reach the instruction
-        while not (instruction - 1 < motor.get_velocity() < instruction + 1):
-            pass
-
-        t0 = time.time()
-        t1 = time.time()
-
-        # Wait for 1 second to stabilize at the instructed velocity (can't be done with a time.sleep() because of the
-        # watchdog thread)
-        while t1 - t0 < 1.0:
-            motor.save_data_to_file(f"data_from_dyn_calibration_{rd}", instruction=instruction)
-            t1 = time.time()
-
-        print(f"Stabilized at {instruction} rpm.")
-
-        iq_measured = []
-        vel_estimate = []
-
-        t0 = time.time()
-        t1 = time.time()
-        t_next = 0
-
-        # Measure the current and velocity for 5 turns
-        while t1 - t0 < abs(instruction) / 60 * 5:
-            t1 = time.time()
-            if t1 - t0 > t_next:
-                motor.save_data_to_file(f"data_from_dyn_calibration_{rd}", instruction=instruction)
-                iq_measured.append(motor.get_iq_measured())
-                vel_estimate.append(motor.odrv0.axis0.encoder.vel_estimate)
-                t_next += 1 / fs
-
-        resisting_current.append(np.mean(iq_measured))
-        motor_velocity.append(np.mean(vel_estimate))
+        calibration(ins)
 
 motor.stop()
 
-dictionary = {
-    "resisting_current": resisting_current,
-    "motor_velocity": motor_velocity,
-}
-
-# Writing to .json
-json_object = json.dumps(dictionary, indent=4)
-with open(f"velocity_and_current_from_dyn_calibration_{rd}.json", "w") as outfile:
-    outfile.write(json_object)
-
-plt.plot(motor_velocity, resisting_current)
+plot_data(read("/home/mickaelbegon/Documents/Stage_Amandine/ControlOdrive/XP/data_from_dyn_calibration.bio", 100, 100))
 
 plt.show()
