@@ -9,9 +9,6 @@ from ergocycleS2M.data_processing.load import plot_data, read
 from ergocycleS2M.motor_control.enums import DirectionMode
 from ergocycleS2M.motor_control.motor import MotorController
 
-plot_data(read("data_from_dyn_calibration_54.bio", 100, 100))
-
-
 # Initialisation
 motor = MotorController()
 motor.set_direction(DirectionMode.REVERSE)
@@ -29,7 +26,9 @@ def calibration(instruction, nb_turns=5):
     Parameters
     ----------
     instruction
-        The instruction in rpm.
+        The cadence instruction in rpm.
+    nb_turns
+        The number of turns to sample the data at the desired cadence.
     """
     if instruction > 0:
         motor.set_direction(DirectionMode.FORWARD)
@@ -61,6 +60,7 @@ def calibration(instruction, nb_turns=5):
         t1 = time.time()
         motor.minimal_save_data_to_file(file_name, instruction=instruction)
 
+
 for ins in range(-60, 61, 5):
     if ins == 0:
         calibration(-1, 1)
@@ -70,6 +70,6 @@ for ins in range(-60, 61, 5):
 
 motor.stop()
 
-plot_data(read("/home/mickaelbegon/Documents/Stage_Amandine/ControlOdrive/XP/data_from_dyn_calibration.bio", 100, 100))
+plot_data(read(file_name, 100, 100))
 
 plt.show()
