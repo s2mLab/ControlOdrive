@@ -5,8 +5,10 @@ import argparse
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pickle
 from pathlib import Path
+import sys
 from typing import Tuple
 
 from ergocycleS2M.motor_control.enums import (
@@ -430,4 +432,8 @@ def read_from_terminal():
 
 
 if __name__ == "__main__":
-    plot_data(read("/home/mickaelbegon/Documents/Stage_Amandine/ControlOdrive/XP/Test_anais.bio", 100, 100))
+    script_path = sys.argv[0]
+    script_directory = os.path.dirname(os.path.abspath(script_path))
+    control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
+
+    plot_data(read(control_odrive_directory + "/XP/Calib_torque.bio", 100, 100))
