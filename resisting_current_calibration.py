@@ -1,21 +1,19 @@
 """
 This script is used to sample the current corresponding to the resisting torque of the motor at different velocities.
 """
+import json
 import matplotlib.pyplot as plt
-import random
+import numpy as np
 import time
 
-from ergocycleS2M.data_processing.load import plot_data, read
+from scipy.optimize import curve_fit
+
 from ergocycleS2M.motor_control.enums import DirectionMode
 from ergocycleS2M.motor_control.motor import MotorController
 
 # Initialisation
 motor = MotorController()
 motor.set_direction(DirectionMode.REVERSE)
-
-rd = random.randint(0, 100)
-
-file_name = f"data_from_dyn_calibration_{rd}.bio"
 
 
 def calibration(instruction, nb_turns=5):
@@ -32,6 +30,8 @@ def calibration(instruction, nb_turns=5):
     """
     if instruction > 0:
         motor.set_direction(DirectionMode.FORWARD)
+    else:
+        motor.set_direction(DirectionMode.REVERSE)
     motor.cadence_control(instruction)
 
     print(f"Waiting to stabilize at {instruction} rpm...")
@@ -46,30 +46,81 @@ def calibration(instruction, nb_turns=5):
     # Wait for 1 second to stabilize at the instructed velocity (can't be done with a time.sleep() because of the
     # watchdog thread)
     while t1 - t0 < 1.0:
-        motor.minimal_save_data_to_file(file_name, instruction=instruction)
         t1 = time.time()
 
     print(f"Stabilized at {instruction} rpm.")
 
     t0 = time.time()
     t1 = time.time()
-    t_next = 0
 
-    # Save the data as frequently as possible during 5 turns
+    # Save the data as frequently as possible during nb_turns
+    iq_measured = []
+    vel_estimate = []
     while t1 - t0 < nb_turns / (abs(instruction) / 60):
         t1 = time.time()
-        motor.minimal_save_data_to_file(file_name, instruction=instruction)
+        iq_measured.append(motor.odrv0.axis0.motor.current_control.Iq_measured)
+        vel_estimate.append(motor.odrv0.axis0.encoder.vel_estimate)
+
+    return np.mean(iq_measured), np.mean(vel_estimate)
 
 
-for ins in range(-60, 61, 5):
-    if ins == 0:
-        calibration(-1, 1)
-        calibration(1, 1)
-    else:
-        calibration(ins)
+if __name__ == "__main__":
+    intensities = []
+    velocities = []
+    for ins in range(-60, 61, 5):
+        if ins == 0:
+            average_iq_measured, average_vel_estimate = calibration(-1, 1)
+            intensities.append(average_iq_measured)
+            velocities.append(average_vel_estimate)
+            average_iq_measured, average_vel_estimate = calibration(1, 1)
+            intensities.append(average_iq_measured)
+            velocities.append(average_vel_estimate)
+        else:
+            average_iq_measured, average_vel_estimate = calibration(ins)
+            intensities.append(average_iq_measured)
+            velocities.append(average_vel_estimate)
 
-motor.stop()
+    def lost_current(
+            vel_estimate, resisting_current_proportional, resisting_current_constant
+    ):
+        """
+        The current corresponding to the resisting torque of the motor is modeled as a linear function of the velocity.
 
-plot_data(read(file_name, 100, 100))
+        Parameters
+        ----------
+        vel_estimate:
+            The velocity of the motor.
+        resisting_current_proportional:
+            The proportional coefficient.
+        resisting_current_constant:
+            The constant coefficient.
 
-plt.show()
+        Returns
+        -------
+
+        """
+        return np.sign(vel_estimate) * (
+                resisting_current_proportional * np.abs(vel_estimate) + resisting_current_constant
+        )
+
+
+    popt = curve_fit(lost_current, np.asarray(velocities), np.asarray(intensities), p0=[0.01, 0.5])
+
+    motor.stop()
+
+    plt.plot(velocities, intensities)
+    plt.plot(velocities, lost_current(velocities, *popt[0]))
+    plt.xlabel("Motor velocity (tr/s)")
+    plt.ylabel("Resisting current (A)")
+    plt.show()
+
+    with open("./parameters/hardware_and_security.json", "r") as f:
+        hardware_and_security = json.load(f)
+
+    hardware_and_security["resisting_current_proportional"] = - popt[0][0]
+    hardware_and_security["resisting_current_constant"] = - popt[1][0]
+
+    # Writing to .json
+    json_object = json.dumps(hardware_and_security, indent=4)
+    with open("./parameters/hardware_and_security.json", "w") as outfile:
+        outfile.write(json_object)
