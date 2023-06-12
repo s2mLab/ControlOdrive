@@ -11,8 +11,7 @@ from scipy.optimize import curve_fit
 from ergocycleS2M.data_processing.load import load, read, compute_data
 
 script_path = sys.argv[0]
-script_directory = os.path.dirname(os.path.abspath(script_path))
-control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
+control_odrive_directory = os.path.dirname(os.path.abspath(script_path))
 
 data = load(control_odrive_directory + "/data_from_dyn_calibration_54.bio")
 smoothed_data = read(control_odrive_directory + "/data_from_dyn_calibration_54.bio", 100, 100)

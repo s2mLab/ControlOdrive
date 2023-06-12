@@ -15,9 +15,9 @@ from ergocycleS2M.motor_control.enums import (
     DirectionMode,
 )
 
-# from ergocycleS2M.motor_control.motor import MotorController
+from ergocycleS2M.motor_control.motor import MotorController
 
-from ergocycleS2M.motor_control.phantom import Phantom
+# from ergocycleS2M.motor_control.phantom import Phantom
 from ergocycleS2M.gui.gui_enums import (
     GUIControlMode,
     StopwatchStates,
@@ -692,7 +692,7 @@ def main():
     """
     Main function to run the application.
     """
-    motor = Phantom(enable_watchdog=True, external_watchdog=True)
+    motor = MotorController(enable_watchdog=True, external_watchdog=True)
     app = QtWidgets.QApplication(sys.argv)
     gui = ErgocycleApplication(motor)
     gui.show()
