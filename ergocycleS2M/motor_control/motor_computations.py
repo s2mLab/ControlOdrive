@@ -21,8 +21,8 @@ class MotorComputations:
         self._reduction_ratio = self.hardware_and_security["reduction_ratio"]
         self._torque_constant = self.hardware_and_security["torque_constant"]
 
-        self.resisting_current_coeff_proportional = self.hardware_and_security["resisting_current_coeff_proportional"]
-        self.resisting_current_coeff_power = self.hardware_and_security["resisting_current_coeff_power"]
+        self.resisting_current_proportional = self.hardware_and_security["resisting_current_proportional"]
+        self.resisting_current_constant = self.hardware_and_security["resisting_current_constant"]
         self._resisting_torque_current = self.hardware_and_security["resisting_torque_current"]
 
     @staticmethod
@@ -76,11 +76,8 @@ class MotorComputations:
             The resisting torque due to solid frictions in Nm at the pedals.
         """
         if vel_estimate != 0.0:
-            resisting_current = (
-                self.resisting_current_coeff_proportional
-                * vel_estimate
-                / abs(vel_estimate)
-                * abs(vel_estimate) ** (1 / self.resisting_current_coeff_power)
+            resisting_current = np.sign(vel_estimate) * (
+                self.resisting_current_proportional * abs(vel_estimate) + self.resisting_current_constant
             )
         else:
             # As the motor is not moving, all current is dissipated as heat and corresponds to the resisting current.
