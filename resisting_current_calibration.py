@@ -114,13 +114,13 @@ if __name__ == "__main__":
     plt.ylabel("Resisting current (A)")
     plt.show()
 
-    with open("./parameters/hardware_and_security.json", "r") as f:
+    with open("./ergocycleS2M/parameters/hardware_and_security.json", "r") as f:
         hardware_and_security = json.load(f)
 
-    hardware_and_security["resisting_current_proportional"] = - popt[0][0]
-    hardware_and_security["resisting_current_constant"] = - popt[1][0]
+    hardware_and_security["resisting_current_proportional"] = - float(popt[0][0])
+    hardware_and_security["resisting_current_constant"] = - float(popt[0][1])
 
     # Writing to .json
     json_object = json.dumps(hardware_and_security, indent=4)
-    with open("./parameters/hardware_and_security.json", "w") as outfile:
+    with open("./ergocycleS2M/parameters/hardware_and_security.json", "w") as outfile:
         outfile.write(json_object)

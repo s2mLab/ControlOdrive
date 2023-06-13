@@ -32,6 +32,6 @@
     "pedals_accel_lim": 31,
     "torque_ramp_rate_lim": 5,
     "maximal_cadence_stop": 31,
-    "resisting_current_proportional": 0.01218532,
-    "resisting_current_constant": 0.37856018
+    "resisting_current_proportional": 0.012109769054928311,
+    "resisting_current_constant": 0.38324651511638025
 }
