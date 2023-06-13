@@ -80,8 +80,10 @@ class MotorComputations:
                 self.resisting_current_proportional * abs(vel_estimate) + self.resisting_current_constant
             )
         else:
-            # As the motor is not moving, all current is dissipated as heat and corresponds to the resisting current.
-            resisting_current = i_measured
+            # As the motor is not moving, we consider that all the current under the resisting_current_constant is
+            # dissipated in the motor, the rest corresponds to the user torque. This is not what actually happens but
+            # this choice has been made, in case of the study of a static movement it has to be adapted.
+            resisting_current = - np.sign(i_measured) * min(self.resisting_current_constant, abs(i_measured))
         return self._torque_constant * resisting_current / self._reduction_ratio
 
     def compute_user_torque(
