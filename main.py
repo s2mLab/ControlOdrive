@@ -326,7 +326,8 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
 
         # If the motor is based on cadence control, the ramp is in rpm/s. It can be given to motor.stopping(),
         # else it won't be used. Either way it is protected by the min() function.
-        self.motor.stopping(cadence_ramp_rate=ramp_instruction)
+        self.motor_thread.stopping = True
+        self.motor_thread.stopping_ramp_instruction = ramp_instruction
 
     def _control_display(self):
         """
@@ -554,6 +555,10 @@ class MotorDisplayThread(QtCore.QThread):
         self.saving = False
         self.file_name = ""
 
+        # Stopping
+        self.stopping = False
+        self.stopping_ramp_instruction = 30.0
+
     def watchdog_feed(self):
         """
         Feed the watchdog of the motor.
@@ -636,32 +641,34 @@ class MotorDisplayThread(QtCore.QThread):
 
                 self.watchdog_feed()
 
-            # Adapt the control of the motor accordingly to the current cadence and torque
-            control_mode = self.motor.get_control_mode()
-            # If the motor is in torque control, the torque input needs to be updated in function of the cadence
-            # because of the resisting torque.
-            # Furthermore, it allows to stop the pedals by reducing the torque if the user has stopped.
-            if control_mode == ControlMode.TORQUE_CONTROL:
-                self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
+            if not self.stopping:
+                # Adapt the control of the motor accordingly to the current cadence and torque
+                control_mode = self.motor.get_control_mode()
+                # If the motor is in torque control, the torque input needs to be updated in function of the cadence
+                # because of the resisting torque.
+                # Furthermore, it allows to stop the pedals by reducing the torque if the user has stopped.
+                if control_mode == ControlMode.TORQUE_CONTROL:
+                    self.instruction = self.motor.torque_control(self.spin_box, self.ramp_instruction)
 
-            # The concentric power control mode is based on the torque control mode, but the torque input is calculated
-            # from the current cadence (torque_input = f(power / cadence, resiting torque)).
-            elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
-                self.instruction = self.motor.concentric_power_control(self.spin_box, self.ramp_instruction)
+                # The concentric power control mode is based on the torque control mode, but the torque input is calculated
+                # from the current cadence (torque_input = f(power / cadence, resiting torque)).
+                elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
+                    self.instruction = self.motor.concentric_power_control(self.spin_box, self.ramp_instruction)
 
-            # The linear control mode is based on the torque control mode, but the torque input is calculated from the
-            # current cadence (torque_input = linear_coeff * cadence and resiting torque).
-            elif control_mode == ControlMode.LINEAR_CONTROL:
-                self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
+                # The linear control mode is based on the torque control mode, but the torque input is calculated from the
+                # current cadence (torque_input = linear_coeff * cadence and resiting torque).
+                elif control_mode == ControlMode.LINEAR_CONTROL:
+                    self.instruction = self.motor.linear_control(self.spin_box, self.ramp_instruction)
 
-            # The concentric power control mode is based on the cadence control mode, but the cadence input is
-            # calculated from the current torque (cadence_input = f(power / torque, resiting torque)).
-            elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
-                self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
+                # The concentric power control mode is based on the cadence control mode, but the cadence input is
+                # calculated from the current torque (cadence_input = f(power / torque, resiting torque)).
+                elif control_mode == ControlMode.ECCENTRIC_POWER_CONTROL:
+                    self.instruction = self.motor.eccentric_power_control(self.spin_box, self.ramp_instruction)
 
-            elif control_mode == ControlMode.STOPPING:
+            else:
+                self.motor.stopping(cadence_ramp_rate=self.stopping_ramp_instruction)
                 if abs(self.motor.get_cadence()) < 10.0:
-                    self.motor.stopped()
+                    self.stopping = not self.motor.stopped()
                     self.ui.start_update_pushButton.setEnabled(True)
 
             self.watchdog_feed()
