@@ -545,7 +545,7 @@ class MotorController(MotorComputations):
                 input_motor_torque = motor_torque = 0.0
             else:
                 abs_motor_torque = max(0.0, abs(user_torque) - abs(resisting_torque))
-                motor_torque = - self.get_sign() * abs_motor_torque
+                motor_torque = self.get_sign() * abs_motor_torque
                 input_motor_torque = motor_torque * self._reduction_ratio
 
         # The motor can be controlled with the computed values
