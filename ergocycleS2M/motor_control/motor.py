@@ -556,14 +556,12 @@ class MotorController(MotorComputations):
             self.axis.controller.config.input_mode = INPUT_MODE_TORQUE_RAMP
             self.axis.controller.config.enable_torque_mode_vel_limit = True
 
-            self.axis.controller.config.torque_ramp_rate = torque_ramp_rate_motor
-            self.axis.controller.input_torque = input_motor_torque
+        self.axis.controller.config.torque_ramp_rate = torque_ramp_rate_motor
+        self.axis.controller.input_torque = input_motor_torque
 
+        if self._control_mode not in control_modes_based_on_torque:
             # Starts the motor
             self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-        else:
-            self.axis.controller.config.torque_ramp_rate = torque_ramp_rate_motor
-            self.axis.controller.input_torque = input_motor_torque
 
         # In case the previous control mode was based on torque control but was not `TORQUE_CONTROL`,
         # self._control_mode is updated.
