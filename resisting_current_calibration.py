@@ -58,8 +58,8 @@ def calibration(instruction, nb_turns=5):
     vel_estimate = []
     while t1 - t0 < nb_turns / (abs(instruction) / 60):
         t1 = time.time()
-        iq_measured.append(motor.odrv0.axis0.motor.current_control.Iq_measured)
-        vel_estimate.append(motor.odrv0.axis0.encoder.vel_estimate)
+        iq_measured.append(motor.axis.motor.current_control.Iq_measured)
+        vel_estimate.append(motor.axis.encoder.vel_estimate)
 
     return np.mean(iq_measured), np.mean(vel_estimate)
 

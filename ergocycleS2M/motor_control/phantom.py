@@ -22,10 +22,7 @@ parameters_path = Path(__file__).resolve().parent.parent / "parameters"
 
 class Phantom(MotorComputations):
     """
-    Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
-    Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 the all the
-    occurrences of `axis0` would need to be set to `axis1`. If the user wants to connect a second Odrive, the script
-    would need to be adapted with `odrv1`.
+    Represents phantom class of the MotorController class: no odrive board need to be connected to use this class.
     """
 
     def __init__(
