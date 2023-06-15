@@ -357,7 +357,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
         Start or stop saving the data to a file.
         """
         # Choosing the file name at the beginning of the saving.
-        self.motor_thread.file_name = f"XP/{self.ui.save_lineEdit.text()}"
+        self.motor_thread.file_name = self.ui.save_lineEdit.text()
         ext = ".bio"
         if os.path.isfile(f"{self.motor_thread.file_name}{ext}"):
             # File already exists, add a suffix to the filename
