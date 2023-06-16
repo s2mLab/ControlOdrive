@@ -168,7 +168,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             if index >= 2:
                 index = 0
         else:
-            raise ValueError(f"{training_mode} training has not been implemented yet.")
+            raise NotImplementedError(f"{training_mode} training has not been implemented yet.")
         self.ui.control_comboBox.setCurrentIndex(index)
         self._update_instruction_display_on_control_mode_change()
 
@@ -205,7 +205,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                 self.ui.ramp_label.setText("Cadence ramp")
                 self.ui.acceleration_units_label.setText("rpm/s")
             else:
-                raise ValueError(f"{training_mode} training has not been implemented yet.")
+                raise NotImplementedError(f"{training_mode} training has not been implemented yet.")
 
         elif control_mode == GUIControlMode.LINEAR.value:
             self.ui.instruction_spinBox.setRange(0, 1.0)
@@ -241,7 +241,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             self.ui.acceleration_units_label.setText("N.m/s")
 
         else:
-            raise ValueError(f"{control_mode} control has not been implemented yet.")
+            raise NotImplementedError(f"{control_mode} control has not been implemented yet.")
 
     def _set_instruction_to_0(self):
         """
@@ -289,7 +289,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
                     self.motor_thread.spin_box, self.motor_thread.ramp_instruction
                 )
             else:
-                raise ValueError(f"{self._training_mode} training has not been implemented yet.")
+                raise NotImplementedError(f"{self._training_mode} training has not been implemented yet.")
 
         elif self._gui_control_mode == GUIControlMode.LINEAR:
             self.motor_thread.spin_box = self.ui.instruction_spinBox.value()
@@ -309,7 +309,7 @@ class ErgocycleApplication(QtWidgets.QMainWindow):
             )
 
         else:
-            raise ValueError(f"{self._gui_control_mode} control has not been implemented yet.")
+            raise NotImplementedError(f"{self._gui_control_mode} control has not been implemented yet.")
 
     def _control_stop(self):
         """
