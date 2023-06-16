@@ -6,13 +6,13 @@ from setuptools import setup
 setup(
     name="ergocycleS2M",
     version="1.0",
-    author="S2M",
+    author="Amandine Chupin",
     description="A project to control the ergocycle with a graphic interface",
     packages=[
         "ergocycleS2M",
         "ergocycleS2M.data_processing",
-        "ergocycleS2M.motor_control",
         "ergocycleS2M.gui",
+        "ergocycleS2M.motor_control",
         "ergocycleS2M.parameters",
     ],
     data_files=[
@@ -21,10 +21,10 @@ setup(
             ["ergocycleS2M/parameters/hardware_and_security.json", "ergocycleS2M/parameters/gains.json"],
         ),
     ],
-    install_requires=["numpy", "matplotlib", "PyQt5", "pyqtgraph"],
+    install_requires=["matplotlib", "numpy", "odrive", "PyQt5", "pyqtgraph", "scipy"],
     entry_points={
         "console_scripts": [
-            "read_ergocycle_file = ergocycleS2M.data_processing.save_and_load:read_from_terminal",
+            "read_ergocycle_file = ergocycleS2M.data_processing.load:read_from_terminal",
             "start_ergocycle = ergocycleS2M.gui.main:main",
         ],
     },
