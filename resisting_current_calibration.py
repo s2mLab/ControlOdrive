@@ -80,9 +80,7 @@ if __name__ == "__main__":
             intensities.append(average_iq_measured)
             velocities.append(average_vel_estimate)
 
-    def lost_current(
-            vel_estimate, resisting_current_proportional, resisting_current_constant
-    ):
+    def lost_current(vel_estimate, resisting_current_proportional, resisting_current_constant):
         """
         The current corresponding to the resisting torque of the motor is modeled as a linear function of the velocity.
 
@@ -100,9 +98,8 @@ if __name__ == "__main__":
 
         """
         return np.sign(vel_estimate) * (
-                resisting_current_proportional * np.abs(vel_estimate) + resisting_current_constant
+            resisting_current_proportional * np.abs(vel_estimate) + resisting_current_constant
         )
-
 
     popt = curve_fit(lost_current, np.asarray(velocities), np.asarray(intensities), p0=[0.01, 0.5])
 
@@ -117,8 +114,8 @@ if __name__ == "__main__":
     with open("./ergocycleS2M/parameters/hardware_and_security.json", "r") as f:
         hardware_and_security = json.load(f)
 
-    hardware_and_security["resisting_current_proportional"] = - float(popt[0][0])
-    hardware_and_security["resisting_current_constant"] = - float(popt[0][1])
+    hardware_and_security["resisting_current_proportional"] = -float(popt[0][0])
+    hardware_and_security["resisting_current_constant"] = -float(popt[0][1])
 
     # Writing to .json
     json_object = json.dumps(hardware_and_security, indent=4)

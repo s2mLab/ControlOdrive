@@ -30,7 +30,7 @@
     "watchdog_feed_time": 0.01,
     "reduction_ratio": 0.02442002442002442,
     "pedals_accel_lim": 31,
-    "torque_ramp_rate_lim": 5,
+    "torque_ramp_rate_lim": 5.5,
     "maximal_cadence_stop": 31,
     "resisting_current_proportional": 0.012109769054928311,
     "resisting_current_constant": 0.38324651511638025

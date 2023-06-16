@@ -160,9 +160,10 @@ class MotorController(MotorComputations):
             # As all the code is on the same thread (except for `_internal_watchdog_feed`), not anything else will
             # happen until the watchdog is fully enabled.
             time.sleep(3 * self._watchdog_timeout)  # 3 was chosen arbitrarily
-            # TODO: Clear only the `AXIS_ERROR_WATCHDOG_TIMER_EXPIRED`.
-            if self.axis.error == AXIS_ERROR_WATCHDOG_TIMER_EXPIRED:
-                self.axis.error = AXIS_ERROR_NONE
+            if traduce_error(AXIS_ERROR_WATCHDOG_TIMER_EXPIRED, ODriveAxisError) in traduce_error(
+                self.axis.error, ODriveAxisError
+            ):
+                self.axis.error -= AXIS_ERROR_WATCHDOG_TIMER_EXPIRED
             self.odrive_board.clear_errors()
             print("Watchdog enabled")
             return True
@@ -283,9 +284,7 @@ class MotorController(MotorComputations):
             )
         if k_vel_integrator_gain is not None:
             self.axis.controller.config.vel_integrator_gain = (
-                k_vel_integrator_gain
-                * self.axis.motor.config.torque_constant
-                * self.axis.encoder.config.cpr
+                k_vel_integrator_gain * self.axis.motor.config.torque_constant * self.axis.encoder.config.cpr
             )
         # For position, cadence and torque control
         if current_gain is not None:
@@ -301,8 +300,12 @@ class MotorController(MotorComputations):
         """
         Configures the settings linked to the hardware or the security not supposed to be changed by the user.
         """
-        self.odrive_board.config.enable_dc_bus_overvoltage_ramp = self.hardware_and_security["enable_dc_bus_overvoltage_ramp"]
-        self.odrive_board.config.dc_bus_overvoltage_ramp_start = self.hardware_and_security["dc_bus_overvoltage_ramp_start"]
+        self.odrive_board.config.enable_dc_bus_overvoltage_ramp = self.hardware_and_security[
+            "enable_dc_bus_overvoltage_ramp"
+        ]
+        self.odrive_board.config.dc_bus_overvoltage_ramp_start = self.hardware_and_security[
+            "dc_bus_overvoltage_ramp_start"
+        ]
         self.odrive_board.config.dc_bus_overvoltage_ramp_end = self.hardware_and_security["dc_bus_overvoltage_ramp_end"]
         self.odrive_board.config.gpio9_mode = self.hardware_and_security["gpio9_mode"]
         self.odrive_board.config.gpio10_mode = self.hardware_and_security["gpio10_mode"]
@@ -317,9 +320,7 @@ class MotorController(MotorComputations):
         self.axis.controller.config.vel_limit = (
             self.hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60
         )  # tr/s
-        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security[
-            "vel_limit_tolerance"
-        ]  # tr/s
+        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
         # Encoder
         self.axis.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
@@ -331,13 +332,9 @@ class MotorController(MotorComputations):
         self.axis.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
         self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
         self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
-        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security[
-            "resistance_calib_max_voltage"
-        ]
+        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
         self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
-        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security[
-            "current_control_bandwidth"
-        ]
+        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
         self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self._reduction_ratio
 
@@ -527,7 +524,11 @@ class MotorController(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            # TODO: Check if the torque ramp rate is correct
+            if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+                raise ValueError(
+                    f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+                    f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+                )
             torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
 
             if abs(user_torque * self._reduction_ratio) > self.axis.motor.config.torque_lim:
@@ -573,7 +574,10 @@ class MotorController(MotorComputations):
         self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
     ) -> float:
         """
-        # TODO add docstring in all to explain to call in a thread.
+        Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
+        the torque imposed at the user adapts to its cadence to ensure the power.
+        As the torque has to adapt to the cadence, this function has to be called in a loop or a thread depending.
+
         Parameters
         ----------
         power: float
@@ -603,6 +607,9 @@ class MotorController(MotorComputations):
         self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0
     ) -> float:
         """
+        Ensure a constant power at the pedals. In eccentric mode, the power is negative when the user is pedaling and
+        the cadence imposed at the user adapts to its torque to ensure the power.
+
         Parameters
         ----------
         power: float
@@ -632,6 +639,8 @@ class MotorController(MotorComputations):
         self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
     ) -> float:
         """
+        Produce a torque proportional to the user's cadence.
+
         Parameters
         ----------
         linear_coeff: float
@@ -799,9 +808,7 @@ class MotorController(MotorComputations):
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
         """
-        return self.compute_user_torque(
-            self.axis.motor.current_control.Iq_measured, self.axis.encoder.vel_estimate
-        )
+        return self.compute_user_torque(self.axis.motor.current_control.Iq_measured, self.axis.encoder.vel_estimate)
 
     def get_errors(self) -> str:
         """

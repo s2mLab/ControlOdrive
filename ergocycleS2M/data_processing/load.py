@@ -330,7 +330,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         spinbox_for_torque = np.zeros(len(data["spin_box"]))
         spinbox_for_torque[:] = np.nan
         spinbox_for_torque[data["control_mode"] == ControlMode.TORQUE_CONTROL.value] = data["spin_box"][
-           data["control_mode"] == ControlMode.TORQUE_CONTROL.value
+            data["control_mode"] == ControlMode.TORQUE_CONTROL.value
         ]
 
     fig, ax1 = plt.subplots()
@@ -350,7 +350,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
     ax1.plot(
         data["time"],
-        instruction_for_torque,
+        -instruction_for_torque,
         label="Instruction",
     )
 
@@ -361,10 +361,10 @@ def plot_data(data: dict, plot_errors: bool = False):
         spinbox_for_power = np.zeros(len(data["spin_box"]))
         spinbox_for_power[:] = np.nan
         spinbox_for_power[data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value] = data["spin_box"][
-           data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
+            data["control_mode"] == ControlMode.CONCENTRIC_POWER_CONTROL.value
         ]
         spinbox_for_power[data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value] = data["spin_box"][
-           data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
+            data["control_mode"] == ControlMode.ECCENTRIC_POWER_CONTROL.value
         ]
 
     fig, ax1 = plt.subplots()
@@ -436,4 +436,4 @@ if __name__ == "__main__":
     script_directory = os.path.dirname(os.path.abspath(script_path))
     control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
 
-    plot_data(read(control_odrive_directory + "/XP/Calib_torque.bio", 100, 100))
+    plot_data(read(control_odrive_directory + "/Test_power_1.bio", 100, 100), plot_errors=True)

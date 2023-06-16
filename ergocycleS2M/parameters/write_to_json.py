@@ -55,7 +55,7 @@ dictionary = {
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8 / 36 * 10 / 91,
     "pedals_accel_lim": 31,  # (rpm)/s of the pedals
-    "torque_ramp_rate_lim": 5,  # Nm/s
+    "torque_ramp_rate_lim": 5.5,  # Nm/s
     "maximal_cadence_stop": 31,  # tr/s of the pedals
     "resisting_current_proportional": hardware_and_security["resisting_current_proportional"],
     "resisting_current_constant": hardware_and_security["resisting_current_constant"],
