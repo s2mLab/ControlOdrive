@@ -580,6 +580,8 @@ class MotorDisplayThread(QtCore.QThread):
         while self.run:
             self.watchdog_feed()
 
+            # TODO time.sleep
+
             if self.saving:
                 # Save data
                 if self.comment_to_save:

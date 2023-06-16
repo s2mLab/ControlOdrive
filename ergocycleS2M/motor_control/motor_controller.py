@@ -832,8 +832,8 @@ class MotorController(MotorComputations):
         instruction: float = None,
         ramp_instruction: float = None,
         comment: str = "",
-        stopwatch: float = 0.0,
-        lap: float = 0.0,
+        stopwatch: float = None,
+        lap: float = None,
         training_mode: str = "",
     ):
         """
