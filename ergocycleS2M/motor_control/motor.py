@@ -766,7 +766,7 @@ class MotorController(MotorComputations):
         """
         Returns the user mechanical power in W.
         """
-        return self.compute_user_torque(self.get_user_torque(), self.get_cadence())
+        return self.compute_user_power(self.get_user_torque(), self.get_cadence())
 
     def get_iq_setpoint(self) -> float:
         """

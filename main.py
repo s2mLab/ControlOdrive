@@ -679,11 +679,11 @@ class MotorDisplayThread(QtCore.QThread):
                 self.time_array = np.roll(self.time_array, -1)
                 self.time_array[-1] = time.time() - self.plot_start_time
                 self.cadence_array = np.roll(self.cadence_array, -1)
-                self.cadence_array[-1] = self.motor.get_cadence()
+                self.cadence_array[-1] = cadence = self.motor.get_cadence()
                 self.torque_array = np.roll(self.torque_array, -1)
-                self.torque_array[-1] = self.motor.get_user_torque()
+                self.torque_array[-1] = torque = self.motor.get_user_torque()
                 self.power_array = np.roll(self.power_array, -1)
-                self.power_array[-1] = self.motor.get_user_power()
+                self.power_array[-1] = self.motor.compute_user_power(torque, cadence)
                 if self.motor_started:
                     if self.spin_box_array is None:
                         self.spin_box_array = np.zeros(self.size_arrays)
