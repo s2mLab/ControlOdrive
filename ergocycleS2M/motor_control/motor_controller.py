@@ -759,29 +759,11 @@ class MotorController(MotorComputations):
         """
         return self.compute_cadence(self.axis.encoder.vel_estimate)
 
-    def get_electrical_power(self) -> float:
-        """
-        Returns the electrical power in W.
-        """
-        return self.axis.controller.electrical_power
-
-    def get_mechanical_power(self) -> float:
-        """
-        Returns the mechanical power in W.
-        """
-        return self.axis.controller.mechanical_power
-
     def get_user_power(self) -> float:
         """
         Returns the user mechanical power in W.
         """
         return self.compute_user_power(self.get_user_torque(), self.get_cadence())
-
-    def get_iq_setpoint(self) -> float:
-        """
-        Returns the commanded motor current in A.
-        """
-        return self.axis.motor.current_control.Iq_setpoint
 
     def get_iq_measured(self) -> float:
         """
