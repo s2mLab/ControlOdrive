@@ -1,13 +1,13 @@
 import multiprocessing as mp
 import sys
-
+import time
 from ctypes import c_bool, c_double
 from PyQt5 import QtWidgets
 
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
-# from ergocycleS2M.motor_control.motor_controller import MotorController
-from ergocycleS2M.motor_control.mock_controller import MockController
+from ergocycleS2M.motor_control.motor_controller import MotorController
+# from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
@@ -35,28 +35,27 @@ class Application:
         self.queue_comment = mp.Queue()
 
         # Create the processes
-        self.motor_process = mp.Process(name="motor", target=self.motor_control_process, daemon=True)
+        # self.motor_process = mp.Process(name="motor", target=self.motor_control_process, daemon=True)
         self.gui_process = mp.Process(name="gui", target=self.gui_process, daemon=True)
 
     def start(self):
         """ """
-        self.motor_process.start()
+        # self.motor_process.start()
         self.gui_process.start()
-        self.gui_process.join()
+        self.motor_control_process()
 
     def motor_control_process(self):
         """
         Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
         It updates the command and the display, saves the data and feeds the watchdog.
         """
-        motor = MockController(enable_watchdog=True, external_watchdog=True)
+        motor = MotorController(enable_watchdog=True, external_watchdog=False)
         stopping_ramp_instruction = 30.0
         # TODO: zero_position_calibration
+        is_cadence_control = False
 
         while self.run.value:
-            # motor.axis.watchdog_feed()
             control_mode = motor.get_control_mode()
-            is_cadence_control = False
 
             if self.zero_position.value:
                 motor.zero_position_calibration()
@@ -67,6 +66,7 @@ class Application:
                 try:
                     control_mode, direction = self.queue_instructions.get_nowait()
                     motor.set_direction(direction)
+                    is_cadence_control = False
                 except Exception:
                     pass
 
@@ -105,7 +105,6 @@ class Application:
                 motor.stopping(cadence_ramp_rate=stopping_ramp_instruction)
                 if abs(motor.get_cadence()) < 10.0:
                     self.stopping.value = not motor.stopped()
-                is_cadence_control = False
 
             self.i_measured.value = motor.get_iq_measured()
             self.turns.value = motor.get_turns()
