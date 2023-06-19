@@ -813,10 +813,10 @@ class MotorController(MotorComputations):
         spin_box: float = None,
         instruction: float = None,
         ramp_instruction: float = None,
-        comment: str = "",
+        comment: str = None,
         stopwatch: float = None,
         lap: float = None,
-        training_mode: str = "",
+        training_mode: str = None,
     ):
         """
         Saves data. Only the data needed to reconstruct all the data is saved.

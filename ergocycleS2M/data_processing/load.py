@@ -24,7 +24,7 @@ from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.utils import traduce_error
 
 
-def load(filename: str, number_of_line: int = None) -> dict:
+def load(filename: str) -> dict:
     """
     This function reads data from a pickle file to concatenate them into one dictionary. Copied and adapted from
     https://github.com/pyomeca/biosiglive/blob/a9ac18d288e6cadd1bd3d38f9fc4a1584a789065/biosiglive/file_io/save_and_load.py
@@ -33,8 +33,6 @@ def load(filename: str, number_of_line: int = None) -> dict:
     ----------
     filename : str
         The path to the file.
-    number_of_line : int
-        The number of lines to read. If None, all lines are read. Not tested in this project.
 
     Returns
     -------
@@ -44,29 +42,26 @@ def load(filename: str, number_of_line: int = None) -> dict:
     if Path(filename).suffix != ".bio":
         raise ValueError("The file must be a .bio file.")
     data = {}
-    limit = 2 if not number_of_line else number_of_line
     with open(filename, "rb") as file:
-        count = 0
-        while count < limit:
+        while True:
             try:
                 data_tmp = pickle.load(file)
                 for key in data_tmp.keys():
+                    # If the key is already in the dictionary, we concatenate the data
                     if key in data.keys() and data[key] is not None:
                         if isinstance(data[key], list) is True:
                             data[key].append(data_tmp[key])
                         else:
                             data[key] = np.append(data[key], data_tmp[key], axis=len(data[key].shape) - 1)
+                    # If the key is not in the dictionary (first appearance), we add it
                     else:
-                        if isinstance(data_tmp[key], (int, float, str, dict)) is True:
-                            data[key] = [data_tmp[key]]
-                        elif isinstance(data_tmp[key], list) is True:
-                            data[key] = [data_tmp[key]]
+                        # If the first appearance is not the first entry of the file, we must create the entry and fill
+                        # it with Nones
+                        if "time" in data.keys() and len(data["time"]) > 1:
+                            data[key] = [None] * (len(data["time"]) - 1) + [data_tmp[key]]
+                        # Else, we can create the entry and fill it with the data
                         else:
-                            data[key] = data_tmp[key]
-                if number_of_line:
-                    count += 1
-                else:
-                    count = 1
+                            data[key] = [data_tmp[key]]
             except EOFError:
                 break
     return data
@@ -436,4 +431,4 @@ if __name__ == "__main__":
     script_directory = os.path.dirname(os.path.abspath(script_path))
     control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
 
-    plot_data(read(control_odrive_directory + "/Test_power_1.bio", 100, 100), plot_errors=True)
+    plot_data(read(control_odrive_directory + "/data_from_dyn_calibration_54.bio", 100, 100), plot_errors=True)
