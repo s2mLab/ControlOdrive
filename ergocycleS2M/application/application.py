@@ -189,6 +189,8 @@ class Application:
                         comment = self.queue_comment.get_nowait()
                     except Exception:
                         comment = ""
+                    while time.time() - time_prev_save < 1.0 / self.saving_frequency:
+                        pass
                     save_data_to_file(
                         file_path=file_name,
                         time=time.time() - t0,
@@ -213,9 +215,6 @@ class Application:
                         sensorless_estimator_error=self.sensorless_estimator_error.value[0],
                         can_error=self.can_error.value[0],
                     )
-                    loop_time = time.time() - time_prev_save
                     time_prev_save = time.time()
-                    if loop_time < 1.0 / self.saving_frequency:
-                        time.sleep(1.0 / self.saving_frequency - loop_time)
             except Exception:
                 pass
