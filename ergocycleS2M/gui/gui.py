@@ -1,24 +1,13 @@
 import multiprocessing as mp
 import numpy as np
-import os
-import sys
 import time
+
 from PyQt5 import QtCore, QtGui, QtWidgets
-from ctypes import c_bool, c_double
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
-from ergocycleS2M.motor_control.enums import (
-    DirectionMode,
-)
-from ergocycleS2M.gui.gui_enums import (
-    GUIControlMode,
-    StopwatchStates,
-    TrainingMode,
-)
-from ergocycleS2M.gui.gui_utils import (
-    PlotWidget,
-)
-from ergocycleS2M.motor_control.enums import ControlMode
+from ergocycleS2M.gui.gui_enums import GUIControlMode, StopwatchStates, TrainingMode
+from ergocycleS2M.gui.gui_utils import PlotWidget
+from ergocycleS2M.motor_control.enums import ControlMode, DirectionMode
 from ergocycleS2M.motor_control.motor_computations import MotorComputations
 
 
@@ -37,46 +26,36 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         vel_estimate: mp.Manager().Value,
         queue_instructions: mp.Queue,
         zero_position: mp.Manager().Value,
+        update_period: float = 0.1,
+        plot_window_size: int = 10,
     ):
         super(ErgocycleGUI, self).__init__(parent=None)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        # Only raw data is received from the motor process, they are processed in the GUI
         self.motor_computations = MotorComputations()
 
         # Shared memory
+        # Security
         self.run = run
+        # Control
+        self.zero_position = zero_position
+        self.queue_instruction = queue_instructions
+        self.spin_box = spin_box
         self.instruction = instruction
         self.ramp_instruction = ramp_instruction
-        self.spin_box = spin_box
         self.stopping = stopping
+        # Saving
         self.saving = saving
         self.queue_comment = queue_comment
+        # Data
         self.i_measured = i_measured
         self.turns = turns
         self.vel_estimate = vel_estimate
-        self.queue_instruction = queue_instructions
-        self.zero_position = zero_position
 
-        self.motor_started = False
-
-        # Plot
-        self._gui_control_mode = GUIControlMode.POWER
-        self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g", show_x_axis=False)
-        self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
-        self.plot_power.getAxis("bottom").setStyle(tickLength=0)
-        self.plot_cadence = PlotWidget(self, name="Cadence", y_label="Cadence (rpm)", color="r", show_x_axis=False)
-        self.ui.cadence_horizontalLayout.insertWidget(0, self.plot_cadence)
-        self.plot_cadence.getAxis("bottom").setStyle(tickLength=0)
-        self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b", y_axis_range=5)
-        self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
-        self.plot_start_time = 0.0
-        self.plot_frequency = 2  # Hz
-        self.size_arrays = 20 * self.plot_frequency  # 10 seconds
-        self.time_array = np.linspace(-self.size_arrays / self.plot_frequency, 0, self.size_arrays)
-        self.cadence_array = np.zeros(self.size_arrays)
-        self.torque_array = np.zeros(self.size_arrays)
-        self.power_array = np.zeros(self.size_arrays)
-        self.spin_box_array = None
+        # Security
+        self.ui.emergency_pushButton.clicked.connect(self.emergency_stop)
 
         # Colors
         self._color_red = QtGui.QColor(255, 150, 150)
@@ -86,13 +65,12 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self.ui.angle_reset_pushButton.backgroundRole()
         )
         self._color_grey = QtGui.QColor(220, 220, 220)
-        self.ui.power_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
-        self.ui.cadence_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
-        self.ui.torque_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
 
-        # Security
-        self.ui.emergency_pushButton.clicked.connect(self.emergency_stop)
-
+        # Control
+        self.motor_started = False
+        self._gui_control_mode = GUIControlMode.POWER
+        self._angle_reset_once = False
+        self.ui.angle_reset_pushButton.clicked.connect(self._angle_reset)
         # Modes
         # Training mode
         self.ui.training_comboBox.addItems([TrainingMode.CONCENTRIC.value, TrainingMode.ECCENTRIC.value])
@@ -105,10 +83,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         self.ui.direction_comboBox.addItems([DirectionMode.FORWARD.value, DirectionMode.REVERSE.value])
         self.ui.direction_comboBox.setCurrentIndex(0)
         self.ui.direction_comboBox.activated.connect(self._set_instruction_to_0)
-
-        # Command
-        self._angle_reset_once = False
-        self.ui.angle_reset_pushButton.clicked.connect(self._angle_reset)
+        # Instructions
         self.ui.start_update_pushButton.clicked.connect(self._control_update)
         self.ui.stop_pushButton.clicked.connect(self._control_stop)
         self.ui.stop_pushButton.setEnabled(False)
@@ -119,7 +94,6 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         self.ui.save_st_pushButton.clicked.connect(self._save_start_stop)
         self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
         self.training_mode = self.ui.training_comboBox.currentText()
-
         # Comments
         self.ui.comments_save_pushButton.clicked.connect(self._comments_save)
         self.ui.comments_save_pushButton.setEnabled(False)
@@ -138,21 +112,36 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         self.ui.stopwatch_lcdNumber.setDigitCount(8)
         self.ui.lap_lcdNumber.setDigitCount(5)
 
+        # Plot
+        self.plot_power = PlotWidget(self, name="Power", y_label="Power (W)", color="g", show_x_axis=False)
+        self.ui.power_horizontalLayout.insertWidget(0, self.plot_power)
+        self.plot_power.getAxis("bottom").setStyle(tickLength=0)
+        self.plot_cadence = PlotWidget(self, name="Cadence", y_label="Cadence (rpm)", color="r", show_x_axis=False)
+        self.ui.cadence_horizontalLayout.insertWidget(0, self.plot_cadence)
+        self.plot_cadence.getAxis("bottom").setStyle(tickLength=0)
+        self.plot_torque = PlotWidget(self, name="Torque", y_label="Torque (N.m)", color="b", y_axis_range=5)
+        self.ui.torque_horizontalLayout.insertWidget(0, self.plot_torque)
+        self.plot_window_size = plot_window_size
+        self.size_arrays = int(self.plot_window_size * 1 / update_period)  # 20 seconds
+        self.time_array = np.linspace(-self.plot_window_size, 0, self.size_arrays)
+        self.cadence_array = np.zeros(self.size_arrays)
+        self.torque_array = np.zeros(self.size_arrays)
+        self.power_array = np.zeros(self.size_arrays)
+        self.spin_box_array = None
+
         # Style
         self.ui.start_update_pushButton.setStyleSheet(f"background-color: {self._color_green.name()};")
         self.ui.errors_label.setStyleSheet(f"font-weight: bold; color: red;")
         self.ui.emergency_pushButton.setStyleSheet(f"background-color: red; color: white;")
+        self.ui.power_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
+        self.ui.cadence_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
+        self.ui.torque_label.setStyleSheet(f"background-color: {self._color_grey.name()}")
 
-        # Data
-        self._display_frequency = 4  # Hz
-        self._save_frequency = 5  # Hz
-
-        self.plot_start_time = QtCore.QDateTime.currentMSecsSinceEpoch() / 1000
-
-
+        # Update the display according to `update_period`
         self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.loop)  # Connect the timeout signal to update_label method
-        self.timer.start(100)  # Update the label every 1000 milliseconds (1 second)
+        self.timer.timeout.connect(self.loop)
+        self.plot_start_time = time.time()
+        self.timer.start(int(update_period * 1000))  # milliseconds
 
     def emergency_stop(self):
         """
@@ -335,7 +324,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self._plot_add_instruction()
             self.training_mode = self.ui.training_comboBox.currentText()
             self.plot_start_time = time.time()
-            self.time_array = np.linspace(-self.size_arrays / self.plot_frequency, 0, self.size_arrays)
+            self.time_array = np.linspace(-self.plot_window_size, 0, self.size_arrays)
 
         # Update instructions and the control depending on the control mode.
         self.ramp_instruction.value = self.ui.acceleration_spinBox.value()
@@ -618,38 +607,3 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             else:
                 self.spin_box_array = None
             self._plot_update()
-
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    # Shared memory
-    # Instructions
-    instruction = mp.Manager().Value(c_double, 0.0)
-    ramp_instruction = mp.Manager().Value(c_double, 0.0)
-    spin_box = mp.Manager().Value(c_double, 0.0)
-    run = mp.Manager().Value(c_bool, True)
-    stopping = mp.Manager().Value(c_bool, False)
-    queue_instructions = mp.Manager().Queue()
-    zero_position = mp.Manager().Value(c_bool, 0.0)
-    i_measured = mp.Manager().Value(c_double, 0.0)
-    turns = mp.Manager().Value(c_double, 0.0)
-    vel_estimate = mp.Manager().Value(c_double, 0.0)
-    saving = mp.Manager().Value(c_bool, False)
-    queue_comment = mp.Queue()
-
-    gui = ErgocycleGUI(
-        run,
-        instruction,
-        ramp_instruction,
-        spin_box,
-        stopping,
-        saving,
-        queue_comment,
-        i_measured,
-        turns,
-        vel_estimate,
-        queue_instructions,
-        zero_position,
-    )
-    gui.show()
-    app.exec()
