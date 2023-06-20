@@ -13,8 +13,8 @@ from ergocycleS2M.data_processing.save import save_data_to_file
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
 
-# from ergocycleS2M.motor_control.motor_controller import MotorController
-from ergocycleS2M.motor_control.mock_controller import MockController
+from ergocycleS2M.motor_control.motor_controller import MotorController
+# from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
@@ -152,7 +152,7 @@ class Application:
         and update its data in the shared memory.
         To be launched in the main process.
         """
-        motor = MockController(enable_watchdog=True, external_watchdog=False)
+        motor = MotorController(enable_watchdog=True, external_watchdog=False)
         motor.zero_position_calibration()
         is_cadence_control = False
 
