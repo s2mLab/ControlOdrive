@@ -8,17 +8,18 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from ergocycleS2M.gui.application import ErgocycleApplication
-from ergocycleS2M.motor_control.motor_controller import MotorController
+from ergocycleS2M.gui.application_gui import ErgocycleApplication
 
-# from ergocycleS2M.motor_control.mock_controller import MockController
+# from ergocycleS2M.motor_control.motor_controller import MotorController
+
+from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 def main():
     """
     Main function to run the application.
     """
-    motor = MotorController(enable_watchdog=True, external_watchdog=True)
+    motor = MockController(enable_watchdog=True, external_watchdog=True)
     app = QtWidgets.QApplication(sys.argv)
     gui = ErgocycleApplication(motor)
     gui.show()

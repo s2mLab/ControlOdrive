@@ -771,6 +771,12 @@ class MotorController(MotorComputations):
         """
         return self.axis.motor.current_control.Iq_measured
 
+    def get_vel_estimate(self) -> float:
+        """
+        Returns the estimated velocity of the motor in tr/s.
+        """
+        return self.axis.encoder.vel_estimate
+
     def get_motor_torque(self) -> float:
         """
         Returns the measured torque.

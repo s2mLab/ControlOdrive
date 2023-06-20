@@ -502,6 +502,12 @@ class MockController(MotorComputations):
         """
         return self.mock_axis_motor_current_control_iq_measured()
 
+    def get_vel_estimate(self) -> float:
+        """
+        Returns the estimated velocity of the motor in tr/s.
+        """
+        return self.mock_axis_encoder_vel_estimate()
+
     def get_motor_torque(self) -> float:
         """
         Returns the measured torque.

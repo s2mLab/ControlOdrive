@@ -2,13 +2,15 @@ import multiprocessing as mp
 import sys
 import time
 
+from ctypes import c_bool
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
 from ergocycleS2M.gui.gui_enums import StopwatchStates
 from ergocycleS2M.motor_control.mock_controller import MockController
 
-queue = mp.Manager().Queue()
+queue = mp.Manager().Value("d", 0.0)
+
 
 class MotorUpdateAndDisplayThread(QtCore.QThread):
     """
@@ -58,10 +60,7 @@ class MotorUpdateAndDisplayThread(QtCore.QThread):
             seconds = int(self.lap % 60)  # get the integer part of the remainder
             self.ui.lap_lcdNumber.display(f"{minutes:02d}:{seconds:02d}")
 
-            try:
-                self.ui.errors_label.setText(f"torque {queue.get_nowait()}")
-            except:
-                pass
+            self.ui.errors_label.setText(f"torque {queue.value}")
 
 
 class Application(QtWidgets.QMainWindow):
@@ -153,13 +152,15 @@ def run_appli():
     gui = Application()
     gui.show()
     app.exec()
+    app.run = False
 
 
 def motor_process_function():
     motor = MockController(enable_watchdog=True, external_watchdog=True)
     while True:
         time.sleep(1.0)
-        queue.put_nowait(motor.get_motor_torque())
+        data = {"truc": 1.0, "machin": "lala", "bidule": motor.get_motor_torque()}
+        queue.value = motor.get_motor_torque()
 
 
 motor_process = mp.Process(name="gui", target=motor_process_function, daemon=True)
