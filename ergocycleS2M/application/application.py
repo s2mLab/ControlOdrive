@@ -9,8 +9,8 @@ from ergocycleS2M.data_processing.save import save_data_to_file
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
 
-# from ergocycleS2M.motor_control.motor_controller import MotorController
-from ergocycleS2M.motor_control.mock_controller import MockController
+from ergocycleS2M.motor_control.motor_controller import MotorController
+# from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
@@ -67,7 +67,7 @@ class Application:
         Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
         It updates the command and the display, saves the data and feeds the watchdog.
         """
-        motor = MockController(enable_watchdog=True, external_watchdog=False)
+        motor = MotorController(enable_watchdog=True, external_watchdog=False)
         stopping_ramp_instruction = 30.0
         # TODO: zero_position_calibration
         is_cadence_control = False

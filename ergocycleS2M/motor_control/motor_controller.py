@@ -813,6 +813,30 @@ class MotorController(MotorComputations):
         )
         return error_text
 
+    def get_error(self) -> int:
+        return self.odrive_board.error
+
+    def get_axis_error(self) -> int:
+        return self.axis.error
+
+    def get_motor_error(self) -> int:
+        return self.axis.motor.error
+
+    def get_encoder_error(self) -> int:
+        return self.axis.encoder.error
+
+    def get_controller_error(self) -> int:
+        return self.axis.controller.error
+
+    def get_sensorless_estimator_error(self) -> int:
+        return self.axis.sensorless_estimator.error
+
+    def get_can_error(self) -> int:
+        return self.odrive_board.can.error
+
+    def get_state(self) -> int:
+        return self.axis.current_state
+
     def minimal_save_data_to_file(
         self,
         file_path: str,
