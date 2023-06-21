@@ -804,11 +804,11 @@ class MotorController(MotorComputations):
         """
         error_text = (
             f"{traduce_error(self.odrive_board.error, ODriveError)} "
-            f"{traduce_error(self.odrive_board.error, ODriveSensorlessEstimatorError)} "
             f"{traduce_error(self.axis.error, ODriveAxisError)} "
-            f"{traduce_error(self.axis.error, ODriveEncoderError)} "
             f"{traduce_error(self.axis.controller.error, ODriveControllerError)} "
+            f"{traduce_error(self.axis.encoder.error, ODriveEncoderError)} "
             f"{traduce_error(self.axis.motor.error, ODriveMotorError)} "
+            f"{traduce_error(self.axis.sensorless_estimator.error, ODriveSensorlessEstimatorError)} "
             f"{traduce_error(self.odrive_board.can.error, ODriveCanError)}"
         )
         return error_text

@@ -537,6 +537,30 @@ class MockController(MotorComputations):
         """
         return ""
 
+    def get_error(self) -> int:
+        return 0
+
+    def get_axis_error(self) -> int:
+        return 0
+
+    def get_motor_error(self) -> int:
+        return 0
+
+    def get_encoder_error(self) -> int:
+        return 0
+
+    def get_controller_error(self) -> int:
+        return 0
+
+    def get_sensorless_estimator_error(self) -> int:
+        return 0
+
+    def get_can_error(self) -> int:
+        return 0
+
+    def get_state(self) -> int:
+        return 0
+
     def minimal_save_data_to_file(
         self,
         file_path: str,

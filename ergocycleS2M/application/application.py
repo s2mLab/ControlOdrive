@@ -1,19 +1,22 @@
 import multiprocessing as mp
+import os
 import sys
 import time
-from ctypes import c_bool, c_double
+from ctypes import c_bool, c_double, c_long, c_wchar_p
 from PyQt5 import QtWidgets
 
+from ergocycleS2M.data_processing.save import save_data_to_file
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
-from ergocycleS2M.motor_control.motor_controller import MotorController
-# from ergocycleS2M.motor_control.mock_controller import MockController
+
+# from ergocycleS2M.motor_control.motor_controller import MotorController
+from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
     """ """
 
-    def __init__(self):
+    def __init__(self, saving_frequency: float = 10):
         # Shared memory
         # Instructions
         self.instruction = mp.Manager().Value(c_double, 0.0)
@@ -30,18 +33,33 @@ class Application:
         self.vel_estimate = mp.Manager().Value(c_double, 0.0)
         # Saving
         self.saving = mp.Manager().Value(c_bool, False)
-
-        # Pipe
-        self.queue_comment = mp.Queue()
+        self.queue_file_name = mp.Manager().Queue()
+        self.queue_comment = mp.Manager().Queue()
+        self.saving_frequency = saving_frequency
+        self.error = mp.Manager().Value(c_long, 0)
+        self.axis_error = mp.Manager().Value(c_long, 0)
+        self.controller_error = mp.Manager().Value(c_long, 0)
+        self.encoder_error = mp.Manager().Value(c_long, 0)
+        self.motor_error = mp.Manager().Value(c_long, 0)
+        self.sensorless_estimator_error = mp.Manager().Value(c_long, 0)
+        self.can_error = mp.Manager().Value(c_long, 0)
+        self.control_mode = mp.Manager().Value(c_wchar_p, None)
+        self.direction = mp.Manager().Value(c_wchar_p, None)
+        self.stopwatch = mp.Manager().Value(c_double, 0.0)
+        self.lap = mp.Manager().Value(c_double, 0.0)
+        self.training_mode = mp.Manager().Value(c_wchar_p, None)
+        self.state = mp.Manager().Value(c_long, None)
 
         # Create the processes
-        # self.motor_process = mp.Process(name="motor", target=self.motor_control_process, daemon=True)
-        self.gui_process = mp.Process(name="gui", target=self.gui_process, daemon=True)
+        self.motor_process = mp.Process(name="motor", target=self.motor_control_process, daemon=True)
+        self.gui_process = mp.Process(name="gui", target=self.gui_fun_process, daemon=True)
+        self.save_process = mp.Process(name="save", target=self.save_fun_process, daemon=True)
 
     def start(self):
         """ """
         # self.motor_process.start()
         self.gui_process.start()
+        self.save_process.start()
         self.motor_control_process()
 
     def motor_control_process(self):
@@ -49,7 +67,7 @@ class Application:
         Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
         It updates the command and the display, saves the data and feeds the watchdog.
         """
-        motor = MotorController(enable_watchdog=True, external_watchdog=False)
+        motor = MockController(enable_watchdog=True, external_watchdog=False)
         stopping_ramp_instruction = 30.0
         # TODO: zero_position_calibration
         is_cadence_control = False
@@ -109,8 +127,18 @@ class Application:
             self.i_measured.value = motor.get_iq_measured()
             self.turns.value = motor.get_turns()
             self.vel_estimate.value = motor.get_vel_estimate()
+            self.error.value = motor.get_error(),
+            self.axis_error.value = motor.get_axis_error(),
+            self.controller_error.value = motor.get_controller_error(),
+            self.encoder_error.value = motor.get_encoder_error(),
+            self.motor_error.value = motor.get_motor_error(),
+            self.sensorless_estimator_error.value = motor.get_sensorless_estimator_error(),
+            self.can_error.value = motor.get_can_error(),
+            self.control_mode.value = motor.get_control_mode()
+            self.direction.value = motor.get_direction()
+            self.state.value = motor.get_state()
 
-    def gui_process(self):
+    def gui_fun_process(self):
         """ """
         app = QtWidgets.QApplication(sys.argv)
         gui = ErgocycleGUI(
@@ -120,12 +148,74 @@ class Application:
             self.spin_box,
             self.stopping,
             self.saving,
+            self.queue_file_name,
             self.queue_comment,
             self.i_measured,
             self.turns,
             self.vel_estimate,
             self.queue_instructions,
             self.zero_position,
+            self.stopwatch,
+            self.lap,
+            self.training_mode,
+            self.error,
+            self.axis_error,
+            self.controller_error,
+            self.encoder_error,
+            self.motor_error,
+            self.sensorless_estimator_error,
+            self.can_error,
         )
         gui.show()
         app.exec()
+
+    def save_fun_process(self):
+        """ """
+        while self.run.value:
+            try:
+                file_name = self.queue_file_name.get_nowait()
+                # Choosing the file name at the beginning of the saving.
+                ext = ".bio"
+                if os.path.isfile(f"{file_name}{ext}"):
+                    # File already exists, add a suffix to the filename
+                    i = 1
+                    while os.path.isfile(f"{file_name}_{i}{ext}"):
+                        i += 1
+                    file_name = f"{file_name}_{i}"
+
+                time_prev_save = t0 = time.time()
+                while self.saving.value:
+                    try:
+                        comment = self.queue_comment.get_nowait()
+                    except Exception:
+                        comment = ""
+                    save_data_to_file(
+                        file_path=file_name,
+                        time=time.time() - t0,
+                        spin_box=self.spin_box.value,
+                        instruction=self.instruction.value,
+                        ramp_instruction=self.ramp_instruction.value,
+                        comment=comment,
+                        stopwatch=self.stopwatch.value,
+                        lap=self.lap.value,
+                        state=self.state.value,
+                        control_mode=self.control_mode.value,
+                        direction=self.direction.value,
+                        training_mode=self.training_mode.value,
+                        vel_estimate=self.vel_estimate.value,
+                        turns=self.turns.value,
+                        iq_measured=self.i_measured.value,
+                        error=self.error.value[0],
+                        axis_error=self.axis_error.value[0],
+                        controller_error=self.controller_error.value[0],
+                        encoder_error=self.encoder_error.value[0],
+                        motor_error=self.motor_error.value[0],
+                        sensorless_estimator_error=self.sensorless_estimator_error.value[0],
+                        can_error=self.can_error.value[0],
+                    )
+                    loop_time = time.time() - time_prev_save
+                    time_prev_save = time.time()
+                    if loop_time < 1.0 / self.saving_frequency:
+                        time.sleep(1.0 / self.saving_frequency - loop_time)
+            except Exception:
+                pass

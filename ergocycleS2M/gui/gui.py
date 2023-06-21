@@ -7,9 +7,19 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
 from ergocycleS2M.gui.gui_enums import GUIControlMode, StopwatchStates, TrainingMode
 from ergocycleS2M.gui.gui_utils import PlotWidget
-from ergocycleS2M.motor_control.enums import ControlMode, DirectionMode
+from ergocycleS2M.motor_control.enums import (
+    ControlMode,
+    DirectionMode,
+    ODriveError,
+    ODriveAxisError,
+    ODriveEncoderError,
+    ODriveControllerError,
+    ODriveSensorlessEstimatorError,
+    ODriveMotorError,
+    ODriveCanError,
+)
 from ergocycleS2M.motor_control.motor_computations import MotorComputations
-
+from ergocycleS2M.utils import traduce_error
 
 class ErgocycleGUI(QtWidgets.QMainWindow):
     def __init__(
@@ -20,12 +30,23 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         spin_box: mp.Manager().Value,
         stopping: mp.Manager().Value,
         saving: mp.Manager().Value,
-        queue_comment: mp.Pipe,
+        queue_file_name: mp.Manager().Queue,
+        queue_comment: mp.Manager().Queue,
         i_measured: mp.Manager().Value,
         turns: mp.Manager().Value,
         vel_estimate: mp.Manager().Value,
         queue_instructions: mp.Queue,
         zero_position: mp.Manager().Value,
+        stopwatch: mp.Manager().Value,
+        lap: mp.Manager().Value,
+        training_mode: mp.Manager().Value,
+        error: mp.Manager().Value,
+        axis_error: mp.Manager().Value,
+        controller_error: mp.Manager().Value,
+        encoder_error: mp.Manager().Value,
+        motor_error: mp.Manager().Value,
+        sensorless_estimator_error: mp.Manager().Value,
+        can_error: mp.Manager().Value,
         update_period: float = 0.1,
         plot_window_size: int = 10,
     ):
@@ -42,17 +63,30 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         # Control
         self.zero_position = zero_position
         self.queue_instruction = queue_instructions
+        self.training_mode_value = training_mode
         self.spin_box = spin_box
         self.instruction = instruction
         self.ramp_instruction = ramp_instruction
         self.stopping = stopping
         # Saving
         self.saving = saving
+        self.queue_file_name = queue_file_name
         self.queue_comment = queue_comment
+        # Stopwatch
+        self.stopwatch_value = stopwatch
+        self.lap_value = lap
         # Data
         self.i_measured = i_measured
         self.turns = turns
         self.vel_estimate = vel_estimate
+        # Errors
+        self.error = error
+        self.axis_error = axis_error
+        self.controller_error = controller_error
+        self.encoder_error = encoder_error
+        self.motor_error = motor_error
+        self.sensorless_estimator_error = sensorless_estimator_error
+        self.can_error = can_error
 
         # Security
         self.ui.emergency_pushButton.clicked.connect(self.emergency_stop)
@@ -328,7 +362,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
 
         # Update instructions and the control depending on the control mode.
         self.ramp_instruction.value = self.ui.acceleration_spinBox.value()
-
+        self.training_mode_value.value = self._training_mode
         if self._gui_control_mode == GUIControlMode.POWER:
             if self._training_mode == TrainingMode.CONCENTRIC.value:
                 self.spin_box.value = self.ui.instruction_spinBox.value()
@@ -409,10 +443,11 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         Start or stop saving the data to a file.
         """
         self.saving.value = not self.saving.value
-        self.ui.save_lineEdit.setEnabled(not self.saving)
-        self.ui.comments_save_pushButton.setEnabled(self.saving)
-        self.ui.comments_lineEdit.setEnabled(self.saving)
-        if self.saving:
+        self.ui.save_lineEdit.setEnabled(not self.saving.value)
+        self.ui.comments_save_pushButton.setEnabled(self.saving.value)
+        self.ui.comments_lineEdit.setEnabled(self.saving.value)
+        if self.saving.value:
+            self.queue_file_name.put_nowait(self.ui.save_lineEdit.text())
             self.ui.save_st_pushButton.setText("Stop saving")
             self.ui.save_st_pushButton.setStyleSheet(f"background-color: {self._color_red.name()}")
             self.ui.comments_save_pushButton.setStyleSheet(f"background-color: {self._color_green.name()}")
@@ -560,6 +595,9 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
                 self.stopwatch = 0.0
                 self.lap = 0.0
 
+            self.stopwatch_value.value = self.stopwatch
+            self.lap_value.value = self.lap
+
             minutes = int(self.stopwatch // 60)  # get the integer part of the quotient
             seconds = int(self.stopwatch % 60)  # get the integer part of the remainder
             milliseconds = int((self.stopwatch - int(self.stopwatch)) * 100)  # get the milliseconds component
@@ -588,7 +626,16 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self.ui.turns_display.setText(f"{turns:.0f} tr")
             self.ui.angle_display.setText(f"{angle:.0f} °")
 
-            # TODO: print errors + save errors
+            # Errors
+            self.ui.errors_label.setText(
+                f"{traduce_error(self.error.value[0], ODriveError)} "
+                f"{traduce_error(self.axis_error.value[0], ODriveAxisError)} "
+                f"{traduce_error(self.controller_error.value[0], ODriveControllerError)} "
+                f"{traduce_error(self.encoder_error.value[0], ODriveEncoderError)} "
+                f"{traduce_error(self.motor_error.value[0], ODriveMotorError)} "
+                f"{traduce_error(self.sensorless_estimator_error.value[0], ODriveSensorlessEstimatorError)} "
+                f"{traduce_error(self.can_error.value[0], ODriveCanError)}"
+            )
 
             # Plot data
             self.time_array = np.roll(self.time_array, -1)

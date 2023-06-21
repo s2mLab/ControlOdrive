@@ -431,4 +431,4 @@ if __name__ == "__main__":
     script_directory = os.path.dirname(os.path.abspath(script_path))
     control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
 
-    plot_data(read(control_odrive_directory + "/data_from_dyn_calibration_54.bio", 100, 100), plot_errors=True)
+    plot_data(read(control_odrive_directory + "/XP_participantX.bio", 100, 100), plot_errors=True)
