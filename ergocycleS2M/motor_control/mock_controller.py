@@ -48,6 +48,8 @@ class MockController(MotorComputations):
 
         self._gains_path = gains_path
 
+        self.t0 = time.time()
+
         if file_path:
             self.file_path = file_path
         else:
@@ -233,7 +235,7 @@ class MockController(MotorComputations):
         """
         Calibration for the 0 deg.
         """
-        pass
+        self._relative_pos = self.mock_axis_encoder_pos_estimate()
 
     def position_control(self, angle: float = 0.0):
         """
@@ -312,7 +314,11 @@ class MockController(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            # TODO: Check if the torque ramp rate is correct
+            if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+                raise ValueError(
+                    f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+                    f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+                )
             torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
 
         # The motor can be controlled with the computed values
@@ -330,7 +336,10 @@ class MockController(MotorComputations):
         self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
     ):
         """
-        # TODO add docstring in all to explain to call in a thread.
+        Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
+        the torque imposed at the user adapts to its cadence to ensure the power.
+        As the torque has to adapt to the cadence, this function has to be called in a loop or a thread depending.
+
         Parameters
         ----------
         power: float
@@ -358,6 +367,9 @@ class MockController(MotorComputations):
 
     def eccentric_power_control(self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0):
         """
+        Ensure a constant power at the pedals. In eccentric mode, the power is negative when the user is pedaling and
+        the cadence imposed at the user adapts to its torque to ensure the power.
+
         Parameters
         ----------
         power: float
@@ -385,6 +397,8 @@ class MockController(MotorComputations):
 
     def linear_control(self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None):
         """
+        Produce a torque proportional to the user's cadence.
+
         Parameters
         ----------
         linear_coeff: float
@@ -625,8 +639,7 @@ class MockController(MotorComputations):
 
         save(data, file_path)
 
-    @staticmethod
-    def mock_axis_encoder_pos_estimate():
+    def mock_axis_encoder_pos_estimate(self):
         """
         Mock self.axis.encoder.pos_estimate
         """

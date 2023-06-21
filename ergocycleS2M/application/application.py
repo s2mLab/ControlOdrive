@@ -1,3 +1,7 @@
+"""
+This module contains the main application class. This application manages the gui, the motor and the saving in different
+processes with a shared memory.
+"""
 import multiprocessing as mp
 import os
 import sys
@@ -9,33 +13,116 @@ from ergocycleS2M.data_processing.save import save_data_to_file
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
 
-from ergocycleS2M.motor_control.motor_controller import MotorController
-# from ergocycleS2M.motor_control.mock_controller import MockController
+# from ergocycleS2M.motor_control.motor_controller import MotorController
+from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
-    """ """
+    """
+    This class is the main application. It creates launch the gui, the motor and the saving in different processes with
+    a shared memory.
+
+    Attributes
+    ----------
+    saving_frequency : float
+        Frequency of the saving in Hz.
+    run : mp.Value
+        Shared memory value to stop the application.
+    zero_position : mp.Value
+        Shared memory value to indicate to set the zero position of the motor.
+    queue_instructions : mp.Queue
+        Shared memory queue to send instructions to the motor.
+    training_mode : mp.Value
+        Shared memory value to indicate the current training mode.
+    spin_box : mp.Value
+        Shared memory value to indicate the current spin box value.
+    instruction : mp.Value
+        Shared memory value to indicate the current instruction.
+    ramp_instruction : mp.Value
+        Shared memory value to indicate the current ramp instruction.
+    stopping : mp.Value
+        Shared memory value to indicate if the motor is stopping.
+    saving : mp.Value
+        Shared memory value to indicate to save the data in a file.
+    queue_file_name : mp.Queue
+        Shared memory queue to send the file name to the saving process.
+    queue_comment : mp.Queue
+        Shared memory queue to send the comment to the saving process.
+    stopwatch : mp.Value
+        Shared memory value to indicate the current stopwatch value.
+    lap : mp.Value
+        Shared memory value to indicate the current lap value.
+    i_measured : mp.Value
+        Shared memory value to indicate the current measured current in A.
+    turns : mp.Value
+        Shared memory value to indicate the current number of turns in tr.
+    vel_estimate : mp.Value
+        Shared memory value to indicate the current estimated velocity at the motor in tr/s.
+    error : mp.Value
+        Shared memory value to indicate the current odrv.error.
+    axis_error : mp.Value
+        Shared memory value to indicate the current odrv.axis.error.
+    controller_error : mp.Value
+        Shared memory value to indicate the current odrv.axis.controller.error.
+    encoder_error : mp.Value
+        Shared memory value to indicate the current odrv.axis.encoder.error.
+    motor_error : mp.Value
+        Shared memory value to indicate the current odrv.axis.motor.error.
+    sensorless_estimator_error : mp.Value
+        Shared memory value to indicate the current odrv.axis.sensorless_estimator.error.
+    can_error : mp.Value
+        Shared memory value to indicate the current odrv.can.error.
+    gui_process : mp.Process
+        Process of the gui.
+    saving_process : mp.Process
+        Process of the motor control.
+
+    Methods
+    -------
+    start
+        Start the application.
+    motor_control_loop
+        Loop of the motor control it updates the control accordingly to the information received from the gui process
+        and update its data in the shared memory.
+        To be launched in the main process.
+    gui_loop
+        Loop of the gui it updates the data accordingly to the information received from the motor control process and
+        update the control of the motor in the shared memory.
+        To be launched in a parallel process.
+    saving_loop
+        Loop of the saving process it saves the data in a file.
+        To be launched in a parallel process.
+    """
 
     def __init__(self, saving_frequency: float = 10):
+        self.saving_frequency = saving_frequency
+
         # Shared memory
-        # Instructions
+        # Security
+        self.run = mp.Manager().Value(c_bool, True)
+        # Control
+        self.zero_position = mp.Manager().Value(c_bool, 0.0)
+        self.queue_instructions = mp.Manager().Queue()
+        self.training_mode = mp.Manager().Value(c_wchar_p, None)
+        self.control_mode = mp.Manager().Value(c_wchar_p, None)
+        self.direction = mp.Manager().Value(c_wchar_p, None)
+        self.spin_box = mp.Manager().Value(c_double, 0.0)
         self.instruction = mp.Manager().Value(c_double, 0.0)
         self.ramp_instruction = mp.Manager().Value(c_double, 0.0)
-        self.spin_box = mp.Manager().Value(c_double, 0.0)
-        # State of the motor
-        self.run = mp.Manager().Value(c_bool, True)
         self.stopping = mp.Manager().Value(c_bool, False)
-        self.queue_instructions = mp.Manager().Queue()
-        # Motor values
-        self.zero_position = mp.Manager().Value(c_bool, 0.0)
-        self.i_measured = mp.Manager().Value(c_double, 0.0)
-        self.turns = mp.Manager().Value(c_double, 0.0)
-        self.vel_estimate = mp.Manager().Value(c_double, 0.0)
         # Saving
         self.saving = mp.Manager().Value(c_bool, False)
         self.queue_file_name = mp.Manager().Queue()
         self.queue_comment = mp.Manager().Queue()
-        self.saving_frequency = saving_frequency
+        # Stopwatch
+        self.stopwatch = mp.Manager().Value(c_double, 0.0)
+        self.lap = mp.Manager().Value(c_double, 0.0)
+        # Data
+        self.i_measured = mp.Manager().Value(c_double, 0.0)
+        self.turns = mp.Manager().Value(c_double, 0.0)
+        self.vel_estimate = mp.Manager().Value(c_double, 0.0)
+        self.state = mp.Manager().Value(c_long, None)
+        # Errors
         self.error = mp.Manager().Value(c_long, 0)
         self.axis_error = mp.Manager().Value(c_long, 0)
         self.controller_error = mp.Manager().Value(c_long, 0)
@@ -43,33 +130,30 @@ class Application:
         self.motor_error = mp.Manager().Value(c_long, 0)
         self.sensorless_estimator_error = mp.Manager().Value(c_long, 0)
         self.can_error = mp.Manager().Value(c_long, 0)
-        self.control_mode = mp.Manager().Value(c_wchar_p, None)
-        self.direction = mp.Manager().Value(c_wchar_p, None)
-        self.stopwatch = mp.Manager().Value(c_double, 0.0)
-        self.lap = mp.Manager().Value(c_double, 0.0)
-        self.training_mode = mp.Manager().Value(c_wchar_p, None)
-        self.state = mp.Manager().Value(c_long, None)
 
         # Create the processes
-        self.motor_process = mp.Process(name="motor", target=self.motor_control_process, daemon=True)
-        self.gui_process = mp.Process(name="gui", target=self.gui_fun_process, daemon=True)
-        self.save_process = mp.Process(name="save", target=self.save_fun_process, daemon=True)
+        self.gui_process = mp.Process(name="GUI process", target=self.gui, daemon=True)
+        self.saving_process = mp.Process(name="Saving process", target=self.saving_loop, daemon=True)
 
     def start(self):
-        """ """
-        # self.motor_process.start()
+        """
+        Start the application.
+        """
         self.gui_process.start()
-        self.save_process.start()
-        self.motor_control_process()
+        self.saving_process.start()
+        self.motor_control_loop()
+        # We join the processes to be sure that they are stopped before exiting the application.
+        self.gui_process.join()
+        self.saving_process.join()
 
-    def motor_control_process(self):
+    def motor_control_loop(self):
         """
-        Main loop of the thread. It is called when the thread is started. It is stopped when the thread is stopped.
-        It updates the command and the display, saves the data and feeds the watchdog.
+        Loop of the motor control it updates the control accordingly to the information received from the gui process
+        and update its data in the shared memory.
+        To be launched in the main process.
         """
-        motor = MotorController(enable_watchdog=True, external_watchdog=False)
-        stopping_ramp_instruction = 30.0
-        # TODO: zero_position_calibration
+        motor = MockController(enable_watchdog=True, external_watchdog=False)
+        motor.zero_position_calibration()
         is_cadence_control = False
 
         while self.run.value:
@@ -120,57 +204,64 @@ class Application:
                     is_cadence_control = True
 
             else:
-                motor.stopping(cadence_ramp_rate=stopping_ramp_instruction)
+                motor.stopping(cadence_ramp_rate=self.ramp_instruction.value)
                 if abs(motor.get_cadence()) < 10.0:
                     self.stopping.value = not motor.stopped()
 
+            # Data
             self.i_measured.value = motor.get_iq_measured()
             self.turns.value = motor.get_turns()
             self.vel_estimate.value = motor.get_vel_estimate()
-            self.error.value = motor.get_error(),
-            self.axis_error.value = motor.get_axis_error(),
-            self.controller_error.value = motor.get_controller_error(),
-            self.encoder_error.value = motor.get_encoder_error(),
-            self.motor_error.value = motor.get_motor_error(),
-            self.sensorless_estimator_error.value = motor.get_sensorless_estimator_error(),
-            self.can_error.value = motor.get_can_error(),
             self.control_mode.value = motor.get_control_mode()
             self.direction.value = motor.get_direction()
             self.state.value = motor.get_state()
+            # Errors
+            self.error.value = (motor.get_error(),)
+            self.axis_error.value = (motor.get_axis_error(),)
+            self.controller_error.value = (motor.get_controller_error(),)
+            self.encoder_error.value = (motor.get_encoder_error(),)
+            self.motor_error.value = (motor.get_motor_error(),)
+            self.sensorless_estimator_error.value = (motor.get_sensorless_estimator_error(),)
+            self.can_error.value = (motor.get_can_error(),)
 
-    def gui_fun_process(self):
-        """ """
+    def gui(self):
+        """
+        Loop of the gui it updates the data accordingly to the information received from the motor control process and
+        update the control of the motor in the shared memory.
+        """
         app = QtWidgets.QApplication(sys.argv)
         gui = ErgocycleGUI(
-            self.run,
-            self.instruction,
-            self.ramp_instruction,
-            self.spin_box,
-            self.stopping,
-            self.saving,
-            self.queue_file_name,
-            self.queue_comment,
-            self.i_measured,
-            self.turns,
-            self.vel_estimate,
-            self.queue_instructions,
-            self.zero_position,
-            self.stopwatch,
-            self.lap,
-            self.training_mode,
-            self.error,
-            self.axis_error,
-            self.controller_error,
-            self.encoder_error,
-            self.motor_error,
-            self.sensorless_estimator_error,
-            self.can_error,
+            run=self.run,
+            zero_position=self.zero_position,
+            queue_instructions=self.queue_instructions,
+            training_mode=self.training_mode,
+            spin_box=self.spin_box,
+            instruction=self.instruction,
+            ramp_instruction=self.ramp_instruction,
+            stopping=self.stopping,
+            saving=self.saving,
+            queue_file_name=self.queue_file_name,
+            queue_comment=self.queue_comment,
+            stopwatch=self.stopwatch,
+            lap=self.lap,
+            i_measured=self.i_measured,
+            turns=self.turns,
+            vel_estimate=self.vel_estimate,
+            error=self.error,
+            axis_error=self.axis_error,
+            controller_error=self.controller_error,
+            encoder_error=self.encoder_error,
+            motor_error=self.motor_error,
+            sensorless_estimator_error=self.sensorless_estimator_error,
+            can_error=self.can_error,
         )
         gui.show()
         app.exec()
 
-    def save_fun_process(self):
-        """ """
+    def saving_loop(self):
+        """
+        Loop of the saving process it saves the data in a file.
+        """
         while self.run.value:
             try:
                 file_name = self.queue_file_name.get_nowait()
@@ -183,17 +274,19 @@ class Application:
                         i += 1
                     file_name = f"{file_name}_{i}"
 
-                time_prev_save = t0 = time.time()
-                while self.saving.value:
+                previous_save_time = saving_start_time = time.time()
+                # TODO: Save at a fixed frequency
+                while self.run.value and self.saving.value:
                     try:
                         comment = self.queue_comment.get_nowait()
                     except Exception:
                         comment = ""
-                    while time.time() - time_prev_save < 1.0 / self.saving_frequency:
+                    # Force the saving to be done at the specified frequency
+                    while time.time() - previous_save_time < 1.0 / self.saving_frequency:
                         pass
                     save_data_to_file(
                         file_path=file_name,
-                        time=time.time() - t0,
+                        time=time.time() - saving_start_time,
                         spin_box=self.spin_box.value,
                         instruction=self.instruction.value,
                         ramp_instruction=self.ramp_instruction.value,
@@ -201,9 +294,9 @@ class Application:
                         stopwatch=self.stopwatch.value,
                         lap=self.lap.value,
                         state=self.state.value,
+                        training_mode=self.training_mode.value,
                         control_mode=self.control_mode.value,
                         direction=self.direction.value,
-                        training_mode=self.training_mode.value,
                         vel_estimate=self.vel_estimate.value,
                         turns=self.turns.value,
                         iq_measured=self.i_measured.value,
@@ -215,6 +308,7 @@ class Application:
                         sensorless_estimator_error=self.sensorless_estimator_error.value[0],
                         can_error=self.can_error.value[0],
                     )
-                    time_prev_save = time.time()
+                    previous_save_time = time.time()
             except Exception:
+                # No file name in the queue meaning that no saving instruction has been sent.
                 pass

@@ -5,41 +5,42 @@ import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ergocycleS2M.gui.ergocycle_gui import Ui_MainWindow
-from ergocycleS2M.gui.gui_enums import GUIControlMode, StopwatchStates, TrainingMode
-from ergocycleS2M.gui.gui_utils import PlotWidget
+from ergocycleS2M.gui.enums import GUIControlMode, StopwatchStates, TrainingMode
+from ergocycleS2M.gui.plot_widget import PlotWidget
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     DirectionMode,
     ODriveError,
     ODriveAxisError,
-    ODriveEncoderError,
     ODriveControllerError,
-    ODriveSensorlessEstimatorError,
+    ODriveEncoderError,
     ODriveMotorError,
+    ODriveSensorlessEstimatorError,
     ODriveCanError,
 )
 from ergocycleS2M.motor_control.motor_computations import MotorComputations
 from ergocycleS2M.utils import traduce_error
 
+
 class ErgocycleGUI(QtWidgets.QMainWindow):
     def __init__(
         self,
         run: mp.Manager().Value,
+        zero_position: mp.Manager().Value,
+        queue_instructions: mp.Queue,
+        training_mode: mp.Manager().Value,
+        spin_box: mp.Manager().Value,
         instruction: mp.Manager().Value,
         ramp_instruction: mp.Manager().Value,
-        spin_box: mp.Manager().Value,
         stopping: mp.Manager().Value,
         saving: mp.Manager().Value,
         queue_file_name: mp.Manager().Queue,
         queue_comment: mp.Manager().Queue,
+        stopwatch: mp.Manager().Value,
+        lap: mp.Manager().Value,
         i_measured: mp.Manager().Value,
         turns: mp.Manager().Value,
         vel_estimate: mp.Manager().Value,
-        queue_instructions: mp.Queue,
-        zero_position: mp.Manager().Value,
-        stopwatch: mp.Manager().Value,
-        lap: mp.Manager().Value,
-        training_mode: mp.Manager().Value,
         error: mp.Manager().Value,
         axis_error: mp.Manager().Value,
         controller_error: mp.Manager().Value,
