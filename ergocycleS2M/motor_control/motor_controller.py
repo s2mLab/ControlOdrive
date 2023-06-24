@@ -201,18 +201,18 @@ class MotorController(MotorComputations):
             self.axis.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
         else:
             # Starts a full calibration because the motor is not under mechanical load
-            self.axis.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+            self.odrive_board.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
 
         # Waits for the calibration to finish.
-        while self.axis.current_state != AXIS_STATE_IDLE:
+        while self.odrive_board.axis0.current_state != AXIS_STATE_IDLE:
             pass
 
         if self.has_error():
             raise RuntimeError("Error with configuration and/or calibration. Check odrivetool -> dump_errors(odrv0)")
 
         # Confirms the configuration and calibration. Allows to save the configuration after reboot.
-        self.axis.encoder.config.pre_calibrated = True
-        self.axis.motor.config.pre_calibrated = True
+        self.odrive_board.axis0.encoder.config.pre_calibrated = True
+        self.odrive_board.axis0.motor.config.pre_calibrated = True
         self.save_configuration()
 
         print("Calibration done")
@@ -223,11 +223,11 @@ class MotorController(MotorComputations):
         """
         return not (
             self.odrive_board.error == 0
-            and self.axis.error == AXIS_ERROR_NONE
-            and self.axis.controller.error == CONTROLLER_ERROR_NONE
-            and self.axis.encoder.error == ENCODER_ERROR_NONE
-            and self.axis.motor.error == MOTOR_ERROR_NONE
-            and self.axis.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
+            and self.odrive_board.axis0.error == AXIS_ERROR_NONE
+            and self.odrive_board.axis0.controller.error == CONTROLLER_ERROR_NONE
+            and self.odrive_board.axis0.encoder.error == ENCODER_ERROR_NONE
+            and self.odrive_board.axis0.motor.error == MOTOR_ERROR_NONE
+            and self.odrive_board.axis0.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
         )
 
     def configuration(self) -> None:
@@ -276,23 +276,23 @@ class MotorController(MotorComputations):
         # Gains
         # For position control only
         if pos_gain is not None:
-            self.axis.controller.config.pos_gain = pos_gain
+            self.odrive_board.axis0.controller.config.pos_gain = pos_gain
         # For position and cadence control
         if k_vel_gain is not None:
-            self.axis.controller.config.vel_gain = (
-                k_vel_gain * self.axis.motor.config.torque_constant * self.axis.encoder.config.cpr
+            self.odrive_board.axis0.controller.config.vel_gain = (
+                k_vel_gain * self.odrive_board.axis0.motor.config.torque_constant * self.odrive_board.axis0.encoder.config.cpr
             )
         if k_vel_integrator_gain is not None:
-            self.axis.controller.config.vel_integrator_gain = (
-                k_vel_integrator_gain * self.axis.motor.config.torque_constant * self.axis.encoder.config.cpr
+            self.odrive_board.axis0.controller.config.vel_integrator_gain = (
+                k_vel_integrator_gain * self.odrive_board.axis0.motor.config.torque_constant * self.odrive_board.axis0.encoder.config.cpr
             )
         # For position, cadence and torque control
         if current_gain is not None:
-            self.axis.controller.config.current_gain = current_gain
+            self.odrive_board.axis0.controller.config.current_gain = current_gain
         if current_integrator_gain is not None:
-            self.axis.controller.config.current_integrator_gain = current_integrator_gain
+            self.odrive_board.axis0.controller.config.current_integrator_gain = current_integrator_gain
         if bandwidth is not None:
-            self.axis.encoder.config.bandwidth = bandwidth
+            self.odrive_board.axis0.encoder.config.bandwidth = bandwidth
 
         self.save_configuration()
 
@@ -317,33 +317,33 @@ class MotorController(MotorComputations):
         self.odrive_board.config.brake_resistance = self.hardware_and_security["brake_resistance"]
 
         # Controller
-        self.axis.controller.config.vel_limit = (
+        self.odrive_board.axis0.controller.config.vel_limit = (
             self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
-        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
+        self.odrive_board.axis0.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
         # Encoder
-        self.axis.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
-        self.axis.encoder.config.cpr = self.hardware_and_security["cpr"]  # Count Per Revolution
-        self.axis.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
+        self.odrive_board.axis0.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
+        self.odrive_board.axis0.encoder.config.cpr = self.hardware_and_security["cpr"]  # Count Per Revolution
+        self.odrive_board.axis0.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
-        self.axis.motor.config.motor_type = self.hardware_and_security["motor_type"]
-        self.axis.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
-        self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
-        self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
-        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
-        self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
-        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
-        self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
+        self.odrive_board.axis0.motor.config.motor_type = self.hardware_and_security["motor_type"]
+        self.odrive_board.axis0.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
+        self.odrive_board.axis0.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
+        self.odrive_board.axis0.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
+        self.odrive_board.axis0.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
+        self.odrive_board.axis0.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
+        self.odrive_board.axis0.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
+        self.odrive_board.axis0.motor.config.current_lim = self.hardware_and_security["current_lim"]
+        self.odrive_board.axis0.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
         # cadence and acceleration limits
-        self.axis.trap_traj.config.vel_limit = self.axis.controller.config.vel_limit
-        self.axis.trap_traj.config.accel_limit = (
+        self.odrive_board.axis0.trap_traj.config.vel_limit = self.odrive_board.axis0.controller.config.vel_limit
+        self.odrive_board.axis0.trap_traj.config.accel_limit = (
             self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
-        self.axis.trap_traj.config.decel_limit = (
+        self.odrive_board.axis0.trap_traj.config.decel_limit = (
             self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
 
@@ -393,12 +393,13 @@ class MotorController(MotorComputations):
             Acceleration of the pedals (rpm/s)
         """
         if abs(ramp_rate / self.reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
-            raise ValueError(
-                f"The acceleration limit is "
-                f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 3600} "
-                f"rpm² for the pedals. "
-                f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
-            )
+            pass
+            #raise ValueError(
+            #    f"The acceleration limit is "
+            #    f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 3600} "
+            #    f"rpm² for the pedals. "
+            #    f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
+            #)
 
     # The following function is commented because it has not been tested for a long time.
     # def turns_control(self, turns: float = 0.0) -> None:
@@ -464,12 +465,12 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
-            raise ValueError(
-                f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
-                f"rpm for the pedals."
-                f"cadence specified: {cadence} rpm for the pedals"
-            )
+        #if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
+        #    raise ValueError(
+        #        f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
+        #        f"rpm for the pedals."
+        #        f"cadence specified: {cadence} rpm for the pedals"
+        #    )
 
         self._check_ramp_rate(cadence_ramp_rate)
 
@@ -526,18 +527,18 @@ class MotorController(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
-                raise ValueError(
-                    f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
-                    f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
-                )
+            #if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+            #    raise ValueError(
+            #        f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+            #        f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+            #    )
             torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
-                raise ValueError(
-                    f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
-                    f"Torque specified: {user_torque} Nm"
-                )
+            #if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
+            #    raise ValueError(
+            #        f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
+            #        f"Torque specified: {user_torque} Nm"
+            #    )
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
@@ -724,11 +725,12 @@ class MotorController(MotorComputations):
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         if vel_stop > self.hardware_and_security["maximal_cadence_stop"]:
-            raise ValueError(
-                f"The maximal cadence at which the motor can be stopped is "
-                f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
-                f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
-            )
+            pass
+        #    raise ValueError(
+        #        f"The maximal cadence at which the motor can be stopped is "
+        #        f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
+        #        f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
+        #    )
 
         self.stopping(cadence_ramp_rate)
 

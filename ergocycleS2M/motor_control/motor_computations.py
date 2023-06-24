@@ -23,7 +23,6 @@ class MotorComputations:
 
         self.resisting_current_proportional = self.hardware_and_security["resisting_current_proportional"]
         self.resisting_current_constant = self.hardware_and_security["resisting_current_constant"]
-        self._resisting_torque_current = self.hardware_and_security["resisting_torque_current"]
 
     @staticmethod
     def compute_angle(turns: float) -> float:
