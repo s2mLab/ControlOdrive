@@ -14,6 +14,7 @@ from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
 
 from ergocycleS2M.motor_control.motor_controller import MotorController
+
 # from ergocycleS2M.motor_control.mock_controller import MockController
 
 

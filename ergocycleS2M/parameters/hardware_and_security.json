@@ -17,7 +17,7 @@
     "calib_scan_distance": 150.0,
     "motor_type": 0,
     "pole_pairs": 8,
-    "torque_constant": 0.1053225104205947,
+    "torque_constant": 0.09084625098244366,
     "resisting_torque_current": 0.42,
     "calibration_current": 7.0,
     "resistance_calib_max_voltage": 20.0,

@@ -319,7 +319,7 @@ class MockController(MotorComputations):
                     f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
                     f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
                 )
-            torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
+            torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
@@ -496,7 +496,7 @@ class MockController(MotorComputations):
         """
         Returns the estimated number of turns.
         """
-        return -(self.mock_axis_encoder_pos_estimate() - self._relative_pos) * self._reduction_ratio
+        return -(self.mock_axis_encoder_pos_estimate() - self._relative_pos) * self.reduction_ratio
 
     def get_cadence(self) -> float:
         """

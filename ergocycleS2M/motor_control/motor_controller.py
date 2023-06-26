@@ -318,7 +318,7 @@ class MotorController(MotorComputations):
 
         # Controller
         self.axis.controller.config.vel_limit = (
-            self.hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_vel_limit"] / self.reduction_ratio / 60
         )  # tr/s
         self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
@@ -336,15 +336,15 @@ class MotorController(MotorComputations):
         self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
         self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self._reduction_ratio
+        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
         # cadence and acceleration limits
         self.axis.trap_traj.config.vel_limit = self.axis.controller.config.vel_limit
         self.axis.trap_traj.config.accel_limit = (
-            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
         self.axis.trap_traj.config.decel_limit = (
-            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
 
     def get_sign(self) -> int:
@@ -386,10 +386,10 @@ class MotorController(MotorComputations):
         ramp_rate: float
             Acceleration of the pedals (rpm/s)
         """
-        if abs(ramp_rate / self._reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
+        if abs(ramp_rate / self.reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
             raise ValueError(
                 f"The acceleration limit is "
-                f"{self.axis.trap_traj.config.accel_limit * self._reduction_ratio * 3600} "
+                f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 3600} "
                 f"rpm² for the pedals. "
                 f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
             )
@@ -411,7 +411,7 @@ class MotorController(MotorComputations):
             self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.POSITION_CONTROL
 
-        self.axis.controller.input_pos = self._relative_pos + turns / self._reduction_ratio
+        self.axis.controller.input_pos = self._relative_pos + turns / self.reduction_ratio
 
     def zero_position_calibration(self) -> None:
         """
@@ -441,7 +441,7 @@ class MotorController(MotorComputations):
             self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
             self._control_mode = ControlMode.POSITION_CONTROL
 
-        self.axis.controller.input_pos = self._relative_pos + angle / 360 / self._reduction_ratio
+        self.axis.controller.input_pos = self._relative_pos + angle / 360 / self.reduction_ratio
 
     def cadence_control(
         self,
@@ -462,9 +462,9 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        if cadence / self._reduction_ratio / 60 > self.axis.controller.config.vel_limit:
+        if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
             raise ValueError(
-                f"The cadence limit is {self.axis.controller.config.vel_limit * self._reduction_ratio * 60} "
+                f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
                 f"rpm for the pedals."
                 f"cadence specified: {cadence} rpm for the pedals"
             )
@@ -477,8 +477,8 @@ class MotorController(MotorComputations):
             self.axis.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.axis.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
-        self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
-        self.axis.controller.input_vel = -self.get_sign() * cadence / 60 / self._reduction_ratio
+        self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self.reduction_ratio
+        self.axis.controller.input_vel = -self.get_sign() * cadence / 60 / self.reduction_ratio
 
         if self._control_mode not in control_modes_based_on_cadence:
             # Starts the motor if the previous control mode was not already `cadence_CONTROL`
@@ -529,11 +529,11 @@ class MotorController(MotorComputations):
                     f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
                     f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
                 )
-            torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
+            torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            if abs(user_torque * self._reduction_ratio) > self.axis.motor.config.torque_lim:
+            if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
                 raise ValueError(
-                    f"The torque limit is {self.axis.motor.config.torque_lim / self._reduction_ratio} Nm."
+                    f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
                     f"Torque specified: {user_torque} Nm"
                 )
 
@@ -547,7 +547,7 @@ class MotorController(MotorComputations):
             else:
                 abs_motor_torque = max(0.0, abs(user_torque) - abs(resisting_torque))
                 motor_torque = self.get_sign() * abs_motor_torque
-                input_motor_torque = motor_torque * self._reduction_ratio
+                input_motor_torque = motor_torque * self.reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
@@ -592,7 +592,7 @@ class MotorController(MotorComputations):
         -------
         The input torque (Nm) at the pedals.
         """
-        cadence = abs(self.axis.encoder.vel_estimate * self._reduction_ratio * 2 * np.pi)  # rad/s
+        cadence = abs(self.axis.encoder.vel_estimate * self.reduction_ratio * 2 * np.pi)  # rad/s
         if cadence == 0:
             return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
         else:
@@ -684,7 +684,7 @@ class MotorController(MotorComputations):
             or self.previous_control_mode == ControlMode.POSITION_CONTROL
         ):
             # Gently slows down the motor.
-            self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
+            self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self.reduction_ratio
             self.axis.controller.input_vel = 0.0
 
         self._control_mode = ControlMode.STOPPING
@@ -751,7 +751,7 @@ class MotorController(MotorComputations):
         """
         Returns the estimated number of turns.
         """
-        return -(self.axis.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio
+        return -(self.axis.encoder.pos_estimate - self._relative_pos) * self.reduction_ratio
 
     def get_cadence(self) -> float:
         """
