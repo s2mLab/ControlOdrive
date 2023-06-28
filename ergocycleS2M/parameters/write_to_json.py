@@ -8,6 +8,8 @@ with open("hardware_and_security.json", "r") as hardware_and_security_file:
 
 current_lim = 500 / 48  # 500W / 48V # Not sure of this value
 # Calculated with the `torque_constant_computation.py` script
+# 0.1053225104205947 (calib done by Amandine at the beginning of her internship)
+# 0.09084625098244366 (calib done by Amandine and Kevin at the end of her internship with greater loads)
 torque_constant = hardware_and_security["torque_constant"]
 # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
 reduction_ratio = 8 / 36 * 10 / 91
