@@ -628,15 +628,15 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self.ui.angle_display.setText(f"{angle:.0f} °")
 
             # Errors
-            #self.ui.errors_label.setText(
-             #   f"{traduce_error(self.error.value, ODriveError)} "
-              #  f"{traduce_error(self.axis_error.value, ODriveAxisError)} "
-               # f"{traduce_error(self.controller_error.value, ODriveControllerError)} "
-                #f"{traduce_error(self.encoder_error.value, ODriveEncoderError)} "
+            # self.ui.errors_label.setText(
+            #   f"{traduce_error(self.error.value, ODriveError)} "
+            #  f"{traduce_error(self.axis_error.value, ODriveAxisError)} "
+            # f"{traduce_error(self.controller_error.value, ODriveControllerError)} "
+            # f"{traduce_error(self.encoder_error.value, ODriveEncoderError)} "
             #    f"{traduce_error(self.motor_error.value, ODriveMotorError)} "
-             #   f"{traduce_error(self.sensorless_estimator_error.value, ODriveSensorlessEstimatorError)} "
-              #  f"{traduce_error(self.can_error.value, ODriveCanError)}"
-            #)
+            #   f"{traduce_error(self.sensorless_estimator_error.value, ODriveSensorlessEstimatorError)} "
+            #  f"{traduce_error(self.can_error.value, ODriveCanError)}"
+            # )
 
             # Plot data
             self.time_array = np.roll(self.time_array, -1)

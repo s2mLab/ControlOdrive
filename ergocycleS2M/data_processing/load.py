@@ -229,7 +229,7 @@ def smooth_data(data: dict, window_length: int) -> dict:
     else:
         kernel = np.ones(window_length) / window_length
         smoothed_data = copy.deepcopy(data)
-        for key in ["iq_measured", "user_torque", "cadence", "user_power", "resisting_torque", "motor_torque"]:
+        for key in ["turns", "iq_measured", "user_torque", "cadence", "user_power", "resisting_torque", "motor_torque"]:
             smoothed_data[f"smoothed_{key}"] = np.convolve(data[key], kernel, mode="valid")
 
         smoothed_data["time_for_smoothed"] = data["time"][window_length // 2 : -window_length // 2 + 1]
