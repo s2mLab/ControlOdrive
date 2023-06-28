@@ -220,33 +220,11 @@ class MockController(MotorComputations):
         """
         pass
 
-    def turns_control(self, turns: float = 0.0):
-        """
-        Makes the motors turn for the indicated number of turns.
-
-        Parameters
-        ----------
-        turns: float
-            The number of turns the motor will do.
-        """
-        pass
-
     def zero_position_calibration(self):
         """
         Calibration for the 0 deg.
         """
         self._relative_pos = self.mock_axis_encoder_pos_estimate()
-
-    def position_control(self, angle: float = 0.0):
-        """
-        Leads the motors to the indicated angle.
-
-        Parameters
-        ----------
-        angle: float
-            The angle the motor must go to ([-180.0, 360.0] deg)
-        """
-        pass
 
     def cadence_control(
         self,

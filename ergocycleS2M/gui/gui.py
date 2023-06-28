@@ -10,16 +10,8 @@ from ergocycleS2M.gui.plot_widget import PlotWidget
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
     DirectionMode,
-    ODriveError,
-    ODriveAxisError,
-    ODriveControllerError,
-    ODriveEncoderError,
-    ODriveMotorError,
-    ODriveSensorlessEstimatorError,
-    ODriveCanError,
 )
 from ergocycleS2M.motor_control.motor_computations import MotorComputations
-from ergocycleS2M.utils import traduce_error
 
 
 class ErgocycleGUI(QtWidgets.QMainWindow):

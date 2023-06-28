@@ -318,7 +318,7 @@ class MotorController(MotorComputations):
 
         # Controller
         self.axis.controller.config.vel_limit = (
-            self.hardware_and_security["pedals_vel_limit"] / self.reduction_ratio / 60
+            self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
         self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
@@ -377,6 +377,12 @@ class MotorController(MotorComputations):
         """
         return self._direction
 
+    def zero_position_calibration(self) -> None:
+        """
+        Calibration for the 0 deg.
+        """
+        self._relative_pos = self.axis.encoder.pos_estimate
+
     def _check_ramp_rate(self, ramp_rate) -> None:
         """
         Check that the acceleration registered by the user is under the acceleration limit.
@@ -394,54 +400,50 @@ class MotorController(MotorComputations):
                 f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
             )
 
-    def turns_control(self, turns: float = 0.0) -> None:
-        """
-        Makes the motors turn for the indicated number of turns.
-
-        Parameters
-        ----------
-        turns: float
-            The number of turns the motor will do.
-        """
-        if self._control_mode != ControlMode.POSITION_CONTROL:
-            self.stop()
-            self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-            self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-            self._relative_pos = self.axis.encoder.pos_estimate
-            self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.POSITION_CONTROL
-
-        self.axis.controller.input_pos = self._relative_pos + turns / self.reduction_ratio
-
-    def zero_position_calibration(self) -> None:
-        """
-        Calibration for the 0 deg.
-        """
-        self._relative_pos = self.axis.encoder.pos_estimate
-
-    def position_control(self, angle: float = 0.0) -> None:
-        """
-        Leads the motors to the indicated angle.
-
-        Parameters
-        ----------
-        angle: float
-            The angle the motor must go to ([-180.0, 360.0] deg)
-        """
-        if angle > 360.0 or angle < -180.0:
-            raise ValueError(
-                f"The angle specified must be between -180.0 deg and 360.0 deg. Angle specified: {angle} deg"
-            )
-
-        if self._control_mode != ControlMode.POSITION_CONTROL:
-            self.stop()
-            self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-            self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-            # Starts the motor
-            self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.POSITION_CONTROL
-
-        self.axis.controller.input_pos = self._relative_pos + angle / 360 / self.reduction_ratio
+    # The following function is commented because it has not been tested for a long time.
+    # def turns_control(self, turns: float = 0.0) -> None:
+    #     """
+    #     Makes the motors turn for the indicated number of turns.
+    #
+    #     Parameters
+    #     ----------
+    #     turns: float
+    #         The number of turns the motor will do.
+    #     """
+    #     if self._control_mode != ControlMode.POSITION_CONTROL:
+    #         self.stop()
+    #         self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+    #         self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+    #         self._relative_pos = self.axis.encoder.pos_estimate
+    #         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #         self._control_mode = ControlMode.POSITION_CONTROL
+    #
+    #     self.axis.controller.input_pos = self._relative_pos + turns / self.reduction_ratio
+    #
+    # The following function is commented because it has not been tested for a long time.
+    # def position_control(self, angle: float = 0.0) -> None:
+    #     """
+    #     Leads the motors to the indicated angle.
+    #
+    #     Parameters
+    #     ----------
+    #     angle: float
+    #         The angle the motor must go to ([-180.0, 360.0] deg)
+    #     """
+    #     if angle > 360.0 or angle < -180.0:
+    #         raise ValueError(
+    #             f"The angle specified must be between -180.0 deg and 360.0 deg. Angle specified: {angle} deg"
+    #         )
+    #
+    #     if self._control_mode != ControlMode.POSITION_CONTROL:
+    #         self.stop()
+    #         self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+    #         self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+    #         # Starts the motor
+    #         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #         self._control_mode = ControlMode.POSITION_CONTROL
+    #
+    #     self.axis.controller.input_pos = self._relative_pos + angle / 360 / self.reduction_ratio
 
     def cadence_control(
         self,

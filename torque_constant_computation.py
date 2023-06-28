@@ -130,19 +130,20 @@ all_theoretical_user_torques = all_weight_torques / reduction_ratio  # The weigh
 n = len(all_weight_torques)
 std = np.std(all_measured_user_torques - all_theoretical_user_torques)
 print(f"The standard deviation is {std:.2f} Nm.")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) <     std]) / n * 100:.0f}% of the values: +/-{std:.2f} Nm")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) < 2 * std]) / n * 100:.0f}% of the values: +/-{2*std:.2f} Nm")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) < 3 * std]) / n * 100:.0f}% of the values: +/-{3*std:.2f} Nm")
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) <     std]) / n * 100:.0f}% of the values: +/-{std:.2f} Nm"
+)
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) < 2 * std]) / n * 100:.0f}% of the values: +/-{2*std:.2f} Nm"
+)
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - all_theoretical_user_torques) < 3 * std]) / n * 100:.0f}% of the values: +/-{3*std:.2f} Nm"
+)
 
 line = np.linspace(min(all_theoretical_user_torques), max(all_theoretical_user_torques))
 plt.plot(line, line, label="Theoretical torque")
 plt.plot(all_theoretical_user_torques, all_measured_user_torques, "+", label="Measured torque")
-plt.fill_between(
-    line,
-    line - std * 3,
-    line + std * 3,
-    label=f"+/- {3 * std : .2f} Nm",
-    alpha=0.2)
+plt.fill_between(line, line - std * 3, line + std * 3, label=f"+/- {3 * std : .2f} Nm", alpha=0.2)
 plt.grid()
 plt.legend()
 plt.title("Torques measured during the torque constant calibration")
@@ -162,9 +163,15 @@ offset = curve_fit(offset_torque, all_measured_user_torques, all_theoretical_use
 
 std = np.std(all_measured_user_torques - (all_theoretical_user_torques + offset))
 print("With an offset on the bounds:")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < std]) / n * 100:.0f}% of the values: +{offset + std:.2f} / {offset - std:.2f} Nm")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < 2 * std]) / n * 100:.0f}% of the values: +{offset + 2 * std:.2f} / {offset - 2 * std:.2f} Nm")
-print(f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < 3 * std]) / n * 100:.0f}% of the values: +{offset + 3 * std:.2f} / {offset - 3 * std:.2f} Nm")
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < std]) / n * 100:.0f}% of the values: +{offset + std:.2f} / {offset - std:.2f} Nm"
+)
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < 2 * std]) / n * 100:.0f}% of the values: +{offset + 2 * std:.2f} / {offset - 2 * std:.2f} Nm"
+)
+print(
+    f"{len(all_measured_user_torques[np.abs(all_measured_user_torques - (all_theoretical_user_torques + offset)) < 3 * std]) / n * 100:.0f}% of the values: +{offset + 3 * std:.2f} / {offset - 3 * std:.2f} Nm"
+)
 
 plt.plot(line, line, label="Theoretical torque")
 plt.plot(all_theoretical_user_torques, all_measured_user_torques, "+", label="Measured torque")
@@ -173,7 +180,8 @@ plt.fill_between(
     line + offset - std * 2,
     line + offset + std * 2,
     label=f"+{offset + 2 * std:.2f} / {offset - 2 * std:.2f} Nm",
-    alpha=0.2)
+    alpha=0.2,
+)
 plt.grid()
 plt.legend()
 plt.title("Torques measured during the torque constant calibration")
