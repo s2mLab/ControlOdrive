@@ -571,7 +571,7 @@ class MotorController(MotorComputations):
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
-                    self.axis.motor.current_control.Iq_measured, vel_estimate
+                self.axis.motor.current_control.Iq_measured, vel_estimate
                 )
 
             if user_torque == 0.0:
@@ -600,7 +600,7 @@ class MotorController(MotorComputations):
         # self._control_mode is updated.
         self._control_mode = control_mode
 
-        return motor_torque  # Nm at the pedals
+        return self.axis.controller.torque_setpoint / self.reduction_ratio  # Nm at the pedals
 
     def concentric_power_control(
         self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None

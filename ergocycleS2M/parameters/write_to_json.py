@@ -44,7 +44,7 @@ dictionary = {
     # If you set this to a higher value than the true brake resistance then the ODrive will unnecessarily burn more
     # power than required during braking.
     "brake_resistance": 3.5,  # Ohms
-    "pedals_cadence_limit": cadence_lim,
+    "pedals_cadence_limit": 200.0,
     "vel_limit_tolerance": 2.0,  # tr/s of the motor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
