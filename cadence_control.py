@@ -36,7 +36,7 @@ while t1 - t0 < 10:
         # torque or the cadence that is sent to the motor, because no matter what the control model specified by the
         # user is, the control of the motor can only be done with a torque or a cadence control.
         motor.minimal_save_data_to_file(
-            "cadence_control_example", spin_box=instruction, instruction=instruction, ramp_instruction=ramp_rate
+            "cadence_control_example", gear=0, spin_box=instruction, instruction=instruction, ramp_instruction=ramp_rate
         )
         t_next += 1 / f_sample
 
@@ -47,7 +47,7 @@ data = load("cadence_control_example.bio")
 t = np.asarray(data["time"])
 
 # Plot
-_, cadence, *_ = compute_data(data["vel_estimate"], data["turns"], data["iq_measured"])
+_, cadence, *_ = compute_data(data["vel_estimate"], data["turns"], data["iq_measured"], data["gear"])
 plt.plot(t, cadence, label="Pedals cadence")
 # The real instruction sent to the motor is not saved in the data, but it can be computed from the ramp_rate and the
 # instruction if needed.

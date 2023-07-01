@@ -214,7 +214,7 @@ class Application:
                     is_cadence_control = True
 
             else:
-                motor.stopping(cadence_ramp_rate=self.ramp_instruction.value)
+                motor.stopping()
                 if abs(motor.get_cadence()) < 10.0:
                     self.stopping.value = not motor.stopped()
 

@@ -52,7 +52,7 @@ dictionary = {
     "torque_constant": torque_constant,
     "calibration_current": 7.0,  # Not sure of this value
     "resistance_calib_max_voltage": 20.0,  # Not sure of this value
-    "requested_current_range": current_lim + 5.0,  # > current_lim + current_lim_margin but as little as possible
+    "requested_current_range_margin": 0.5,
     "current_control_bandwidth": 100.0,  # Not sure of this value
     "I_bus_hard_max": 600 / 48,  # 600W / 48V
     "current_lim": current_lim,

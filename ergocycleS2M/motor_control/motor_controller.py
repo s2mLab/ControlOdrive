@@ -77,8 +77,6 @@ class MotorController(MotorComputations):
         # if the motor happened to be wired on axis 1, it would be easier to change it.
         self.odrive_board.clear_errors()
         self.axis = self.odrive_board.axis1
-        self._gains_path = gains_path
-        self.gains_configuration(False)
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
@@ -93,6 +91,8 @@ class MotorController(MotorComputations):
             self.file_path = "XP/last_XP"
         self.first_save = True
         self.t0 = 0.0
+
+        self._gains_path = gains_path
 
     def erase_configuration(self) -> None:
         """
@@ -355,9 +355,9 @@ class MotorController(MotorComputations):
         self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
         self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
         self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
-        self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
-        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
+        self.axis.motor.config.requested_current_range = self.axis.motor.config.current_lim + self.axis.motor.config.current_lim_margin + self.hardware_and_security["requested_current_range_margin"]
+        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
         # cadence and acceleration limits
@@ -657,8 +657,8 @@ class MotorController(MotorComputations):
         torque = self.get_user_torque()
 
         # If the user is not forcing against the motor, the motor goes to the maximum cadence.
-        if (self._direction == DirectionMode.REVERSE and torque >= 0) or (
-            self._direction == DirectionMode.FORWARD and torque <= 0
+        if (self._direction == DirectionMode.REVERSE and torque <= 0) or (
+            self._direction == DirectionMode.FORWARD and torque >= 0
         ):
             self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
@@ -722,8 +722,7 @@ class MotorController(MotorComputations):
             or self.previous_control_mode == ControlMode.POSITION_CONTROL
         ):
             # Gently slows down the motor.
-            self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self.reduction_ratio
-            self.axis.controller.input_vel = 0.0
+            self.cadence_control(0.0, cadence_ramp_rate)
 
         self._control_mode = ControlMode.STOPPING
 
@@ -885,6 +884,7 @@ class MotorController(MotorComputations):
     def minimal_save_data_to_file(
         self,
         file_path: str,
+        gear: int = None,
         spin_box: float = None,
         instruction: float = None,
         ramp_instruction: float = None,
@@ -922,6 +922,7 @@ class MotorController(MotorComputations):
 
         data = {
             "time": time.time() - self.t0,
+            "gear": gear,
             "spin_box": spin_box,
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,

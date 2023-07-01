@@ -307,7 +307,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
 
         elif control_mode == GUIControlMode.CADENCE.value:
             self.ui.instruction_spinBox.setRange(
-                0, self.motor_computations.hardware_and_security["pedals_cadence_limit"] - 1
+                0, 70
             )
             self.ui.acceleration_spinBox.setRange(
                 0, self.motor_computations.hardware_and_security["pedals_accel_lim"] - 1
