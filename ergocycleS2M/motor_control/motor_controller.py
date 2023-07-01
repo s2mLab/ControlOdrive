@@ -601,6 +601,7 @@ class MotorController(MotorComputations):
         self,
         power: float = 0.0,
         torque_ramp_rate: float = 2.0,
+        torque_max: float = 40.0,
         gear: int = 0,
         resisting_torque: float = None,
     ) -> float:
@@ -615,6 +616,9 @@ class MotorController(MotorComputations):
             Power (W) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        torque_max: float
+            Maximum torque Nm at the pedals.
+            It has to be inferior to self.hardware_and_security["cadence_lim_gui"].
         gear: int
             The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
@@ -629,7 +633,7 @@ class MotorController(MotorComputations):
         if cadence == 0:
             input_torque = 0.0
         else:
-            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim"])
+            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim_gui"])
         return self.torque_control(
             input_torque, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
         )
@@ -649,6 +653,7 @@ class MotorController(MotorComputations):
             cadence ramp rate (rpm/s) at the pedals.
         cadence_max: float
             Maximum cadence rpm at the pedals, if no torque is applied or if the torque < power / cadence_max.
+            It has to be inferior to self.hardware_and_security["cadence_lim_gui"].
 
         Returns
         -------
