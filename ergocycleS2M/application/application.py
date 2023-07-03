@@ -5,17 +5,15 @@ processes with a shared memory.
 import multiprocessing as mp
 import os
 import sys
-import time
 from ctypes import c_bool, c_double, c_long, c_wchar_p
 from PyQt5 import QtWidgets
 
-from ergocycleS2M.data_processing.save import save_data_to_file
+from ergocycleS2M.data_processing.save import DataSaver
 from ergocycleS2M.gui.gui import ErgocycleGUI
 from ergocycleS2M.motor_control.enums import ControlMode
 
-from ergocycleS2M.motor_control.motor_controller import MotorController
-
-# from ergocycleS2M.motor_control.mock_controller import MockController
+# from ergocycleS2M.motor_control.motor_controller import MotorController
+from ergocycleS2M.motor_control.mock_controller import MockController
 
 
 class Application:
@@ -153,7 +151,7 @@ class Application:
         and update its data in the shared memory.
         To be launched in the main process.
         """
-        motor = MotorController(enable_watchdog=True, external_watchdog=False)
+        motor = MockController(enable_watchdog=True, external_watchdog=False)
         motor.zero_position_calibration()
         is_cadence_control = False
 
@@ -263,6 +261,7 @@ class Application:
         """
         Loop of the saving process it saves the data in a file.
         """
+        saving_app = QtWidgets.QApplication(sys.argv)
         while self.run.value:
             try:
                 file_name = self.queue_file_name.get_nowait()
@@ -275,41 +274,32 @@ class Application:
                         i += 1
                     file_name = f"{file_name}_{i}"
 
-                previous_save_time = saving_start_time = time.time()
-                # TODO: Save at a fixed frequency
-                while self.run.value and self.saving.value:
-                    try:
-                        comment = self.queue_comment.get_nowait()
-                    except Exception:
-                        comment = ""
-                    # Force the saving to be done at the specified frequency
-                    while time.time() - previous_save_time < 1.0 / self.saving_frequency:
-                        pass
-                    save_data_to_file(
-                        file_path=file_name,
-                        time=time.time() - saving_start_time,
-                        spin_box=self.spin_box.value,
-                        instruction=self.instruction.value,
-                        ramp_instruction=self.ramp_instruction.value,
-                        comment=comment,
-                        stopwatch=self.stopwatch.value,
-                        lap=self.lap.value,
-                        state=self.state.value,
-                        training_mode=self.training_mode.value,
-                        control_mode=self.control_mode.value,
-                        direction=self.direction.value,
-                        vel_estimate=self.vel_estimate.value,
-                        turns=self.turns.value,
-                        iq_measured=self.i_measured.value,
-                        error=self.error.value[0],
-                        axis_error=self.axis_error.value[0],
-                        controller_error=self.controller_error.value[0],
-                        encoder_error=self.encoder_error.value[0],
-                        motor_error=self.motor_error.value[0],
-                        sensorless_estimator_error=self.sensorless_estimator_error.value[0],
-                        can_error=self.can_error.value[0],
-                    )
-                    previous_save_time = time.time()
+                saving_widget = DataSaver(
+                    file_path=file_name,
+                    run=self.run,
+                    saving=self.saving,
+                    spin_box=self.spin_box,
+                    instruction=self.instruction,
+                    ramp_instruction=self.ramp_instruction,
+                    queue_comment=self.queue_comment,
+                    stopwatch=self.stopwatch,
+                    lap=self.lap,
+                    state=self.state,
+                    training_mode=self.training_mode,
+                    control_mode=self.control_mode,
+                    direction=self.direction,
+                    vel_estimate=self.vel_estimate,
+                    turns=self.turns,
+                    iq_measured=self.i_measured,
+                    error=self.error,
+                    axis_error=self.axis_error,
+                    controller_error=self.controller_error,
+                    encoder_error=self.encoder_error,
+                    motor_error=self.motor_error,
+                    sensorless_estimator_error=self.sensorless_estimator_error,
+                    can_error=self.can_error,
+                )
+                saving_app.exec()
             except Exception:
                 # No file name in the queue meaning that no saving instruction has been sent.
                 pass

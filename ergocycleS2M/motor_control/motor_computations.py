@@ -58,7 +58,7 @@ class MotorComputations:
         """
         return -vel_estimate * self.reduction_ratio * 60
 
-    def compute_resisting_torque_for_positive_velocity(self, vel_estimate: float | np.ndarray) -> float | np.ndarray:
+    def compute_resisting_torque_for_positive_velocity(self, vel_estimate: float) -> float:
         return np.sign(vel_estimate) * (
             self.resisting_current_proportional * abs(vel_estimate) + self.resisting_current_constant
         )
