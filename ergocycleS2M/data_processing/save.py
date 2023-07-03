@@ -161,6 +161,7 @@ class DataSaver(QtWidgets.QMainWindow):
             motor_error: mp.Value,
             sensorless_estimator_error: mp.Value,
             can_error: mp.Value,
+            motor_time: mp.Value,
             save_period: float = 0.1,
     ):
         super().__init__(parent=None)
@@ -192,6 +193,8 @@ class DataSaver(QtWidgets.QMainWindow):
         self.motor_error = motor_error
         self.sensorless_estimator_error = sensorless_estimator_error
         self.can_error = can_error
+
+        self.motor_time = motor_time
 
         # Update the display according to `update_period`
         self.timer = QtCore.QTimer(self)
@@ -225,6 +228,7 @@ class DataSaver(QtWidgets.QMainWindow):
         """
         data = {
             "time": time.time() - self.start_time,
+            "motor_time": self.motor_time.value,
             "spin_box": self.spin_box.value,
             "instruction": self.instruction.value,
             "ramp_instruction": self.ramp_instruction.value,

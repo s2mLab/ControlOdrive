@@ -5,6 +5,8 @@ processes with a shared memory.
 import multiprocessing as mp
 import os
 import sys
+import time
+
 from ctypes import c_bool, c_double, c_long, c_wchar_p
 from PyQt5 import QtWidgets
 
@@ -113,6 +115,7 @@ class Application:
         self.saving = mp.Manager().Value(c_bool, False)
         self.queue_file_name = mp.Manager().Queue()
         self.queue_comment = mp.Manager().Queue()
+        self.motor_time = mp.Manager().Value(c_double, 0.0)
         # Stopwatch
         self.stopwatch = mp.Manager().Value(c_double, 0.0)
         self.lap = mp.Manager().Value(c_double, 0.0)
@@ -223,6 +226,8 @@ class Application:
             self.sensorless_estimator_error.value = motor.get_sensorless_estimator_error()
             self.can_error.value = motor.get_can_error()
 
+            self.motor_time.value = time.time()
+
     def gui(self):
         """
         Loop of the gui it updates the data accordingly to the information received from the motor control process and
@@ -299,6 +304,7 @@ class Application:
                     sensorless_estimator_error=self.sensorless_estimator_error,
                     can_error=self.can_error,
                     save_period=self.save_period,
+                    motor_time=self.motor_time,
                 )
                 saving_app.exec()
             except Exception:
