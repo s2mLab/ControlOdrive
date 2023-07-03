@@ -23,7 +23,7 @@ class Application:
 
     Attributes
     ----------
-    saving_frequency : float
+    save_period : float
         Frequency of the saving in Hz.
     run : mp.Value
         Shared memory value to stop the application.
@@ -93,8 +93,8 @@ class Application:
         To be launched in a parallel process.
     """
 
-    def __init__(self, saving_frequency: float = 10):
-        self.saving_frequency = saving_frequency
+    def __init__(self, save_period: float = 10):
+        self.save_period = save_period
 
         # Shared memory
         # Security
@@ -298,6 +298,7 @@ class Application:
                     motor_error=self.motor_error,
                     sensorless_estimator_error=self.sensorless_estimator_error,
                     can_error=self.can_error,
+                    save_period=self.save_period,
                 )
                 saving_app.exec()
             except Exception:
