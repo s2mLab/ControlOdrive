@@ -238,13 +238,13 @@ class DataSaver(QtWidgets.QMainWindow):
             "vel_estimate": self.vel_estimate.value,
             "turns": self.turns.value,
             "iq_measured": self.iq_measured.value,
-            "error": self.error.value[0],
-            "axis_error": self.axis_error.value[0],
-            "controller_error": self.controller_error.value[0],
-            "encoder_error": self.encoder_error.value[0],
-            "motor_error": self.motor_error.value[0],
-            "sensorless_estimator_error": self.sensorless_estimator_error.value[0],
-            "can_error": self.can_error.value[0],
+            "error": self.error.value,
+            "axis_error": self.axis_error.value,
+            "controller_error": self.controller_error.value,
+            "encoder_error": self.encoder_error.value,
+            "motor_error": self.motor_error.value,
+            "sensorless_estimator_error": self.sensorless_estimator_error.value,
+            "can_error": self.can_error.value,
         }
 
         save(data, self.file_path)

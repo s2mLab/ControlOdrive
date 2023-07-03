@@ -215,13 +215,13 @@ class Application:
             self.direction.value = motor.get_direction()
             self.state.value = motor.get_state()
             # Errors
-            self.error.value = (motor.get_error(),)
-            self.axis_error.value = (motor.get_axis_error(),)
-            self.controller_error.value = (motor.get_controller_error(),)
-            self.encoder_error.value = (motor.get_encoder_error(),)
-            self.motor_error.value = (motor.get_motor_error(),)
-            self.sensorless_estimator_error.value = (motor.get_sensorless_estimator_error(),)
-            self.can_error.value = (motor.get_can_error(),)
+            self.error.value = motor.get_error()
+            self.axis_error.value = motor.get_axis_error()
+            self.controller_error.value = motor.get_controller_error()
+            self.encoder_error.value = motor.get_encoder_error()
+            self.motor_error.value = motor.get_motor_error()
+            self.sensorless_estimator_error.value = motor.get_sensorless_estimator_error()
+            self.can_error.value = motor.get_can_error()
 
     def gui(self):
         """
