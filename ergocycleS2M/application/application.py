@@ -90,8 +90,8 @@ class Application:
         Loop of the gui it updates the data accordingly to the information received from the motor control process and
         update the control of the motor in the shared memory.
         To be launched in a parallel process.
-    saving_loop
-        Loop of the saving process it saves the data in a file.
+    data_saver
+        It saves the data in a file if requested.
         To be launched in a parallel process.
     """
 
@@ -135,7 +135,7 @@ class Application:
 
         # Create the processes
         self.gui_process = mp.Process(name="GUI process", target=self.gui, daemon=True)
-        self.saving_process = mp.Process(name="Saving process", target=self.saving_loop, daemon=True)
+        self.saving_process = mp.Process(name="Saving process", target=self.data_saver, daemon=True)
 
     def start(self):
         """
@@ -262,7 +262,7 @@ class Application:
         gui.show()
         app.exec()
 
-    def saving_loop(self):
+    def data_saver(self):
         """
         Loop of the saving process it saves the data in a file.
         """

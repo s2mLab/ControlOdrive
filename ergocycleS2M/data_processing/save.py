@@ -135,7 +135,7 @@ def save_data_to_file(
     save(data, file_path)
 
 
-class DataSaver(QtWidgets.QMainWindow):
+class DataSaver(QtWidgets.QApplication):
     def __init__(
             self,
             file_path: str,

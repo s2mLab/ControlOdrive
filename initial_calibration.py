@@ -2,7 +2,7 @@
 Calibration without load
 """
 
-from ergocycleS2M.motor_control.motor import MotorController
+from ergocycleS2M.motor_control.motor_controller import MotorController
 
 # Initialisation
 motor = MotorController(enable_watchdog=False)
