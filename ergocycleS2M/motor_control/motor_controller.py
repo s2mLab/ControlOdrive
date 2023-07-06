@@ -104,11 +104,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis0
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis0
 
     def save_configuration(self) -> None:
         """
@@ -122,11 +128,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis0
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis0
 
     def config_watchdog(self, enable_watchdog: bool, watchdog_timeout: float = None) -> bool:
         """
@@ -162,6 +174,7 @@ class MotorController(MotorComputations):
             # As all the code is on the same thread (except for `_internal_watchdog_feed`), not anything else will
             # happen until the watchdog is fully enabled.
             time.sleep(3 * self._watchdog_timeout)  # 3 was chosen arbitrarily
+            # noinspection PyTypeChecker
             if traduce_error(AXIS_ERROR_WATCHDOG_TIMER_EXPIRED, ODriveAxisError) in traduce_error(
                 self.axis.error, ODriveAxisError
             ):
@@ -203,18 +216,18 @@ class MotorController(MotorComputations):
             self.axis.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
         else:
             # Starts a full calibration because the motor is not under mechanical load
-            self.odrive_board.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+            self.axis.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
 
         # Waits for the calibration to finish.
-        while self.odrive_board.axis0.current_state != AXIS_STATE_IDLE:
+        while self.axis.current_state != AXIS_STATE_IDLE:
             pass
 
         if self.has_error():
             raise RuntimeError("Error with configuration and/or calibration. Check odrivetool -> dump_errors(odrv0)")
 
         # Confirms the configuration and calibration. Allows to save the configuration after reboot.
-        self.odrive_board.axis0.encoder.config.pre_calibrated = True
-        self.odrive_board.axis0.motor.config.pre_calibrated = True
+        self.axis.encoder.config.pre_calibrated = True
+        self.axis.motor.config.pre_calibrated = True
         self.save_configuration()
 
         print("Calibration done")
@@ -225,11 +238,11 @@ class MotorController(MotorComputations):
         """
         return not (
             self.odrive_board.error == 0
-            and self.odrive_board.axis0.error == AXIS_ERROR_NONE
-            and self.odrive_board.axis0.controller.error == CONTROLLER_ERROR_NONE
-            and self.odrive_board.axis0.encoder.error == ENCODER_ERROR_NONE
-            and self.odrive_board.axis0.motor.error == MOTOR_ERROR_NONE
-            and self.odrive_board.axis0.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
+            and self.axis.error == AXIS_ERROR_NONE
+            and self.axis.controller.error == CONTROLLER_ERROR_NONE
+            and self.axis.encoder.error == ENCODER_ERROR_NONE
+            and self.axis.motor.error == MOTOR_ERROR_NONE
+            and self.axis.sensorless_estimator.error == SENSORLESS_ESTIMATOR_ERROR_NONE
         )
 
     def configuration(self) -> None:
@@ -278,27 +291,27 @@ class MotorController(MotorComputations):
         # Gains
         # For position control only
         if pos_gain is not None:
-            self.odrive_board.axis0.controller.config.pos_gain = pos_gain
+            self.axis.controller.config.pos_gain = pos_gain
         # For position and cadence control
         if k_vel_gain is not None:
-            self.odrive_board.axis0.controller.config.vel_gain = (
+            self.axis.controller.config.vel_gain = (
                 k_vel_gain
-                * self.odrive_board.axis0.motor.config.torque_constant
-                * self.odrive_board.axis0.encoder.config.cpr
+                * self.axis.motor.config.torque_constant
+                * self.axis.encoder.config.cpr
             )
         if k_vel_integrator_gain is not None:
-            self.odrive_board.axis0.controller.config.vel_integrator_gain = (
+            self.axis.controller.config.vel_integrator_gain = (
                 k_vel_integrator_gain
-                * self.odrive_board.axis0.motor.config.torque_constant
-                * self.odrive_board.axis0.encoder.config.cpr
+                * self.axis.motor.config.torque_constant
+                * self.axis.encoder.config.cpr
             )
         # For position, cadence and torque control
         if current_gain is not None:
-            self.odrive_board.axis0.controller.config.current_gain = current_gain
+            self.axis.controller.config.current_gain = current_gain
         if current_integrator_gain is not None:
-            self.odrive_board.axis0.controller.config.current_integrator_gain = current_integrator_gain
+            self.axis.controller.config.current_integrator_gain = current_integrator_gain
         if bandwidth is not None:
-            self.odrive_board.axis0.encoder.config.bandwidth = bandwidth
+            self.axis.encoder.config.bandwidth = bandwidth
 
         self.save_configuration()
 
@@ -323,43 +336,43 @@ class MotorController(MotorComputations):
         self.odrive_board.config.brake_resistance = self.hardware_and_security["brake_resistance"]
 
         # Controller
-        self.odrive_board.axis0.controller.config.vel_limit = (
+        self.axis.controller.config.vel_limit = (
             self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
-        self.odrive_board.axis0.controller.config.vel_limit_tolerance = self.hardware_and_security[
+        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security[
             "vel_limit_tolerance"
         ]  # tr/s
 
         # Encoder
-        self.odrive_board.axis0.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
-        self.odrive_board.axis0.encoder.config.cpr = self.hardware_and_security["cpr"]  # Count Per Revolution
-        self.odrive_board.axis0.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
+        self.axis.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
+        self.axis.encoder.config.cpr = self.hardware_and_security["cpr"]  # Count Per Revolution
+        self.axis.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
-        self.odrive_board.axis0.motor.config.motor_type = self.hardware_and_security["motor_type"]
-        self.odrive_board.axis0.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
-        self.odrive_board.axis0.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
-        self.odrive_board.axis0.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
-        self.odrive_board.axis0.motor.config.resistance_calib_max_voltage = self.hardware_and_security[
+        self.axis.motor.config.motor_type = self.hardware_and_security["motor_type"]
+        self.axis.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
+        self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
+        self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
+        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security[
             "resistance_calib_max_voltage"
         ]
-        self.odrive_board.axis0.motor.config.requested_current_range = self.hardware_and_security[
+        self.axis.motor.config.requested_current_range = self.hardware_and_security[
             "requested_current_range"
         ]
-        self.odrive_board.axis0.motor.config.current_control_bandwidth = self.hardware_and_security[
+        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security[
             "current_control_bandwidth"
         ]
-        self.odrive_board.axis0.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.odrive_board.axis0.motor.config.torque_lim = (
+        self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
+        self.axis.motor.config.torque_lim = (
             self.hardware_and_security["torque_lim"] * self.reduction_ratio
         )
 
         # cadence and acceleration limits
-        self.odrive_board.axis0.trap_traj.config.vel_limit = self.odrive_board.axis0.controller.config.vel_limit
-        self.odrive_board.axis0.trap_traj.config.accel_limit = (
+        self.axis.trap_traj.config.vel_limit = self.axis.controller.config.vel_limit
+        self.axis.trap_traj.config.accel_limit = (
             self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
-        self.odrive_board.axis0.trap_traj.config.decel_limit = (
+        self.axis.trap_traj.config.decel_limit = (
             self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
 
@@ -822,6 +835,7 @@ class MotorController(MotorComputations):
         """
         Returns the errors.
         """
+        # noinspection PyTypeChecker
         error_text = (
             f"{traduce_error(self.odrive_board.error, ODriveError)} "
             f"{traduce_error(self.axis.error, ODriveAxisError)} "

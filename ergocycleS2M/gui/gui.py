@@ -631,6 +631,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self.ui.angle_display.setText(f"{angle:.0f} °")
 
             # Errors
+            # noinspection PyTypeChecker
             self.ui.errors_label.setText(
                 f"{traduce_error(self.error.value, ODriveError)} "
                 f"{traduce_error(self.axis_error.value, ODriveAxisError)} "

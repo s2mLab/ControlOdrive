@@ -394,6 +394,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         plt.plot(data["sensorless_estimator_error"], label="Sensorless estimator error")
         plt.plot(data["can_error"], label="Can error")
 
+    # noinspection PyTypeChecker
     print(
         f"{traduce_error(data['error'][-1], ODriveError)}"
         f"{traduce_error(data['axis_error'][-1], ODriveAxisError)}"
@@ -401,6 +402,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         f"{traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
         f"{traduce_error(data['motor_error'][-1], ODriveMotorError)}"
         f"{traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}"
+        f"{traduce_error(data['can_error'][-1], ODriveCanError)}"
     )
 
     plt.show()
