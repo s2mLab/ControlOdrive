@@ -35,6 +35,9 @@ from ergocycleS2M.motor_control.enums import (
     control_modes_based_on_torque,
     control_modes_based_on_cadence,
     DirectionMode,
+)
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.utils import (
     ODriveError,
     ODriveAxisError,
     ODriveEncoderError,
@@ -42,9 +45,8 @@ from ergocycleS2M.motor_control.enums import (
     ODriveSensorlessEstimatorError,
     ODriveMotorError,
     ODriveCanError,
+    traduce_error,
 )
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
-from ergocycleS2M.utils import traduce_error
 
 
 parameters_path = Path(__file__).resolve().parent.parent / "parameters"
@@ -280,11 +282,15 @@ class MotorController(MotorComputations):
         # For position and cadence control
         if k_vel_gain is not None:
             self.odrive_board.axis0.controller.config.vel_gain = (
-                k_vel_gain * self.odrive_board.axis0.motor.config.torque_constant * self.odrive_board.axis0.encoder.config.cpr
+                k_vel_gain
+                * self.odrive_board.axis0.motor.config.torque_constant
+                * self.odrive_board.axis0.encoder.config.cpr
             )
         if k_vel_integrator_gain is not None:
             self.odrive_board.axis0.controller.config.vel_integrator_gain = (
-                k_vel_integrator_gain * self.odrive_board.axis0.motor.config.torque_constant * self.odrive_board.axis0.encoder.config.cpr
+                k_vel_integrator_gain
+                * self.odrive_board.axis0.motor.config.torque_constant
+                * self.odrive_board.axis0.encoder.config.cpr
             )
         # For position, cadence and torque control
         if current_gain is not None:
@@ -320,7 +326,9 @@ class MotorController(MotorComputations):
         self.odrive_board.axis0.controller.config.vel_limit = (
             self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
-        self.odrive_board.axis0.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
+        self.odrive_board.axis0.controller.config.vel_limit_tolerance = self.hardware_and_security[
+            "vel_limit_tolerance"
+        ]  # tr/s
 
         # Encoder
         self.odrive_board.axis0.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
@@ -332,11 +340,19 @@ class MotorController(MotorComputations):
         self.odrive_board.axis0.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
         self.odrive_board.axis0.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
         self.odrive_board.axis0.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
-        self.odrive_board.axis0.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
-        self.odrive_board.axis0.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
-        self.odrive_board.axis0.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
+        self.odrive_board.axis0.motor.config.resistance_calib_max_voltage = self.hardware_and_security[
+            "resistance_calib_max_voltage"
+        ]
+        self.odrive_board.axis0.motor.config.requested_current_range = self.hardware_and_security[
+            "requested_current_range"
+        ]
+        self.odrive_board.axis0.motor.config.current_control_bandwidth = self.hardware_and_security[
+            "current_control_bandwidth"
+        ]
         self.odrive_board.axis0.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.odrive_board.axis0.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
+        self.odrive_board.axis0.motor.config.torque_lim = (
+            self.hardware_and_security["torque_lim"] * self.reduction_ratio
+        )
 
         # cadence and acceleration limits
         self.odrive_board.axis0.trap_traj.config.vel_limit = self.odrive_board.axis0.controller.config.vel_limit
@@ -394,12 +410,12 @@ class MotorController(MotorComputations):
         """
         if abs(ramp_rate / self.reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
             pass
-            #raise ValueError(
+            # raise ValueError(
             #    f"The acceleration limit is "
             #    f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 3600} "
             #    f"rpm² for the pedals. "
             #    f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
-            #)
+            # )
 
     # The following function is commented because it has not been tested for a long time.
     # def turns_control(self, turns: float = 0.0) -> None:
@@ -465,7 +481,7 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        #if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
+        # if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
         #    raise ValueError(
         #        f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
         #        f"rpm for the pedals."
@@ -527,14 +543,14 @@ class MotorController(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            #if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+            # if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
             #    raise ValueError(
             #        f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
             #        f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
             #    )
             torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            #if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
+            # if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
             #    raise ValueError(
             #        f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
             #        f"Torque specified: {user_torque} Nm"

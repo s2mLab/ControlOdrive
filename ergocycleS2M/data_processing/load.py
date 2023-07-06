@@ -13,15 +13,18 @@ from typing import Tuple
 
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
+)
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.utils import (
     ODriveError,
     ODriveAxisError,
     ODriveEncoderError,
     ODriveControllerError,
     ODriveSensorlessEstimatorError,
     ODriveMotorError,
+    ODriveCanError,
+    traduce_error,
 )
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
-from ergocycleS2M.utils import traduce_error
 
 
 def load(filename: str) -> dict:
