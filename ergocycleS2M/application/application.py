@@ -188,7 +188,7 @@ class Application:
                     )
 
                 # The linear control mode is based on the torque control mode, but the torque input is calculated from
-                # the current cadence (torque_input = linear_coeff * cadence and resiting torque).
+                # the current cadence (torque_input = f(linear_coeff * cadence, resiting torque)).
                 elif control_mode == ControlMode.LINEAR_CONTROL:
                     self.instruction.value = motor.linear_control(self.spin_box.value, self.ramp_instruction.value)
 

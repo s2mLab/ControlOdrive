@@ -45,7 +45,7 @@ dictionary = {
     # power than required during braking.
     "brake_resistance": 3.5,  # Ohms
     "pedals_cadence_limit": 200.0,
-    "vel_limit_tolerance": 2.0,  # tr/s of the motor
+    "vel_limit_tolerance": 2.0,  # factor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
     "calib_scan_distance": 150.0,

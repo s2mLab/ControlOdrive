@@ -19,6 +19,7 @@ previous_torque_constant = motor_computations.torque_constant
 wrench = 0.170
 
 # Dictionary to store the data of the different calibrations
+# Change this dictionary if you want to do a calib again (3 tr/mass)
 calibs = {
     "calib_1": {
         "file_name": "calibration_files/Calib1.bio",
