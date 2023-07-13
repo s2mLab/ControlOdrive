@@ -508,7 +508,7 @@ class MotorController(MotorComputations):
 
         self._control_mode = control_mode
 
-        return self.get_sign() * cadence
+        return -self.axis.controller.vel_setpoint * self.reduction_ratio * 60
 
     def torque_control(
         self,
@@ -593,7 +593,7 @@ class MotorController(MotorComputations):
         # self._control_mode is updated.
         self._control_mode = control_mode
 
-        return self.axis.controller.torque_setpoint / self.reduction_ratio  # Nm at the pedals
+        return -self.axis.controller.torque_setpoint / self.reduction_ratio  # Nm at the pedals
 
     def concentric_power_control(
         self,
@@ -625,17 +625,12 @@ class MotorController(MotorComputations):
         """
         cadence = abs(self.axis.encoder.vel_estimate * self.reduction_ratio * 2 * np.pi)  # rad/s
         if cadence == 0:
-            return self.torque_control(
-                0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
-            )
+            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim"])
         else:
-            return self.torque_control(
-                min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
-                torque_ramp_rate,
-                gear,
-                resisting_torque,
-                ControlMode.CONCENTRIC_POWER_CONTROL,
-            )
+            input_torque = power / cadence
+        return self.torque_control(
+            input_torque, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
+        )
 
     def eccentric_power_control(
         self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0

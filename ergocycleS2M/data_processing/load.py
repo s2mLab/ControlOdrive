@@ -361,7 +361,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
     ax1.plot(
         data["time"],
-        -instruction_for_torque,
+        instruction_for_torque,
         label="Instruction",
     )
 
