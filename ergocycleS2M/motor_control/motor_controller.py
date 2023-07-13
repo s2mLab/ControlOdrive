@@ -55,8 +55,8 @@ parameters_path = Path(__file__).resolve().parent.parent / "parameters"
 class MotorController(MotorComputations):
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
-    Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 just change the
-    line `self.axis = self.odrive_board.axis0` to `self.axis = self.odrive_board.axis1` and it should work.
+    Odrive and one motor TSDZ2 wired on the axis1 of the Odrive. If a motor happens to be wired on axis1 just change the
+    line `self.axis = self.odrive_board.axis1` to `self.axis = self.odrive_board.axis1` and it should work.
     """
 
     def __init__(
@@ -73,9 +73,12 @@ class MotorController(MotorComputations):
         self._watchdog_feed_time = self.hardware_and_security["watchdog_feed_time"]
         print("Look for an odrive ...")
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.odrive_board.clear_errors()
+        self.axis = self.odrive_board.axis1
+        self._gains_path = gains_path
+        self.gains_configuration(False)
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
@@ -83,8 +86,6 @@ class MotorController(MotorComputations):
         self._relative_pos = 0
         self._direction = DirectionMode.FORWARD
         self.previous_control_mode = ControlMode.STOP
-
-        self._gains_path = gains_path
 
         if file_path:
             self.file_path = file_path
@@ -104,17 +105,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.axis = self.odrive_board.axis1
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.axis = self.odrive_board.axis1
 
     def save_configuration(self) -> None:
         """
@@ -128,17 +129,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.axis = self.odrive_board.axis1
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.axis = self.odrive_board.axis1
 
     def config_watchdog(self, enable_watchdog: bool, watchdog_timeout: float = None) -> bool:
         """
@@ -295,15 +296,11 @@ class MotorController(MotorComputations):
         # For position and cadence control
         if k_vel_gain is not None:
             self.axis.controller.config.vel_gain = (
-                k_vel_gain
-                * self.axis.motor.config.torque_constant
-                * self.axis.encoder.config.cpr
+                k_vel_gain * self.axis.motor.config.torque_constant * self.axis.encoder.config.cpr
             )
         if k_vel_integrator_gain is not None:
             self.axis.controller.config.vel_integrator_gain = (
-                k_vel_integrator_gain
-                * self.axis.motor.config.torque_constant
-                * self.axis.encoder.config.cpr
+                k_vel_integrator_gain * self.axis.motor.config.torque_constant * self.axis.encoder.config.cpr
             )
         # For position, cadence and torque control
         if current_gain is not None:
@@ -326,9 +323,9 @@ class MotorController(MotorComputations):
             "dc_bus_overvoltage_ramp_start"
         ]
         self.odrive_board.config.dc_bus_overvoltage_ramp_end = self.hardware_and_security["dc_bus_overvoltage_ramp_end"]
-        self.odrive_board.config.gpio9_mode = self.hardware_and_security["gpio9_mode"]
-        self.odrive_board.config.gpio10_mode = self.hardware_and_security["gpio10_mode"]
-        self.odrive_board.config.gpio11_mode = self.hardware_and_security["gpio11_mode"]
+        self.odrive_board.config.gpio12_mode = self.hardware_and_security["gpio9_mode"]
+        self.odrive_board.config.gpio13_mode = self.hardware_and_security["gpio10_mode"]
+        self.odrive_board.config.gpio14_mode = self.hardware_and_security["gpio11_mode"]
         self.odrive_board.config.max_regen_current = self.hardware_and_security["max_regen_current"]
         self.odrive_board.config.dc_max_positive_current = self.hardware_and_security["dc_max_positive_current"]
         self.odrive_board.config.dc_max_negative_current = self.hardware_and_security["dc_max_negative_current"]
@@ -339,9 +336,7 @@ class MotorController(MotorComputations):
         self.axis.controller.config.vel_limit = (
             self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
-        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security[
-            "vel_limit_tolerance"
-        ]  # tr/s
+        self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
         # Encoder
         self.axis.encoder.config.mode = self.hardware_and_security["mode"]  # Mode of the encoder
@@ -349,23 +344,18 @@ class MotorController(MotorComputations):
         self.axis.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
+        print("here",self.axis.motor.config.I_bus_hard_max)
+        self.axis.motor.config.requested_current_range = 35.0
+        self.axis.motor.config.I_bus_hard_max = self.hardware_and_security["I_bus_hard_max"]
         self.axis.motor.config.motor_type = self.hardware_and_security["motor_type"]
         self.axis.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
         self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
         self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
-        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security[
-            "resistance_calib_max_voltage"
-        ]
-        self.axis.motor.config.requested_current_range = self.hardware_and_security[
-            "requested_current_range"
-        ]
-        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security[
-            "current_control_bandwidth"
-        ]
+        self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
+        self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
+        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.axis.motor.config.torque_lim = (
-            self.hardware_and_security["torque_lim"] * self.reduction_ratio
-        )
+        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
         # cadence and acceleration limits
         self.axis.trap_traj.config.vel_limit = self.axis.controller.config.vel_limit
@@ -524,6 +514,7 @@ class MotorController(MotorComputations):
         self,
         user_torque: float = 0.0,
         torque_ramp_rate: float = 2.0,
+        gear: int = 0,
         resisting_torque: float = None,
         control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
     ) -> float:
@@ -536,6 +527,8 @@ class MotorController(MotorComputations):
             Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If None, the resisting torque is calculated in function of the cadence.
@@ -571,7 +564,7 @@ class MotorController(MotorComputations):
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
-                self.axis.motor.current_control.Iq_measured, vel_estimate
+                    self.axis.motor.current_control.Iq_measured, vel_estimate, gear
                 )
 
             if user_torque == 0.0:
@@ -603,7 +596,11 @@ class MotorController(MotorComputations):
         return self.axis.controller.torque_setpoint / self.reduction_ratio  # Nm at the pedals
 
     def concentric_power_control(
-        self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        power: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ) -> float:
         """
         Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
@@ -616,6 +613,8 @@ class MotorController(MotorComputations):
             Power (W) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -626,11 +625,14 @@ class MotorController(MotorComputations):
         """
         cadence = abs(self.axis.encoder.vel_estimate * self.reduction_ratio * 2 * np.pi)  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
+            return self.torque_control(
+                0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
+            )
         else:
             return self.torque_control(
                 min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
+                gear,
                 resisting_torque,
                 ControlMode.CONCENTRIC_POWER_CONTROL,
             )
@@ -668,7 +670,11 @@ class MotorController(MotorComputations):
             return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
     def linear_control(
-        self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        linear_coeff: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ) -> float:
         """
         Produce a torque proportional to the user's cadence.
@@ -679,6 +685,8 @@ class MotorController(MotorComputations):
             Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -691,6 +699,7 @@ class MotorController(MotorComputations):
         return self.torque_control(
             min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
+            gear,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
         )
@@ -816,13 +825,19 @@ class MotorController(MotorComputations):
         """
         return self.compute_motor_torque(self.axis.motor.current_control.Iq_measured)
 
-    def get_resisting_torque(self) -> float:
+    def get_resisting_torque(self, gear: int = 0) -> float:
         """
         Returns the resisting torque.
+
+        Parameters
+        ----------
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         """
         return self.compute_resisting_torque(
             self.axis.motor.current_control.Iq_measured,
             self.axis.encoder.vel_estimate,
+            gear,
         )
 
     def get_user_torque(self) -> float:

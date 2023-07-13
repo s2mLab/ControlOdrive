@@ -260,6 +260,7 @@ class MockController(MotorComputations):
         self,
         user_torque: float = 0.0,
         torque_ramp_rate: float = 2.0,
+        gear: int = 0,
         resisting_torque: float = None,
         control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
     ):
@@ -272,6 +273,8 @@ class MockController(MotorComputations):
             Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -311,7 +314,11 @@ class MockController(MotorComputations):
         return motor_torque  # Nm at the pedals
 
     def concentric_power_control(
-        self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        power: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ):
         """
         Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
@@ -324,6 +331,8 @@ class MockController(MotorComputations):
             Power (W) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -334,11 +343,12 @@ class MockController(MotorComputations):
         """
         cadence = 0.0  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
+            return self.torque_control(0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
         else:
             return self.torque_control(
                 min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
+                gear,
                 resisting_torque,
                 ControlMode.CONCENTRIC_POWER_CONTROL,
             )
@@ -373,7 +383,13 @@ class MockController(MotorComputations):
             cadence = min(abs(power / torque) / 2 / np.pi * 60, cadence_max)
             return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
-    def linear_control(self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None):
+    def linear_control(
+        self,
+        linear_coeff: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
+    ):
         """
         Produce a torque proportional to the user's cadence.
 
@@ -383,6 +399,8 @@ class MockController(MotorComputations):
             Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -395,6 +413,7 @@ class MockController(MotorComputations):
         return self.torque_control(
             min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
+            gear,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
         )

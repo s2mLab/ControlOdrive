@@ -34,6 +34,7 @@ def save(data_dict, data_path):
 def save_data_to_file(
     file_path: str,
     time: float = None,
+    gear: int = 0,
     spin_box: float = None,
     instruction: float = None,
     ramp_instruction: float = None,
@@ -64,6 +65,8 @@ def save_data_to_file(
         The path of the file where the data will be saved.
     time: float
         The time at the instant of the saving.
+    gear: int
+        The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
     spin_box: float
         The value of the spin box at the instant of the saving.
     instruction: float
@@ -111,6 +114,7 @@ def save_data_to_file(
     data = {
         "time": time,
         "spin_box": spin_box,
+        "gear": gear,
         "instruction": instruction,
         "ramp_instruction": ramp_instruction,
         "comments": comment,
@@ -141,6 +145,7 @@ class DataSaver(QtWidgets.QMainWindow):
         file_path: str,
         run: mp.Value,
         saving: mp.Value,
+        gear: mp.Value,
         spin_box: mp.Value,
         instruction: mp.Value,
         ramp_instruction: mp.Value,
@@ -172,6 +177,7 @@ class DataSaver(QtWidgets.QMainWindow):
 
         # Data
         self.file_path = file_path
+        self.gear = gear
         self.spin_box = spin_box
         self.instruction = instruction
         self.ramp_instruction = ramp_instruction
@@ -229,6 +235,7 @@ class DataSaver(QtWidgets.QMainWindow):
         data = {
             "time": time.time() - self.start_time,
             "motor_time": self.motor_time.value,
+            "gear": self.gear.value,
             "spin_box": self.spin_box.value,
             "instruction": self.instruction.value,
             "ramp_instruction": self.ramp_instruction.value,

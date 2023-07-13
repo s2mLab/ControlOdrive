@@ -7,7 +7,7 @@ import os
 import sys
 import time
 
-from ctypes import c_bool, c_double, c_long, c_wchar_p
+from ctypes import c_bool, c_double, c_int, c_long, c_wchar_p
 from PyQt5 import QtWidgets
 
 from ergocycleS2M.data_processing.save import DataSaver
@@ -29,6 +29,8 @@ class Application:
         Frequency of the saving in Hz.
     run : mp.Value
         Shared memory value to stop the application.
+    gear: mp.Value
+        Shared memory value to indicate the current gear.
     zero_position : mp.Value
         Shared memory value to indicate to set the zero position of the motor.
     queue_instructions : mp.Queue
@@ -101,6 +103,8 @@ class Application:
         # Shared memory
         # Security
         self.run = mp.Manager().Value(c_bool, True)
+        # Hardware
+        self.gear = mp.Manager().Value(c_int, 0)
         # Control
         self.zero_position = mp.Manager().Value(c_bool, 0.0)
         self.queue_instructions = mp.Manager().Queue()
@@ -178,19 +182,23 @@ class Application:
                 # because of the resisting torque.
                 # Furthermore, it allows to stop the pedals by reducing the torque if the user has stopped.
                 if control_mode == ControlMode.TORQUE_CONTROL:
-                    self.instruction.value = motor.torque_control(self.spin_box.value, self.ramp_instruction.value)
+                    self.instruction.value = motor.torque_control(
+                        self.spin_box.value, self.ramp_instruction.value, self.gear.value
+                    )
 
                 # The concentric power control mode is based on the torque control mode, but the torque input is
                 # calculated from the current cadence (torque_input = f(power / cadence, resiting torque)).
                 elif control_mode == ControlMode.CONCENTRIC_POWER_CONTROL:
                     self.instruction.value = motor.concentric_power_control(
-                        self.spin_box.value, self.ramp_instruction.value
+                        self.spin_box.value, self.ramp_instruction.value, self.gear.value
                     )
 
                 # The linear control mode is based on the torque control mode, but the torque input is calculated from
                 # the current cadence (torque_input = f(linear_coeff * cadence, resiting torque)).
                 elif control_mode == ControlMode.LINEAR_CONTROL:
-                    self.instruction.value = motor.linear_control(self.spin_box.value, self.ramp_instruction.value)
+                    self.instruction.value = motor.linear_control(
+                        self.spin_box.value, self.ramp_instruction.value, self.gear.value
+                    )
 
                 # The concentric power control mode is based on the cadence control mode, but the cadence input is
                 # calculated from the current torque (cadence_input = f(power / torque, resiting torque)).
@@ -236,6 +244,7 @@ class Application:
         app = QtWidgets.QApplication(sys.argv)
         gui = ErgocycleGUI(
             run=self.run,
+            gear=self.gear,
             zero_position=self.zero_position,
             queue_instructions=self.queue_instructions,
             training_mode=self.training_mode,
@@ -283,6 +292,7 @@ class Application:
                     file_path=file_name,
                     run=self.run,
                     saving=self.saving,
+                    gear=self.gear,
                     spin_box=self.spin_box,
                     instruction=self.instruction,
                     ramp_instruction=self.ramp_instruction,

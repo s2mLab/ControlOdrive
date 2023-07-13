@@ -62,7 +62,7 @@ for i in range(1, 6):
     calibs[calib_i]["weight_torque_at_motor"] = weight * wrench * np.sin(np.deg2rad(angle)) * reduction_ratio
 
     # Computing the current at the motor from the measured current and the current corresponding to the resisting torque
-    resisting_current = motor_computations.compute_resisting_torque_for_positive_velocity(
+    resisting_current = motor_computations.compute_resisting_current_for_positive_velocity(
         np.asarray(data["vel_estimate"][i_start:i_end])
     )
     calibs[calib_i]["user_current"] = -np.asarray(data["iq_measured"])[i_start:i_end] - resisting_current

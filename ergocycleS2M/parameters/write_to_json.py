@@ -6,7 +6,7 @@ from odrive.enums import GPIO_MODE_DIGITAL, MOTOR_TYPE_HIGH_CURRENT, ENCODER_MOD
 with open("hardware_and_security.json", "r") as hardware_and_security_file:
     hardware_and_security = json.load(hardware_and_security_file)
 
-current_lim = 500 / 48  # 500W / 48V # Not sure of this value
+current_lim = 60  # A
 # Calculated with the `torque_constant_computation.py` script
 # 0.1053225104205947 (calib done by Amandine at the beginning of her internship)
 # 0.09084625098244366 (calib done by Amandine and Kevin at the end of her internship with greater loads)
@@ -56,6 +56,7 @@ dictionary = {
     "resistance_calib_max_voltage": 20.0,  # Not sure of this value
     "requested_current_range": 25.0,  # > current_lim + current_lim_margin but as little as possible
     "current_control_bandwidth": 100.0,  # Not sure of this value
+    "I_bus_hard_max": 600 / 48,  # 600W / 48V
     "current_lim": current_lim,
     "torque_lim": torque_lim,
     "power_lim": torque_lim * cadence_lim * 2 * np.pi / 60,  # Motor power limit in W
@@ -70,6 +71,13 @@ dictionary = {
     # `resisting_current_calibration.py` script (it runs a calibration on the motor that lasts several minutes)
     "resisting_current_proportional": hardware_and_security["resisting_current_proportional"],
     "resisting_current_constant": hardware_and_security["resisting_current_constant"],
+    "resisting_current_cst_gear": hardware_and_security["resisting_current_cst_gear"],
+    "resisting_current_cst_constant": hardware_and_security["resisting_current_cst_constant"],
+    "resisting_current_prop_gear": hardware_and_security["resisting_current_prop_gear"],
+    "resisting_current_prop_constant": hardware_and_security["resisting_current_prop_constant"],
+    # Teeth of the gears, the first one is when the chain is not on the gears. 36 is for the easiest gear (teeth[1]), 11
+    # for the hardest one (teeth[10]).
+    "teeth": [0, 36, 32, 28, 25, 22, 19, 17, 15, 13, 11],
 }
 
 # Serializing json

@@ -24,10 +24,10 @@ from ergocycleS2M.utils import (
 )
 
 
-
 class ErgocycleGUI(QtWidgets.QMainWindow):
     def __init__(
         self,
+        gear: mp.Manager().Value,
         run: mp.Manager().Value,
         zero_position: mp.Manager().Value,
         queue_instructions: mp.Queue,
@@ -64,6 +64,8 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
         # Shared memory
         # Security
         self.run = run
+        # Hardware
+        self.gear = gear
         # Control
         self.zero_position = zero_position
         self.queue_instruction = queue_instructions
@@ -103,6 +105,13 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             self.ui.angle_reset_pushButton.backgroundRole()
         )
         self._color_grey = QtGui.QColor(220, 220, 220)
+
+        # Hardware
+        self.gui_gear = 0
+        self.ui.gear_spinBox.valueChanged.connect(self._update_gear)
+        self.ui.gear_spinBox.setValue(0)
+        self.ui.gear_spinBox.setSingleStep(1)
+        self.ui.gear_spinBox.setRange(0, 10)
 
         # Control
         self.motor_started = False
@@ -207,6 +216,9 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             cursor_pos = self.ui.save_lineEdit.cursorPosition()
             self.ui.save_lineEdit.setText(new_text)
             self.ui.save_lineEdit.setCursorPosition(cursor_pos - 1)
+
+    def _update_gear(self):
+        self.gear.value = self.gui_gear = self.ui.gear_spinBox.value()
 
     def _update_instruction_display_on_training_mode_change(self):
         """
@@ -615,7 +627,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
             turns = self.turns.value
             vel_estimate = self.vel_estimate.value
 
-            user_torque = self.motor_computations.compute_user_torque(i_measured, vel_estimate)
+            user_torque = self.motor_computations.compute_user_torque(i_measured, vel_estimate, self.gui_gear)
             cadence = self.motor_computations.compute_cadence(vel_estimate)
             user_power = self.motor_computations.compute_user_power(user_torque, cadence)
             angle = self.motor_computations.compute_angle(turns)
