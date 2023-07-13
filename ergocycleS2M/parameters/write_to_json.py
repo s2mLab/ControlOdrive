@@ -6,7 +6,7 @@ from odrive.enums import GPIO_MODE_DIGITAL, MOTOR_TYPE_HIGH_CURRENT, ENCODER_MOD
 with open("hardware_and_security.json", "r") as hardware_and_security_file:
     hardware_and_security = json.load(hardware_and_security_file)
 
-current_lim = 60  # A
+current_lim = 30  # A
 # Calculated with the `torque_constant_computation.py` script
 # 0.1053225104205947 (calib done by Amandine at the beginning of her internship)
 # 0.09084625098244366 (calib done by Amandine and Kevin at the end of her internship with greater loads)
@@ -15,7 +15,7 @@ torque_constant = hardware_and_security["torque_constant"]
 reduction_ratio = 8 / 36 * 10 / 91
 torque_lim = current_lim * torque_constant / reduction_ratio  # torque applied by the user in Nm
 # rpm of the pedals, it has been set at this value since above it, we frequently have errors
-cadence_lim = 66
+cadence_lim = 100  # rpm
 
 dictionary = {
     "enable_dc_bus_overvoltage_ramp": True,
@@ -42,7 +42,7 @@ dictionary = {
     # If you set this to a higher value than the true brake resistance then the ODrive will unnecessarily burn more
     # power than required during braking.
     "brake_resistance": 3.5,  # Ohms
-    "pedals_cadence_limit": 200.0,
+    "pedals_cadence_limit": cadence_lim,
     "vel_limit_tolerance": 2.0,  # factor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
@@ -52,7 +52,7 @@ dictionary = {
     "torque_constant": torque_constant,
     "calibration_current": 7.0,  # Not sure of this value
     "resistance_calib_max_voltage": 20.0,  # Not sure of this value
-    "requested_current_range": 25.0,  # > current_lim + current_lim_margin but as little as possible
+    "requested_current_range": current_lim + 5.0,  # > current_lim + current_lim_margin but as little as possible
     "current_control_bandwidth": 100.0,  # Not sure of this value
     "I_bus_hard_max": 600 / 48,  # 600W / 48V
     "current_lim": current_lim,
@@ -63,7 +63,7 @@ dictionary = {
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
     "reduction_ratio": 8 / 36 * 10 / 91,
     "pedals_accel_lim": 31,  # (rpm)/s of the pedals
-    "torque_ramp_rate_lim": 5.5,  # Nm/s
+    "torque_ramp_rate_lim": 15.5,  # Nm/s
     "maximal_cadence_stop": 31,  # tr/s of the pedals
     # The `resisting_current_proportional` and `resisting_current_constant` are calculated with the
     # `resisting_current_calibration.py` script (it runs a calibration on the motor that lasts several minutes)

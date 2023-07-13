@@ -414,14 +414,13 @@ class MotorController(MotorComputations):
         ramp_rate: float
             Acceleration of the pedals (rpm/s)
         """
-        if abs(ramp_rate / self.reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
-            pass
-            # raise ValueError(
-            #    f"The acceleration limit is "
-            #    f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 3600} "
-            #    f"rpm² for the pedals. "
-            #    f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
-            # )
+        if abs(ramp_rate) > self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60:
+            raise ValueError(
+               f"The acceleration limit is "
+               f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60} "
+               f"rpm/s for the pedals. "
+               f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
+            )
 
     # The following function is commented because it has not been tested for a long time.
     # def turns_control(self, turns: float = 0.0) -> None:
@@ -487,12 +486,12 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        # if cadence / self.reduction_ratio / 60 > self.axis.controller.config.vel_limit:
-        #    raise ValueError(
-        #        f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
-        #        f"rpm for the pedals."
-        #        f"cadence specified: {cadence} rpm for the pedals"
-        #    )
+        if cadence > self.axis.controller.config.vel_limit * self.reduction_ratio * 60:
+           raise ValueError(
+               f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
+               f"rpm for the pedals."
+               f"cadence specified: {cadence} rpm for the pedals"
+           )
 
         self._check_ramp_rate(cadence_ramp_rate)
 
@@ -552,18 +551,18 @@ class MotorController(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            # if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
-            #    raise ValueError(
-            #        f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
-            #        f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
-            #    )
+            if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+               raise ValueError(
+                   f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+                   f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+               )
             torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            # if abs(user_torque * self.reduction_ratio) > self.axis.motor.config.torque_lim:
-            #    raise ValueError(
-            #        f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
-            #        f"Torque specified: {user_torque} Nm"
-            #    )
+            if abs(user_torque) > self.axis.motor.config.torque_lim / self.reduction_ratio:
+               raise ValueError(
+                   f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
+                   f"Torque specified: {user_torque} Nm"
+               )
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
@@ -747,7 +746,7 @@ class MotorController(MotorComputations):
 
     def stop(
         self,
-        vel_stop: float = 10.0,
+        cadence_stop: float = 10.0,
         cadence_ramp_rate: float = 30,
     ) -> None:
         """
@@ -755,22 +754,21 @@ class MotorController(MotorComputations):
 
         Parameters
         ----------
-        vel_stop: float
+        cadence_stop: float
             The cadence at which the motor will be stopped if it was turning (rpm of the pedals).
         cadence_ramp_rate: float
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
-        if vel_stop > self.hardware_and_security["maximal_cadence_stop"]:
-            pass
-        #    raise ValueError(
-        #        f"The maximal cadence at which the motor can be stopped is "
-        #        f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
-        #        f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
-        #    )
+        if cadence_stop > self.hardware_and_security["maximal_cadence_stop"]:
+           raise ValueError(
+               f"The maximal cadence at which the motor can be stopped is "
+               f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
+               f"Stop cadence specified: {abs(cadence_stop)} rpm for the pedals"
+           )
 
         self.stopping(cadence_ramp_rate)
 
-        while abs(self.get_cadence()) > vel_stop:
+        while abs(self.get_cadence()) > cadence_stop:
             pass
 
         self.stopped()
