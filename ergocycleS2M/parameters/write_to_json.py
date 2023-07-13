@@ -25,9 +25,7 @@ dictionary = {
     # not to exceed max. output power.
     "dc_bus_overvoltage_ramp_start": 53.0,
     "dc_bus_overvoltage_ramp_end": 55.0,
-    "gpio9_mode": GPIO_MODE_DIGITAL,  # The pins the encoder is connected to
-    "gpio10_mode": GPIO_MODE_DIGITAL,
-    "gpio11_mode": GPIO_MODE_DIGITAL,
+    "gpio_mode": GPIO_MODE_DIGITAL,  # The pins the encoder is connected to
     # The bus current allowed to flow back to the power supply before the brake resistor module will start shunting
     # current.
     "max_regen_current": 0.0,

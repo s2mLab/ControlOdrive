@@ -323,9 +323,12 @@ class MotorController(MotorComputations):
             "dc_bus_overvoltage_ramp_start"
         ]
         self.odrive_board.config.dc_bus_overvoltage_ramp_end = self.hardware_and_security["dc_bus_overvoltage_ramp_end"]
-        self.odrive_board.config.gpio12_mode = self.hardware_and_security["gpio9_mode"]
-        self.odrive_board.config.gpio13_mode = self.hardware_and_security["gpio10_mode"]
-        self.odrive_board.config.gpio14_mode = self.hardware_and_security["gpio11_mode"]
+        # gpio9 for axis0 gpio12 for axis1
+        self.odrive_board.config.gpio12_mode = self.hardware_and_security["gpio_mode"]
+        # gpio10 for axis0 gpio12 for axis13
+        self.odrive_board.config.gpio13_mode = self.hardware_and_security["gpio_mode"]
+        # gpio11 for axis0 gpio14 for axis1
+        self.odrive_board.config.gpio14_mode = self.hardware_and_security["gpio_mode"]
         self.odrive_board.config.max_regen_current = self.hardware_and_security["max_regen_current"]
         self.odrive_board.config.dc_max_positive_current = self.hardware_and_security["dc_max_positive_current"]
         self.odrive_board.config.dc_max_negative_current = self.hardware_and_security["dc_max_negative_current"]
