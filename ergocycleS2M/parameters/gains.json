@@ -1,6 +1,6 @@
 {
     "pos_gain": 1.0,
-    "k_vel_gain": 0.02,
+    "k_vel_gain": 0.01,
     "k_vel_integrator_gain": 0.1,
     "bandwidth": 100.0
 }

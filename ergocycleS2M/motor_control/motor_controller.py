@@ -35,6 +35,9 @@ from ergocycleS2M.motor_control.enums import (
     control_modes_based_on_torque,
     control_modes_based_on_cadence,
     DirectionMode,
+)
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.utils import (
     ODriveError,
     ODriveAxisError,
     ODriveEncoderError,
@@ -42,9 +45,8 @@ from ergocycleS2M.motor_control.enums import (
     ODriveSensorlessEstimatorError,
     ODriveMotorError,
     ODriveCanError,
+    traduce_error,
 )
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
-from ergocycleS2M.utils import traduce_error
 
 
 parameters_path = Path(__file__).resolve().parent.parent / "parameters"
@@ -53,8 +55,8 @@ parameters_path = Path(__file__).resolve().parent.parent / "parameters"
 class MotorController(MotorComputations):
     """
     Represents a motor controlled by an Odrive with the integrated Hall encoder. This script has been written for one
-    Odrive and one motor TSDZ2 wired on the axis0 of the Odrive. If a motor happens to be wired on axis1 just change the
-    line `self.axis = self.odrive_board.axis0` to `self.axis = self.odrive_board.axis1` and it should work.
+    Odrive and one motor TSDZ2 wired on the axis1 of the Odrive. If a motor happens to be wired on axis1 just change the
+    line `self.axis = self.odrive_board.axis1` to `self.axis = self.odrive_board.axis1` and it should work.
     """
 
     def __init__(
@@ -71,9 +73,10 @@ class MotorController(MotorComputations):
         self._watchdog_feed_time = self.hardware_and_security["watchdog_feed_time"]
         print("Look for an odrive ...")
         self.odrive_board = odrive.find_any()
-        # The following line has been written to simplify the occurrences of `self.odrive_board.axis0` in the code and
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
         # if the motor happened to be wired on axis 1, it would be easier to change it.
-        self.axis = self.odrive_board.axis0
+        self.odrive_board.clear_errors()
+        self.axis = self.odrive_board.axis1
         print("Odrive found")
         self._watchdog_is_ready = self.config_watchdog(enable_watchdog)
 
@@ -82,14 +85,14 @@ class MotorController(MotorComputations):
         self._direction = DirectionMode.FORWARD
         self.previous_control_mode = ControlMode.STOP
 
-        self._gains_path = gains_path
-
         if file_path:
             self.file_path = file_path
         else:
             self.file_path = "XP/last_XP"
         self.first_save = True
         self.t0 = 0.0
+
+        self._gains_path = gains_path
 
     def erase_configuration(self) -> None:
         """
@@ -102,11 +105,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis1
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis1
 
     def save_configuration(self) -> None:
         """
@@ -120,11 +129,17 @@ class MotorController(MotorComputations):
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis1
         try:
             self.odrive_board.reboot()
         except fibre.libfibre.ObjectLostError:
             pass
         self.odrive_board = odrive.find_any()
+        # The following line has been written to simplify the occurrences of `self.odrive_board.axis1` in the code and
+        # if the motor happened to be wired on axis 1, it would be easier to change it.
+        self.axis = self.odrive_board.axis1
 
     def config_watchdog(self, enable_watchdog: bool, watchdog_timeout: float = None) -> bool:
         """
@@ -160,6 +175,7 @@ class MotorController(MotorComputations):
             # As all the code is on the same thread (except for `_internal_watchdog_feed`), not anything else will
             # happen until the watchdog is fully enabled.
             time.sleep(3 * self._watchdog_timeout)  # 3 was chosen arbitrarily
+            # noinspection PyTypeChecker
             if traduce_error(AXIS_ERROR_WATCHDOG_TIMER_EXPIRED, ODriveAxisError) in traduce_error(
                 self.axis.error, ODriveAxisError
             ):
@@ -307,9 +323,12 @@ class MotorController(MotorComputations):
             "dc_bus_overvoltage_ramp_start"
         ]
         self.odrive_board.config.dc_bus_overvoltage_ramp_end = self.hardware_and_security["dc_bus_overvoltage_ramp_end"]
-        self.odrive_board.config.gpio9_mode = self.hardware_and_security["gpio9_mode"]
-        self.odrive_board.config.gpio10_mode = self.hardware_and_security["gpio10_mode"]
-        self.odrive_board.config.gpio11_mode = self.hardware_and_security["gpio11_mode"]
+        # gpio9 for axis0 gpio12 for axis1
+        self.odrive_board.config.gpio12_mode = self.hardware_and_security["gpio_mode"]
+        # gpio10 for axis0 gpio12 for axis13
+        self.odrive_board.config.gpio13_mode = self.hardware_and_security["gpio_mode"]
+        # gpio11 for axis0 gpio14 for axis1
+        self.odrive_board.config.gpio14_mode = self.hardware_and_security["gpio_mode"]
         self.odrive_board.config.max_regen_current = self.hardware_and_security["max_regen_current"]
         self.odrive_board.config.dc_max_positive_current = self.hardware_and_security["dc_max_positive_current"]
         self.odrive_board.config.dc_max_negative_current = self.hardware_and_security["dc_max_negative_current"]
@@ -318,7 +337,7 @@ class MotorController(MotorComputations):
 
         # Controller
         self.axis.controller.config.vel_limit = (
-            self.hardware_and_security["pedals_vel_limit"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_cadence_limit"] / self.reduction_ratio / 60
         )  # tr/s
         self.axis.controller.config.vel_limit_tolerance = self.hardware_and_security["vel_limit_tolerance"]  # tr/s
 
@@ -328,23 +347,29 @@ class MotorController(MotorComputations):
         self.axis.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
+        self.axis.motor.config.requested_current_range = 35.0
+        self.axis.motor.config.I_bus_hard_max = self.hardware_and_security["I_bus_hard_max"]
         self.axis.motor.config.motor_type = self.hardware_and_security["motor_type"]
         self.axis.motor.config.pole_pairs = self.hardware_and_security["pole_pairs"]
         self.axis.motor.config.torque_constant = self.hardware_and_security["torque_constant"]
         self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
         self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
-        self.axis.motor.config.requested_current_range = self.hardware_and_security["requested_current_range"]
-        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self._reduction_ratio
+        self.axis.motor.config.requested_current_range = (
+            self.axis.motor.config.current_lim
+            + self.axis.motor.config.current_lim_margin
+            + self.hardware_and_security["requested_current_range_margin"]
+        )
+        self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
+        self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
         # cadence and acceleration limits
         self.axis.trap_traj.config.vel_limit = self.axis.controller.config.vel_limit
         self.axis.trap_traj.config.accel_limit = (
-            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
         self.axis.trap_traj.config.decel_limit = (
-            self.hardware_and_security["pedals_accel_lim"] / self._reduction_ratio / 60
+            self.hardware_and_security["pedals_accel_lim"] / self.reduction_ratio / 60
         )  # tr/s²
 
     def get_sign(self) -> int:
@@ -377,6 +402,12 @@ class MotorController(MotorComputations):
         """
         return self._direction
 
+    def zero_position_calibration(self) -> None:
+        """
+        Calibration for the 0 deg.
+        """
+        self._relative_pos = self.axis.encoder.pos_estimate
+
     def _check_ramp_rate(self, ramp_rate) -> None:
         """
         Check that the acceleration registered by the user is under the acceleration limit.
@@ -386,62 +417,58 @@ class MotorController(MotorComputations):
         ramp_rate: float
             Acceleration of the pedals (rpm/s)
         """
-        if abs(ramp_rate / self._reduction_ratio / 60) > self.axis.trap_traj.config.accel_limit:
+        if abs(ramp_rate) > self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60:
             raise ValueError(
                 f"The acceleration limit is "
-                f"{self.axis.trap_traj.config.accel_limit * self._reduction_ratio * 3600} "
-                f"rpm² for the pedals. "
+                f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60} "
+                f"rpm/s for the pedals. "
                 f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
             )
 
-    def turns_control(self, turns: float = 0.0) -> None:
-        """
-        Makes the motors turn for the indicated number of turns.
-
-        Parameters
-        ----------
-        turns: float
-            The number of turns the motor will do.
-        """
-        if self._control_mode != ControlMode.POSITION_CONTROL:
-            self.stop()
-            self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-            self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-            self._relative_pos = self.axis.encoder.pos_estimate
-            self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.POSITION_CONTROL
-
-        self.axis.controller.input_pos = self._relative_pos + turns / self._reduction_ratio
-
-    def zero_position_calibration(self) -> None:
-        """
-        Calibration for the 0 deg.
-        """
-        self._relative_pos = self.axis.encoder.pos_estimate
-
-    def position_control(self, angle: float = 0.0) -> None:
-        """
-        Leads the motors to the indicated angle.
-
-        Parameters
-        ----------
-        angle: float
-            The angle the motor must go to ([-180.0, 360.0] deg)
-        """
-        if angle > 360.0 or angle < -180.0:
-            raise ValueError(
-                f"The angle specified must be between -180.0 deg and 360.0 deg. Angle specified: {angle} deg"
-            )
-
-        if self._control_mode != ControlMode.POSITION_CONTROL:
-            self.stop()
-            self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
-            self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-            # Starts the motor
-            self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-            self._control_mode = ControlMode.POSITION_CONTROL
-
-        self.axis.controller.input_pos = self._relative_pos + angle / 360 / self._reduction_ratio
+    # The following function is commented because it has not been tested for a long time.
+    # def turns_control(self, turns: float = 0.0) -> None:
+    #     """
+    #     Makes the motors turn for the indicated number of turns.
+    #
+    #     Parameters
+    #     ----------
+    #     turns: float
+    #         The number of turns the motor will do.
+    #     """
+    #     if self._control_mode != ControlMode.POSITION_CONTROL:
+    #         self.stop()
+    #         self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+    #         self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+    #         self._relative_pos = self.axis.encoder.pos_estimate
+    #         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #         self._control_mode = ControlMode.POSITION_CONTROL
+    #
+    #     self.axis.controller.input_pos = self._relative_pos + turns / self.reduction_ratio
+    #
+    # The following function is commented because it has not been tested for a long time.
+    # def position_control(self, angle: float = 0.0) -> None:
+    #     """
+    #     Leads the motors to the indicated angle.
+    #
+    #     Parameters
+    #     ----------
+    #     angle: float
+    #         The angle the motor must go to ([-180.0, 360.0] deg)
+    #     """
+    #     if angle > 360.0 or angle < -180.0:
+    #         raise ValueError(
+    #             f"The angle specified must be between -180.0 deg and 360.0 deg. Angle specified: {angle} deg"
+    #         )
+    #
+    #     if self._control_mode != ControlMode.POSITION_CONTROL:
+    #         self.stop()
+    #         self.axis.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+    #         self.axis.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+    #         # Starts the motor
+    #         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #         self._control_mode = ControlMode.POSITION_CONTROL
+    #
+    #     self.axis.controller.input_pos = self._relative_pos + angle / 360 / self.reduction_ratio
 
     def cadence_control(
         self,
@@ -462,9 +489,9 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        if cadence / self._reduction_ratio / 60 > self.axis.controller.config.vel_limit:
+        if cadence > self.hardware_and_security["cadence_lim_gui"]:
             raise ValueError(
-                f"The cadence limit is {self.axis.controller.config.vel_limit * self._reduction_ratio * 60} "
+                f"The cadence limit is {self.hardware_and_security['cadence_lim_gui']} "
                 f"rpm for the pedals."
                 f"cadence specified: {cadence} rpm for the pedals"
             )
@@ -477,8 +504,8 @@ class MotorController(MotorComputations):
             self.axis.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
             self.axis.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
-        self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
-        self.axis.controller.input_vel = -self.get_sign() * cadence / 60 / self._reduction_ratio
+        self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self.reduction_ratio
+        self.axis.controller.input_vel = -self.get_sign() * cadence / 60 / self.reduction_ratio
 
         if self._control_mode not in control_modes_based_on_cadence:
             # Starts the motor if the previous control mode was not already `cadence_CONTROL`
@@ -486,12 +513,13 @@ class MotorController(MotorComputations):
 
         self._control_mode = control_mode
 
-        return self.get_sign() * cadence
+        return -self.axis.controller.vel_setpoint * self.reduction_ratio * 60
 
     def torque_control(
         self,
         user_torque: float = 0.0,
         torque_ramp_rate: float = 2.0,
+        gear: int = 0,
         resisting_torque: float = None,
         control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
     ) -> float:
@@ -504,6 +532,8 @@ class MotorController(MotorComputations):
             Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If None, the resisting torque is calculated in function of the cadence.
@@ -529,17 +559,17 @@ class MotorController(MotorComputations):
                     f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
                     f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
                 )
-            torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
+            torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            if abs(user_torque * self._reduction_ratio) > self.axis.motor.config.torque_lim:
+            if abs(user_torque) > self.hardware_and_security["torque_lim_gui"]:
                 raise ValueError(
-                    f"The torque limit is {self.axis.motor.config.torque_lim / self._reduction_ratio} Nm."
+                    f"The torque limit is {self.hardware_and_security['torque_lim_gui']} Nm."
                     f"Torque specified: {user_torque} Nm"
                 )
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
-                    self.axis.motor.current_control.Iq_measured, vel_estimate
+                    self.axis.motor.current_control.Iq_measured, vel_estimate, gear
                 )
 
             if user_torque == 0.0:
@@ -547,7 +577,7 @@ class MotorController(MotorComputations):
             else:
                 abs_motor_torque = max(0.0, abs(user_torque) - abs(resisting_torque))
                 motor_torque = self.get_sign() * abs_motor_torque
-                input_motor_torque = motor_torque * self._reduction_ratio
+                input_motor_torque = motor_torque * self.reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
@@ -568,10 +598,15 @@ class MotorController(MotorComputations):
         # self._control_mode is updated.
         self._control_mode = control_mode
 
-        return motor_torque  # Nm at the pedals
+        return -self.axis.controller.torque_setpoint / self.reduction_ratio  # Nm at the pedals
 
     def concentric_power_control(
-        self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        power: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        torque_max: float = 40.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ) -> float:
         """
         Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
@@ -584,6 +619,11 @@ class MotorController(MotorComputations):
             Power (W) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        torque_max: float
+            Maximum torque Nm at the pedals.
+            It has to be inferior to self.hardware_and_security["cadence_lim_gui"].
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -592,16 +632,14 @@ class MotorController(MotorComputations):
         -------
         The input torque (Nm) at the pedals.
         """
-        cadence = abs(self.axis.encoder.vel_estimate * self._reduction_ratio * 2 * np.pi)  # rad/s
+        cadence = abs(self.axis.encoder.vel_estimate * self.reduction_ratio * 2 * np.pi)  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
+            input_torque = 0.0
         else:
-            return self.torque_control(
-                min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
-                torque_ramp_rate,
-                resisting_torque,
-                ControlMode.CONCENTRIC_POWER_CONTROL,
-            )
+            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim_gui"])
+        return self.torque_control(
+            input_torque, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
+        )
 
     def eccentric_power_control(
         self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0
@@ -618,6 +656,7 @@ class MotorController(MotorComputations):
             cadence ramp rate (rpm/s) at the pedals.
         cadence_max: float
             Maximum cadence rpm at the pedals, if no torque is applied or if the torque < power / cadence_max.
+            It has to be inferior to self.hardware_and_security["cadence_lim_gui"].
 
         Returns
         -------
@@ -626,8 +665,8 @@ class MotorController(MotorComputations):
         torque = self.get_user_torque()
 
         # If the user is not forcing against the motor, the motor goes to the maximum cadence.
-        if (self._direction == DirectionMode.REVERSE and torque >= 0) or (
-            self._direction == DirectionMode.FORWARD and torque <= 0
+        if (self._direction == DirectionMode.REVERSE and torque <= 0) or (
+            self._direction == DirectionMode.FORWARD and torque >= 0
         ):
             self.cadence_control(cadence_max, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
             return np.inf  # So we know that the user is not forcing.
@@ -636,7 +675,11 @@ class MotorController(MotorComputations):
             return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
     def linear_control(
-        self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        linear_coeff: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ) -> float:
         """
         Produce a torque proportional to the user's cadence.
@@ -647,6 +690,8 @@ class MotorController(MotorComputations):
             Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -659,6 +704,7 @@ class MotorController(MotorComputations):
         return self.torque_control(
             min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
+            gear,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
         )
@@ -684,8 +730,7 @@ class MotorController(MotorComputations):
             or self.previous_control_mode == ControlMode.POSITION_CONTROL
         ):
             # Gently slows down the motor.
-            self.axis.controller.config.vel_ramp_rate = cadence_ramp_rate / 60 / self._reduction_ratio
-            self.axis.controller.input_vel = 0.0
+            self.cadence_control(0.0, cadence_ramp_rate)
 
         self._control_mode = ControlMode.STOPPING
 
@@ -708,7 +753,7 @@ class MotorController(MotorComputations):
 
     def stop(
         self,
-        vel_stop: float = 10.0,
+        cadence_stop: float = 10.0,
         cadence_ramp_rate: float = 30,
     ) -> None:
         """
@@ -716,21 +761,21 @@ class MotorController(MotorComputations):
 
         Parameters
         ----------
-        vel_stop: float
+        cadence_stop: float
             The cadence at which the motor will be stopped if it was turning (rpm of the pedals).
         cadence_ramp_rate: float
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
-        if vel_stop > self.hardware_and_security["maximal_cadence_stop"]:
+        if cadence_stop > self.hardware_and_security["maximal_cadence_stop"]:
             raise ValueError(
                 f"The maximal cadence at which the motor can be stopped is "
                 f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
-                f"Stop cadence specified: {abs(vel_stop)} rpm for the pedals"
+                f"Stop cadence specified: {abs(cadence_stop)} rpm for the pedals"
             )
 
         self.stopping(cadence_ramp_rate)
 
-        while abs(self.get_cadence()) > vel_stop:
+        while abs(self.get_cadence()) > cadence_stop:
             pass
 
         self.stopped()
@@ -751,7 +796,7 @@ class MotorController(MotorComputations):
         """
         Returns the estimated number of turns.
         """
-        return -(self.axis.encoder.pos_estimate - self._relative_pos) * self._reduction_ratio
+        return -(self.axis.encoder.pos_estimate - self._relative_pos) * self.reduction_ratio
 
     def get_cadence(self) -> float:
         """
@@ -759,29 +804,11 @@ class MotorController(MotorComputations):
         """
         return self.compute_cadence(self.axis.encoder.vel_estimate)
 
-    def get_electrical_power(self) -> float:
-        """
-        Returns the electrical power in W.
-        """
-        return self.axis.controller.electrical_power
-
-    def get_mechanical_power(self) -> float:
-        """
-        Returns the mechanical power in W.
-        """
-        return self.axis.controller.mechanical_power
-
     def get_user_power(self) -> float:
         """
         Returns the user mechanical power in W.
         """
         return self.compute_user_power(self.get_user_torque(), self.get_cadence())
-
-    def get_iq_setpoint(self) -> float:
-        """
-        Returns the commanded motor current in A.
-        """
-        return self.axis.motor.current_control.Iq_setpoint
 
     def get_iq_measured(self) -> float:
         """
@@ -789,19 +816,31 @@ class MotorController(MotorComputations):
         """
         return self.axis.motor.current_control.Iq_measured
 
+    def get_vel_estimate(self) -> float:
+        """
+        Returns the estimated velocity of the motor in tr/s.
+        """
+        return self.axis.encoder.vel_estimate
+
     def get_motor_torque(self) -> float:
         """
         Returns the measured torque.
         """
         return self.compute_motor_torque(self.axis.motor.current_control.Iq_measured)
 
-    def get_resisting_torque(self) -> float:
+    def get_resisting_torque(self, gear: int = 0) -> float:
         """
         Returns the resisting torque.
+
+        Parameters
+        ----------
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         """
         return self.compute_resisting_torque(
             self.axis.motor.current_control.Iq_measured,
             self.axis.encoder.vel_estimate,
+            gear,
         )
 
     def get_user_torque(self) -> float:
@@ -814,27 +853,53 @@ class MotorController(MotorComputations):
         """
         Returns the errors.
         """
+        # noinspection PyTypeChecker
         error_text = (
             f"{traduce_error(self.odrive_board.error, ODriveError)} "
-            f"{traduce_error(self.odrive_board.error, ODriveSensorlessEstimatorError)} "
             f"{traduce_error(self.axis.error, ODriveAxisError)} "
-            f"{traduce_error(self.axis.error, ODriveEncoderError)} "
             f"{traduce_error(self.axis.controller.error, ODriveControllerError)} "
+            f"{traduce_error(self.axis.encoder.error, ODriveEncoderError)} "
             f"{traduce_error(self.axis.motor.error, ODriveMotorError)} "
+            f"{traduce_error(self.axis.sensorless_estimator.error, ODriveSensorlessEstimatorError)} "
             f"{traduce_error(self.odrive_board.can.error, ODriveCanError)}"
         )
         return error_text
 
+    def get_error(self) -> int:
+        return self.odrive_board.error
+
+    def get_axis_error(self) -> int:
+        return self.axis.error
+
+    def get_motor_error(self) -> int:
+        return self.axis.motor.error
+
+    def get_encoder_error(self) -> int:
+        return self.axis.encoder.error
+
+    def get_controller_error(self) -> int:
+        return self.axis.controller.error
+
+    def get_sensorless_estimator_error(self) -> int:
+        return self.axis.sensorless_estimator.error
+
+    def get_can_error(self) -> int:
+        return self.odrive_board.can.error
+
+    def get_state(self) -> int:
+        return self.axis.current_state
+
     def minimal_save_data_to_file(
         self,
         file_path: str,
+        gear: int = None,
         spin_box: float = None,
         instruction: float = None,
         ramp_instruction: float = None,
-        comment: str = "",
-        stopwatch: float = 0.0,
-        lap: float = 0.0,
-        training_mode: str = "",
+        comment: str = None,
+        stopwatch: float = None,
+        lap: float = None,
+        training_mode: str = None,
     ):
         """
         Saves data. Only the data needed to reconstruct all the data is saved.
@@ -865,6 +930,7 @@ class MotorController(MotorComputations):
 
         data = {
             "time": time.time() - self.t0,
+            "gear": gear,
             "spin_box": spin_box,
             "instruction": instruction,
             "ramp_instruction": ramp_instruction,

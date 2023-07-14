@@ -11,8 +11,9 @@ class PlotWidget(pg.PlotWidget):
     Custom plot widget.
     """
 
-    def __init__(self, parent=None, name=None, y_label=None, color="b", show_x_axis=True):
+    def __init__(self, parent=None, name=None, y_label=None, color="b", show_x_axis=True, y_axis_range=10):
         super().__init__(parent=parent)
+        self.y_axis_range = y_axis_range
 
         # Set background color to white
         self.setBackground("w")
@@ -73,8 +74,8 @@ class PlotWidget(pg.PlotWidget):
             self._instruction_curve.setData(time_array, spin_box_array)
 
         self.setXRange(time_array[0], time_array[-1])
-        if min_array > -10 and max_array < 10:
-            self.setYRange(-10, 10)
+        if min_array > -self.y_axis_range and max_array < self.y_axis_range:
+            self.setYRange(-self.y_axis_range, self.y_axis_range)
         else:
             self.setYRange(min(min_array, 0), max(max_array, 0))
 
