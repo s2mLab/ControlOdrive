@@ -347,7 +347,6 @@ class MotorController(MotorComputations):
         self.axis.encoder.config.calib_scan_distance = self.hardware_and_security["calib_scan_distance"]
 
         # Motor
-        print("here",self.axis.motor.config.I_bus_hard_max)
         self.axis.motor.config.requested_current_range = 35.0
         self.axis.motor.config.I_bus_hard_max = self.hardware_and_security["I_bus_hard_max"]
         self.axis.motor.config.motor_type = self.hardware_and_security["motor_type"]
@@ -356,7 +355,11 @@ class MotorController(MotorComputations):
         self.axis.motor.config.calibration_current = self.hardware_and_security["calibration_current"]
         self.axis.motor.config.resistance_calib_max_voltage = self.hardware_and_security["resistance_calib_max_voltage"]
         self.axis.motor.config.current_lim = self.hardware_and_security["current_lim"]
-        self.axis.motor.config.requested_current_range = self.axis.motor.config.current_lim + self.axis.motor.config.current_lim_margin + self.hardware_and_security["requested_current_range_margin"]
+        self.axis.motor.config.requested_current_range = (
+            self.axis.motor.config.current_lim
+            + self.axis.motor.config.current_lim_margin
+            + self.hardware_and_security["requested_current_range_margin"]
+        )
         self.axis.motor.config.current_control_bandwidth = self.hardware_and_security["current_control_bandwidth"]
         self.axis.motor.config.torque_lim = self.hardware_and_security["torque_lim"] * self.reduction_ratio
 
@@ -416,10 +419,10 @@ class MotorController(MotorComputations):
         """
         if abs(ramp_rate) > self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60:
             raise ValueError(
-               f"The acceleration limit is "
-               f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60} "
-               f"rpm/s for the pedals. "
-               f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
+                f"The acceleration limit is "
+                f"{self.axis.trap_traj.config.accel_limit * self.reduction_ratio * 60} "
+                f"rpm/s for the pedals. "
+                f"Acceleration specified: {abs(ramp_rate)} rpm/s for the pedals."
             )
 
     # The following function is commented because it has not been tested for a long time.
@@ -487,11 +490,11 @@ class MotorController(MotorComputations):
         """
         cadence = abs(cadence)
         if cadence > self.hardware_and_security["cadence_lim_gui"]:
-           raise ValueError(
-               f"The cadence limit is {self.hardware_and_security['cadence_lim_gui']} "
-               f"rpm for the pedals."
-               f"cadence specified: {cadence} rpm for the pedals"
-           )
+            raise ValueError(
+                f"The cadence limit is {self.hardware_and_security['cadence_lim_gui']} "
+                f"rpm for the pedals."
+                f"cadence specified: {cadence} rpm for the pedals"
+            )
 
         self._check_ramp_rate(cadence_ramp_rate)
 
@@ -552,17 +555,17 @@ class MotorController(MotorComputations):
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
             if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
-               raise ValueError(
-                   f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
-                   f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
-               )
+                raise ValueError(
+                    f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+                    f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+                )
             torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
             if abs(user_torque) > self.hardware_and_security["torque_lim_gui"]:
-               raise ValueError(
-                   f"The torque limit is {self.hardware_and_security['torque_lim_gui']} Nm."
-                   f"Torque specified: {user_torque} Nm"
-               )
+                raise ValueError(
+                    f"The torque limit is {self.hardware_and_security['torque_lim_gui']} Nm."
+                    f"Torque specified: {user_torque} Nm"
+                )
 
             if resisting_torque is None:
                 resisting_torque = self.compute_resisting_torque(
@@ -764,11 +767,11 @@ class MotorController(MotorComputations):
             The ramp_rate of the deceleration (rpm/s of the pedals).
         """
         if cadence_stop > self.hardware_and_security["maximal_cadence_stop"]:
-           raise ValueError(
-               f"The maximal cadence at which the motor can be stopped is "
-               f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
-               f"Stop cadence specified: {abs(cadence_stop)} rpm for the pedals"
-           )
+            raise ValueError(
+                f"The maximal cadence at which the motor can be stopped is "
+                f"{self.hardware_and_security['maximal_cadence_stop']} rpm for the pedals."
+                f"Stop cadence specified: {abs(cadence_stop)} rpm for the pedals"
+            )
 
         self.stopping(cadence_ramp_rate)
 

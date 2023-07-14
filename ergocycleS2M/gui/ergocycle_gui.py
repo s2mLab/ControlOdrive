@@ -46,7 +46,9 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.current_cadence_display.setFont(font)
-        self.current_cadence_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.current_cadence_display.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.current_cadence_display.setObjectName("current_cadence_display")
         self.verticalLayout_3.addWidget(self.current_cadence_display)
         self.average_cadence_label = QtWidgets.QLabel(self.centralwidget)
@@ -58,7 +60,9 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.average_cadence_display.setFont(font)
-        self.average_cadence_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.average_cadence_display.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.average_cadence_display.setObjectName("average_cadence_display")
         self.verticalLayout_3.addWidget(self.average_cadence_display)
         self.cadence_horizontalLayout.addLayout(self.verticalLayout_3)
@@ -92,7 +96,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.current_power_display.setFont(font)
-        self.current_power_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.current_power_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.current_power_display.setObjectName("current_power_display")
         self.verticalLayout_2.addWidget(self.current_power_display)
         self.average_power_label = QtWidgets.QLabel(self.centralwidget)
@@ -104,7 +108,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.average_power_display.setFont(font)
-        self.average_power_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.average_power_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.average_power_display.setObjectName("average_power_display")
         self.verticalLayout_2.addWidget(self.average_power_display)
         self.power_horizontalLayout.addLayout(self.verticalLayout_2)
@@ -357,7 +361,9 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.current_torque_display.setFont(font)
-        self.current_torque_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.current_torque_display.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.current_torque_display.setObjectName("current_torque_display")
         self.verticalLayout_4.addWidget(self.current_torque_display)
         self.average_torque_label = QtWidgets.QLabel(self.centralwidget)
@@ -369,7 +375,9 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.average_torque_display.setFont(font)
-        self.average_torque_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.average_torque_display.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.average_torque_display.setObjectName("average_torque_display")
         self.verticalLayout_4.addWidget(self.average_torque_display)
         self.torque_horizontalLayout.addLayout(self.verticalLayout_4)
@@ -384,7 +392,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(11)
         self.turns_label.setFont(font)
-        self.turns_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.turns_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.turns_label.setObjectName("turns_label")
         self.turns_horizontalLayout.addWidget(self.turns_label)
         self.turns_display = QtWidgets.QLabel(self.centralwidget)
@@ -392,7 +400,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.turns_display.setFont(font)
-        self.turns_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.turns_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.turns_display.setObjectName("turns_display")
         self.turns_horizontalLayout.addWidget(self.turns_display)
         self.angle_label = QtWidgets.QLabel(self.centralwidget)
@@ -401,7 +409,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(11)
         self.angle_label.setFont(font)
-        self.angle_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.angle_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.angle_label.setObjectName("angle_label")
         self.turns_horizontalLayout.addWidget(self.angle_label)
         self.angle_display = QtWidgets.QLabel(self.centralwidget)
@@ -409,7 +417,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(20)
         self.angle_display.setFont(font)
-        self.angle_display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.angle_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.angle_display.setObjectName("angle_display")
         self.turns_horizontalLayout.addWidget(self.angle_display)
         self.gridLayout_2.addLayout(self.turns_horizontalLayout, 2, 0, 1, 1)
@@ -474,6 +482,7 @@ class Ui_MainWindow(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()

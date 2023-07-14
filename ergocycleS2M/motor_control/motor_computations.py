@@ -49,12 +49,8 @@ class MotorComputations:
                 self.hardware_and_security["resisting_current_constant"],
             )
         else:
-            resisting_current_proportional = (
-                self.prop_gear / self.gears[gear] + self.prop_cst
-            )
-            resisting_current_constant = (
-                self.cst_gear / self.gears[gear] + self.cst_cst
-            )
+            resisting_current_proportional = self.prop_gear / self.gears[gear] + self.prop_cst
+            resisting_current_constant = self.cst_gear / self.gears[gear] + self.cst_cst
             return resisting_current_proportional, resisting_current_constant
 
     @staticmethod
@@ -109,9 +105,7 @@ class MotorComputations:
         resisting_current_proportional, resisting_current_constant = self.compute_resisting_current_coefficients(gear)
         return np.sign(vel_estimate) * (resisting_current_proportional * abs(vel_estimate) + resisting_current_constant)
 
-    def compute_resisting_current(
-        self, i_measured: float, vel_estimate: float, gear: int = 0
-    ) -> float:
+    def compute_resisting_current(self, i_measured: float, vel_estimate: float, gear: int = 0) -> float:
         """
         Returns the current corresponding to the resisting torque.
 
@@ -139,9 +133,7 @@ class MotorComputations:
             resisting_current = -np.sign(i_measured) * min(resisting_current_constant, abs(i_measured))
         return resisting_current
 
-    def compute_resisting_torque(
-        self, i_measured: float, vel_estimate: float, gear: int = 0
-    ) -> float:
+    def compute_resisting_torque(self, i_measured: float, vel_estimate: float, gear: int = 0) -> float:
         """
         Returns the resisting torque.
 
@@ -161,9 +153,7 @@ class MotorComputations:
             The resisting torque due to solid frictions in Nm at the pedals.
         """
         return (
-            self.torque_constant
-            * self.compute_resisting_current(i_measured, vel_estimate, gear)
-            / self.reduction_ratio
+            self.torque_constant * self.compute_resisting_current(i_measured, vel_estimate, gear) / self.reduction_ratio
         )
 
     def compute_user_torque(self, i_measured: float, vel_estimate: float, gear: int = 0) -> float:

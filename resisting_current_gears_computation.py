@@ -32,7 +32,6 @@ def affine(x, prop, cst):
 
 popt_constant = curve_fit(affine, teeth, resisting_current_constant)
 popt_proportional = curve_fit(affine, teeth, resisting_current_proportional)
-print(popt_constant[0])
 
 plt.plot(gears, resisting_current_constant, "o", label="Data")
 plt.plot(gears, affine(teeth, *popt_constant[0]), label="Fitted line")

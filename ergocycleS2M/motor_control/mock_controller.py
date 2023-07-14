@@ -343,7 +343,9 @@ class MockController(MotorComputations):
         """
         cadence = 0.0  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
+            return self.torque_control(
+                0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
+            )
         else:
             return self.torque_control(
                 min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),

@@ -115,8 +115,8 @@ if __name__ == "__main__":
         "intensities": intensities,
         "velocities_std": velocities_std,
         "intensities_std": intensities_std,
-        "a" : -popt[0][0],
-        "b" : -popt[0][1]
+        "a": -popt[0][0],
+        "b": -popt[0][1],
     }
 
     print(data["a"], data["b"])

@@ -109,9 +109,7 @@ def compute_data(
         angle[i] = motor_object.compute_angle(turns[i])
         user_torque[i] = motor_object.compute_user_torque(iq_measured[i], vel_estimate[i], gear[i])
         user_power[i] = motor_object.compute_user_power(user_torque[i], cadence[i])
-        resisting_torque[i] = motor_object.compute_resisting_torque(
-            iq_measured[i], vel_estimate[i], gear[i]
-        )
+        resisting_torque[i] = motor_object.compute_resisting_torque(iq_measured[i], vel_estimate[i], gear[i])
         motor_torque[i] = motor_object.compute_motor_torque(iq_measured[i])
     return user_torque, cadence, angle, user_power, resisting_torque, motor_torque
 

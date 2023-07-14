@@ -1,0 +1,1 @@
+All the information you need is in `documentation/ergocycleS2M.pdf`.
