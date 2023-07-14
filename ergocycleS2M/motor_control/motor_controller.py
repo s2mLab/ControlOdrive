@@ -627,9 +627,9 @@ class MotorController(MotorComputations):
         """
         cadence = abs(self.axis.encoder.vel_estimate * self.reduction_ratio * 2 * np.pi)  # rad/s
         if cadence == 0:
-            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim"])
+            input_torque = 0.0
         else:
-            input_torque = power / cadence
+            input_torque = min(abs(power) / cadence, self.hardware_and_security["torque_lim"])
         return self.torque_control(
             input_torque, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
         )
