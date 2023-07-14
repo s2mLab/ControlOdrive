@@ -267,7 +267,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
 
         control_mode = self.ui.control_comboBox.currentText()
         if control_mode == GUIControlMode.POWER.value:
-            self.ui.instruction_spinBox.setRange(0, self.motor_computations.hardware_and_security["power_lim"])
+            self.ui.instruction_spinBox.setRange(0, self.motor_computations.hardware_and_security["power_lim_gui"])
             self.ui.instruction_spinBox.setSingleStep(power_step)
             self.ui.instruction_label.setText("Power instruction")
             self.ui.units_label.setText("W")
@@ -283,7 +283,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
                 self.ui.acceleration_units_label.setText("N.m/s")
             elif training_mode == TrainingMode.ECCENTRIC.value:
                 self.ui.acceleration_spinBox.setRange(
-                    0, int(self.motor_computations.hardware_and_security["pedals_accel_lim"]) - 1
+                    0, self.motor_computations.hardware_and_security["cadence_lim_gui"]
                 )
                 self.ui.acceleration_spinBox.setSingleStep(vel_step)
                 self.ui.acceleration_spinBox.setValue(vel_ramp)
@@ -322,7 +322,7 @@ class ErgocycleGUI(QtWidgets.QMainWindow):
 
         elif control_mode == GUIControlMode.TORQUE.value:
             self.ui.instruction_spinBox.setRange(
-                0, int(self.motor_computations.hardware_and_security["torque_lim"] - 1)
+                0, self.motor_computations.hardware_and_security["torque_lim_gui"]
             )
             self.ui.acceleration_spinBox.setRange(
                 0, int(self.motor_computations.hardware_and_security["torque_ramp_rate_lim"])

@@ -486,9 +486,9 @@ class MotorController(MotorComputations):
             Control mode of the motor.
         """
         cadence = abs(cadence)
-        if cadence > self.axis.controller.config.vel_limit * self.reduction_ratio * 60:
+        if cadence > self.hardware_and_security["cadence_lim_gui"]:
            raise ValueError(
-               f"The cadence limit is {self.axis.controller.config.vel_limit * self.reduction_ratio * 60} "
+               f"The cadence limit is {self.hardware_and_security['cadence_lim_gui']} "
                f"rpm for the pedals."
                f"cadence specified: {cadence} rpm for the pedals"
            )
@@ -558,9 +558,9 @@ class MotorController(MotorComputations):
                )
             torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
-            if abs(user_torque) > self.axis.motor.config.torque_lim / self.reduction_ratio:
+            if abs(user_torque) > self.hardware_and_security["torque_lim_gui"]:
                raise ValueError(
-                   f"The torque limit is {self.axis.motor.config.torque_lim / self.reduction_ratio} Nm."
+                   f"The torque limit is {self.hardware_and_security['torque_lim_gui']} Nm."
                    f"Torque specified: {user_torque} Nm"
                )
 

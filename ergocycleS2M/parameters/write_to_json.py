@@ -43,6 +43,7 @@ dictionary = {
     # power than required during braking.
     "brake_resistance": 3.5,  # Ohms
     "pedals_cadence_limit": cadence_lim,
+    "cadence_lim_gui": 70.0,  # Not able to reach a higher value
     "vel_limit_tolerance": 2.0,  # factor
     "mode": ENCODER_MODE_HALL,
     "cpr": 6 * 8,  # Count per revolution
@@ -57,7 +58,8 @@ dictionary = {
     "I_bus_hard_max": 600 / 48,  # 600W / 48V
     "current_lim": current_lim,
     "torque_lim": torque_lim,
-    "power_lim": torque_lim * cadence_lim * 2 * np.pi / 60,  # Motor power limit in W
+    "torque_lim_gui": 40.0,  # Arbitrary value
+    "power_lim_gui": 300.0,  # Arbitrary value
     "watchdog_timeout": 0.3,  # Chosen arbitrarily
     "watchdog_feed_time": 0.01,  # Chosen arbitrarily
     # Some doc specified 93 instead of 91 but the checks on the motor seems to validate 91
