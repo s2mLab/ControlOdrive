@@ -1,5 +1,7 @@
 """
 This script is used to sample the current corresponding to the resisting torque of the motor at different velocities.
+It needs to be launched at different gears in order to use then `resisting_current_gears_computation.py`. It has been
+done at60 psi
 """
 import json
 import matplotlib.pyplot as plt
@@ -45,7 +47,7 @@ def calibration(instruction, nb_turns=5):
 
     # Wait for 1 second to stabilize at the instructed velocity (can't be done with a time.sleep() because of the
     # watchdog thread)
-    while t1 - t0 < 1.0:
+    while t1 - t0 < 3.0:
         t1 = time.time()
 
     print(f"Stabilized at {instruction} rpm.")
@@ -60,25 +62,22 @@ def calibration(instruction, nb_turns=5):
         t1 = time.time()
         iq_measured.append(motor.axis.motor.current_control.Iq_measured)
         vel_estimate.append(motor.axis.encoder.vel_estimate)
-
-    return np.mean(iq_measured), np.mean(vel_estimate)
+    print(np.mean(iq_measured), "*/-", np.std(iq_measured), "A")
+    print(np.mean(vel_estimate), "*/-", np.std(vel_estimate), "tr/s")
+    return np.mean(iq_measured), np.std(iq_measured), np.mean(vel_estimate), np.std(vel_estimate)
 
 
 if __name__ == "__main__":
     intensities = []
     velocities = []
-    for ins in range(-60, 61, 5):
-        if ins == 0:
-            average_iq_measured, average_vel_estimate = calibration(-1, 1)
-            intensities.append(average_iq_measured)
-            velocities.append(average_vel_estimate)
-            average_iq_measured, average_vel_estimate = calibration(1, 1)
-            intensities.append(average_iq_measured)
-            velocities.append(average_vel_estimate)
-        else:
-            average_iq_measured, average_vel_estimate = calibration(ins)
-            intensities.append(average_iq_measured)
-            velocities.append(average_vel_estimate)
+    intensities_std = []
+    velocities_std = []
+    for ins in range(5, 61, 5):
+        average_iq_measured, i_std, average_vel_estimate, v_std = calibration(ins)
+        intensities.append(average_iq_measured)
+        velocities.append(average_vel_estimate)
+        intensities_std.append(i_std)
+        velocities_std.append(v_std)
 
     def lost_current(vel_estimate, resisting_current_proportional, resisting_current_constant):
         """
@@ -111,13 +110,18 @@ if __name__ == "__main__":
     plt.ylabel("Resisting current (A)")
     plt.show()
 
-    with open("./ergocycleS2M/parameters/hardware_and_security.json", "r") as f:
-        hardware_and_security = json.load(f)
+    data = {
+        "velocities": velocities,
+        "intensities": intensities,
+        "velocities_std": velocities_std,
+        "intensities_std": intensities_std,
+        "a": -popt[0][0],
+        "b": -popt[0][1],
+    }
 
-    hardware_and_security["resisting_current_proportional"] = -float(popt[0][0])
-    hardware_and_security["resisting_current_constant"] = -float(popt[0][1])
+    print(data["a"], data["b"])
 
     # Writing to .json
-    json_object = json.dumps(hardware_and_security, indent=4)
-    with open("./ergocycleS2M/parameters/hardware_and_security.json", "w") as outfile:
+    json_object = json.dumps(data, indent=4)
+    with open("./calibration_files/resisting_current_gear_10.json", "w") as outfile:
         outfile.write(json_object)

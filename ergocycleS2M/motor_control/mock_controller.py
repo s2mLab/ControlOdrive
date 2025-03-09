@@ -20,7 +20,7 @@ from ergocycleS2M.motor_control.motor_computations import MotorComputations
 parameters_path = Path(__file__).resolve().parent.parent / "parameters"
 
 
-class Phantom(MotorComputations):
+class MockController(MotorComputations):
     """
     Represents phantom class of the MotorController class: no odrive board need to be connected to use this class.
     """
@@ -32,7 +32,7 @@ class Phantom(MotorComputations):
         gains_path: str = str(parameters_path / "gains.json"),
         file_path: str = None,
     ):
-        super(Phantom, self).__init__()
+        super(MockController, self).__init__()
         self._watchdog_is_ready = False
         self._external_watchdog = external_watchdog
         self._watchdog_timeout = self.hardware_and_security["watchdog_timeout"]
@@ -47,6 +47,8 @@ class Phantom(MotorComputations):
         self.previous_control_mode = ControlMode.STOP
 
         self._gains_path = gains_path
+
+        self.t0 = time.time()
 
         if file_path:
             self.file_path = file_path
@@ -218,33 +220,11 @@ class Phantom(MotorComputations):
         """
         pass
 
-    def turns_control(self, turns: float = 0.0):
-        """
-        Makes the motors turn for the indicated number of turns.
-
-        Parameters
-        ----------
-        turns: float
-            The number of turns the motor will do.
-        """
-        pass
-
     def zero_position_calibration(self):
         """
         Calibration for the 0 deg.
         """
-        pass
-
-    def position_control(self, angle: float = 0.0):
-        """
-        Leads the motors to the indicated angle.
-
-        Parameters
-        ----------
-        angle: float
-            The angle the motor must go to ([-180.0, 360.0] deg)
-        """
-        pass
+        self._relative_pos = self.mock_axis_encoder_pos_estimate()
 
     def cadence_control(
         self,
@@ -280,6 +260,7 @@ class Phantom(MotorComputations):
         self,
         user_torque: float = 0.0,
         torque_ramp_rate: float = 2.0,
+        gear: int = 0,
         resisting_torque: float = None,
         control_mode: ControlMode = ControlMode.TORQUE_CONTROL,
     ):
@@ -292,6 +273,8 @@ class Phantom(MotorComputations):
             Torque of the user (Nm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -312,8 +295,12 @@ class Phantom(MotorComputations):
             torque_ramp_rate_motor = 100.0
         # If the user is pedaling, the torque and torque_ramp values have to be translated to the motor.
         else:
-            # TODO: Check if the torque ramp rate is correct
-            torque_ramp_rate_motor = torque_ramp_rate * self._reduction_ratio
+            if torque_ramp_rate > self.hardware_and_security["torque_ramp_rate_lim"]:
+                raise ValueError(
+                    f"The torque ramp rate limit is {self.hardware_and_security['torque_ramp_rate_lim']} Nm/s."
+                    f"Torque ramp rate specified: {torque_ramp_rate} Nm/s"
+                )
+            torque_ramp_rate_motor = torque_ramp_rate * self.reduction_ratio
 
         # The motor can be controlled with the computed values
         if self._control_mode not in control_modes_based_on_torque:
@@ -327,16 +314,25 @@ class Phantom(MotorComputations):
         return motor_torque  # Nm at the pedals
 
     def concentric_power_control(
-        self, power: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None
+        self,
+        power: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
     ):
         """
-        # TODO add docstring in all to explain to call in a thread.
+        Ensure a constant power at the pedals. In concentric mode, the power is positive when the user is pedaling and
+        the torque imposed at the user adapts to its cadence to ensure the power.
+        As the torque has to adapt to the cadence, this function has to be called in a loop or a thread depending.
+
         Parameters
         ----------
         power: float
             Power (W) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -347,17 +343,23 @@ class Phantom(MotorComputations):
         """
         cadence = 0.0  # rad/s
         if cadence == 0:
-            return self.torque_control(0.0, torque_ramp_rate, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL)
+            return self.torque_control(
+                0.0, torque_ramp_rate, gear, resisting_torque, ControlMode.CONCENTRIC_POWER_CONTROL
+            )
         else:
             return self.torque_control(
                 min(abs(power) / cadence, self.hardware_and_security["torque_lim"]),
                 torque_ramp_rate,
+                gear,
                 resisting_torque,
                 ControlMode.CONCENTRIC_POWER_CONTROL,
             )
 
     def eccentric_power_control(self, power: float = 0.0, cadence_ramp_rate: float = 5.0, cadence_max: float = 50.0):
         """
+        Ensure a constant power at the pedals. In eccentric mode, the power is negative when the user is pedaling and
+        the cadence imposed at the user adapts to its torque to ensure the power.
+
         Parameters
         ----------
         power: float
@@ -383,14 +385,24 @@ class Phantom(MotorComputations):
             cadence = min(abs(power / torque) / 2 / np.pi * 60, cadence_max)
             return self.cadence_control(cadence, cadence_ramp_rate, ControlMode.ECCENTRIC_POWER_CONTROL)
 
-    def linear_control(self, linear_coeff: float = 0.0, torque_ramp_rate: float = 2.0, resisting_torque: float = None):
+    def linear_control(
+        self,
+        linear_coeff: float = 0.0,
+        torque_ramp_rate: float = 2.0,
+        gear: int = 0,
+        resisting_torque: float = None,
+    ):
         """
+        Produce a torque proportional to the user's cadence.
+
         Parameters
         ----------
         linear_coeff: float
             Linear coefficient (Nm/rpm) at the pedals.
         torque_ramp_rate: float
             Torque ramp rate (Nm/s) at the pedals.
+        gear: int
+            The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
         resisting_torque: float
             Resisting torque at the pedals (Nm).
             If the variable `torque` is absolute, set resisting_torque to 0.0.
@@ -403,6 +415,7 @@ class Phantom(MotorComputations):
         return self.torque_control(
             min(cadence * abs(linear_coeff), self.hardware_and_security["torque_lim"]),
             torque_ramp_rate,
+            gear,
             resisting_torque,
             ControlMode.LINEAR_CONTROL,
         )
@@ -478,126 +491,88 @@ class Phantom(MotorComputations):
         """
         return self.compute_angle(self.get_turns())
 
-    def get_turns(self):
+    def get_turns(self) -> float:
         """
         Returns the estimated number of turns.
         """
-        return 20 * np.sin(time.time() - self._relative_pos)
+        return -(self.mock_axis_encoder_pos_estimate() - self._relative_pos) * self.reduction_ratio
 
     def get_cadence(self) -> float:
         """
         Returns the estimated cadence of the pedals in rpm.
         """
-        return self.compute_cadence(20 * np.sin(time.time()))
+        return self.compute_cadence(self.mock_axis_encoder_vel_estimate())
 
-    def get_electrical_power(self):
-        """
-        Returns the electrical power in W.
-        """
-        return 20 * np.sin(time.time())
-
-    def get_mechanical_power(self):
-        """
-        Returns the mechanical power in W.
-        """
-        return 20 * np.sin(time.time())
-
-    def get_user_power(self):
+    def get_user_power(self) -> float:
         """
         Returns the user mechanical power in W.
         """
-        return self.compute_user_torque(self.get_user_torque(), self.get_cadence())
+        return self.compute_user_power(self.get_user_torque(), self.get_cadence())
 
-    def get_iq_setpoint(self):
-        """
-        Returns the commanded motor current in A.
-        """
-        return 20 * np.sin(time.time())
-
-    def get_iq_measured(self):
+    def get_iq_measured(self) -> float:
         """
         Returns the measured motor current in A.
         """
-        return 20 * np.sin(time.time())
+        return self.mock_axis_motor_current_control_iq_measured()
 
-    def get_measured_torque(self):
+    def get_vel_estimate(self) -> float:
+        """
+        Returns the estimated velocity of the motor in tr/s.
+        """
+        return self.mock_axis_encoder_vel_estimate()
+
+    def get_motor_torque(self) -> float:
         """
         Returns the measured torque.
         """
-        return 20 * np.sin(time.time())
+        return self.compute_motor_torque(self.mock_axis_motor_current_control_iq_measured())
 
-    def get_motor_torque(self):
-        """
-        Returns the measured torque.
-        """
-        return self.compute_motor_torque(20 * np.sin(time.time()))
-
-    def get_resisting_torque(self):
+    def get_resisting_torque(self) -> float:
         """
         Returns the resisting torque.
         """
         return self.compute_resisting_torque(
-            20 * np.sin(time.time()),
-            20 * np.sin(time.time()),
+            self.mock_axis_motor_current_control_iq_measured(),
+            self.mock_axis_encoder_vel_estimate(),
         )
 
-    def get_user_torque(self):
+    def get_user_torque(self) -> float:
         """
         Returns the measured user torque (the resisting torque is subtracted from the motor_torque).
         """
         return self.compute_user_torque(
-            20 * np.sin(time.time()),
-            20 * np.sin(time.time()),
+            self.mock_axis_motor_current_control_iq_measured(), self.mock_axis_encoder_vel_estimate()
         )
 
-    def get_errors(self):
+    def get_errors(self) -> str:
         """
         Returns the errors.
         """
         return ""
 
-    def save_data_to_file(
-        self,
-        file_path: str,
-        spin_box: float = None,
-        instruction: float = None,
-        ramp_instruction: float = None,
-        comment: str = "",
-        stopwatch: float = 0.0,
-        lap: float = 0.0,
-    ):
-        """
-        Saves data.
-        """
-        if self.first_save:
-            self.t0 = time.time()
-            self.first_save = False
+    def get_error(self) -> int:
+        return 0
 
-        data = {
-            "comments": comment,
-            "stopwatch": stopwatch,
-            "lap": lap,
-            "spin_box": spin_box,
-            "instruction": instruction,
-            "ramp_instruction": ramp_instruction,
-            "time": time.time() - self.t0,
-            "user_torque": self.get_user_torque(),
-            "cadence": self.get_cadence(),
-            "angle": self.get_angle(),
-            "turns": self.get_turns(),
-            "user_power": self.get_user_power(),
-            "control_mode": self._control_mode.value,
-            "direction": self._direction.value,
-            "iq_setpoint": self.get_iq_setpoint(),
-            "iq_measured": self.get_iq_measured(),
-            "measured_torque": self.get_measured_torque(),
-            "motor_torque": self.get_motor_torque(),
-            "resisting_torque": self.get_resisting_torque(),
-            "mechanical_power": self.get_mechanical_power(),
-            "electrical_power": self.get_electrical_power(),
-        }
+    def get_axis_error(self) -> int:
+        return 0
 
-        save(data, file_path)
+    def get_motor_error(self) -> int:
+        return 0
+
+    def get_encoder_error(self) -> int:
+        return 0
+
+    def get_controller_error(self) -> int:
+        return 0
+
+    def get_sensorless_estimator_error(self) -> int:
+        return 0
+
+    def get_can_error(self) -> int:
+        return 0
+
+    def get_state(self) -> int:
+        return 0
 
     def minimal_save_data_to_file(
         self,
@@ -605,13 +580,33 @@ class Phantom(MotorComputations):
         spin_box: float = None,
         instruction: float = None,
         ramp_instruction: float = None,
-        comment: str = "",
-        stopwatch: float = 0.0,
-        lap: float = 0.0,
-        training_mode: str = "",
+        comment: str = None,
+        stopwatch: float = None,
+        lap: float = None,
+        training_mode: str = None,
     ):
         """
-        Saves data.
+        Saves data. Only the data needed to reconstruct all the data is saved.
+
+        Parameters
+        ----------
+        file_path: str
+            The path of the file where the data will be saved.
+        spin_box: float
+            The value of the spin box at the instant of the saving.
+        instruction: float
+            The value of the instruction at the instant of the saving.
+        ramp_instruction: float
+            The value of the ramp instruction at the instant of the saving.
+        comment: str
+            A comment to add to the data at the instant of the saving.
+        stopwatch: float
+            The value of the stopwatch at the instant of the saving.
+        lap: float
+            The value of the stopwatch lap at the instant of the saving.
+        training_mode: str
+            The training mode at the instant of the saving (concentric or eccentric, in the case we are in cadence
+            control).
         """
         if self.first_save:
             self.t0 = time.time()
@@ -625,10 +620,54 @@ class Phantom(MotorComputations):
             "comments": comment,
             "stopwatch": stopwatch,
             "lap": lap,
+            "state": self.mock_return_int(),
             "control_mode": self._control_mode.value,
             "direction": self._direction.value,
             "training_mode": training_mode,
+            "vel_estimate": self.mock_axis_encoder_vel_estimate(),
             "turns": self.get_turns(),
+            "iq_measured": self.mock_axis_motor_current_control_iq_measured(),
+            "error": self.mock_return_int(),
+            "axis_error": self.mock_return_int(),
+            "controller_error": self.mock_return_int(),
+            "encoder_error": self.mock_return_int(),
+            "motor_error": self.mock_return_int(),
+            "sensorless_estimator_error": self.mock_return_int(),
+            "can_error": self.mock_return_int(),
         }
 
         save(data, file_path)
+
+    def mock_axis_encoder_pos_estimate(self):
+        """
+        Mock self.axis.encoder.pos_estimate
+        """
+        return 20 * np.sin(time.time())
+
+    @staticmethod
+    def mock_axis_encoder_vel_estimate():
+        """
+        Mock self.axis.encoder.vel_estimate
+        """
+        return 20 * np.cos(time.time())
+
+    @staticmethod
+    def mock_axis_motor_current_control_iq_measured():
+        """
+        Mock self.axis.motor.current_control.Iq_measured
+        """
+        return 0.1 * np.sin(time.time())
+
+    @staticmethod
+    def mock_return_int():
+        """
+        Mock self.axis.current_state
+        Mock self.odrive_board.error
+        Mock self.axis.error
+        Mock self.axis.controller.error
+        Mock self.axis.encoder.error
+        Mock self.axis.sensorless.error
+        Mock self.axis.motor.error
+        Mock self.odrive.board.can_error
+        """
+        return 0

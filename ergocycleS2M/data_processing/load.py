@@ -13,18 +13,21 @@ from typing import Tuple
 
 from ergocycleS2M.motor_control.enums import (
     ControlMode,
+)
+from ergocycleS2M.motor_control.motor_computations import MotorComputations
+from ergocycleS2M.utils import (
     ODriveError,
     ODriveAxisError,
     ODriveEncoderError,
     ODriveControllerError,
     ODriveSensorlessEstimatorError,
     ODriveMotorError,
+    ODriveCanError,
+    traduce_error,
 )
-from ergocycleS2M.motor_control.motor_computations import MotorComputations
-from ergocycleS2M.utils import traduce_error
 
 
-def load(filename: str, number_of_line: int = None) -> dict:
+def load(filename: str) -> dict:
     """
     This function reads data from a pickle file to concatenate them into one dictionary. Copied and adapted from
     https://github.com/pyomeca/biosiglive/blob/a9ac18d288e6cadd1bd3d38f9fc4a1584a789065/biosiglive/file_io/save_and_load.py
@@ -33,8 +36,6 @@ def load(filename: str, number_of_line: int = None) -> dict:
     ----------
     filename : str
         The path to the file.
-    number_of_line : int
-        The number of lines to read. If None, all lines are read. Not tested in this project.
 
     Returns
     -------
@@ -44,29 +45,26 @@ def load(filename: str, number_of_line: int = None) -> dict:
     if Path(filename).suffix != ".bio":
         raise ValueError("The file must be a .bio file.")
     data = {}
-    limit = 2 if not number_of_line else number_of_line
     with open(filename, "rb") as file:
-        count = 0
-        while count < limit:
+        while True:
             try:
                 data_tmp = pickle.load(file)
                 for key in data_tmp.keys():
+                    # If the key is already in the dictionary, we concatenate the data
                     if key in data.keys() and data[key] is not None:
                         if isinstance(data[key], list) is True:
                             data[key].append(data_tmp[key])
                         else:
                             data[key] = np.append(data[key], data_tmp[key], axis=len(data[key].shape) - 1)
+                    # If the key is not in the dictionary (first appearance), we add it
                     else:
-                        if isinstance(data_tmp[key], (int, float, str, dict)) is True:
-                            data[key] = [data_tmp[key]]
-                        elif isinstance(data_tmp[key], list) is True:
-                            data[key] = [data_tmp[key]]
+                        # If the first appearance is not the first entry of the file, we must create the entry and fill
+                        # it with Nones
+                        if "time" in data.keys() and len(data["time"]) > 1:
+                            data[key] = [None] * (len(data["time"]) - 1) + [data_tmp[key]]
+                        # Else, we can create the entry and fill it with the data
                         else:
-                            data[key] = data_tmp[key]
-                if number_of_line:
-                    count += 1
-                else:
-                    count = 1
+                            data[key] = [data_tmp[key]]
             except EOFError:
                 break
     return data
@@ -76,6 +74,7 @@ def compute_data(
     vel_estimate: np.ndarray,
     turns: np.ndarray,
     iq_measured: np.ndarray,
+    gear: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Computes the data of interest from raw data saved.
@@ -88,6 +87,8 @@ def compute_data(
         The turns done by the motor since the last reset in tr.
     iq_measured: np.ndarray
         The current measured in the motor in A.
+    gear: np.ndarray
+        The current gear (0 if the chain is not on the motor, 1 for the easiest gear 10 for the hardest gear).
 
     Returns
     -------
@@ -106,9 +107,9 @@ def compute_data(
     for i in range(nb_points):
         cadence[i] = motor_object.compute_cadence(vel_estimate[i])
         angle[i] = motor_object.compute_angle(turns[i])
-        user_torque[i] = motor_object.compute_user_torque(iq_measured[i], vel_estimate[i])
+        user_torque[i] = motor_object.compute_user_torque(iq_measured[i], vel_estimate[i], gear[i])
         user_power[i] = motor_object.compute_user_power(user_torque[i], cadence[i])
-        resisting_torque[i] = motor_object.compute_resisting_torque(iq_measured[i], vel_estimate[i])
+        resisting_torque[i] = motor_object.compute_resisting_torque(iq_measured[i], vel_estimate[i], gear[i])
         motor_torque[i] = motor_object.compute_motor_torque(iq_measured[i])
     return user_torque, cadence, angle, user_power, resisting_torque, motor_torque
 
@@ -153,7 +154,10 @@ def interpolate_data(data: dict, frequency: float = 10) -> dict:
                 data_interpolated["lap"][j] = 0.0
 
     # For the other keys, which are strings, instructions or errors, we take the nearest value.
+    if "gear" not in data.keys():
+        data["gear"] = np.zeros(len(data["time"]))
     nearest_keys = [
+        "gear",
         "state",
         "control_mode",
         "direction",
@@ -234,7 +238,7 @@ def smooth_data(data: dict, window_length: int) -> dict:
     else:
         kernel = np.ones(window_length) / window_length
         smoothed_data = copy.deepcopy(data)
-        for key in ["iq_measured", "user_torque", "cadence", "user_power", "resisting_torque", "motor_torque"]:
+        for key in ["turns", "iq_measured", "user_torque", "cadence", "user_power", "resisting_torque", "motor_torque"]:
             smoothed_data[f"smoothed_{key}"] = np.convolve(data[key], kernel, mode="valid")
 
         smoothed_data["time_for_smoothed"] = data["time"][window_length // 2 : -window_length // 2 + 1]
@@ -270,7 +274,12 @@ def read(data_path: str, sample_frequency: float, window_length: int) -> dict:
         data_interpolated["user_power"],
         data_interpolated["resisting_torque"],
         data_interpolated["motor_torque"],
-    ) = compute_data(data_interpolated["vel_estimate"], data_interpolated["turns"], data_interpolated["iq_measured"])
+    ) = compute_data(
+        data_interpolated["vel_estimate"],
+        data_interpolated["turns"],
+        data_interpolated["iq_measured"],
+        data_interpolated["gear"],
+    )
     smoothed_data = smooth_data(data_interpolated, window_length)
     return smoothed_data
 
@@ -350,7 +359,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         ax1.plot(data["time"], spinbox_for_torque, label="Spin box")
     ax1.plot(
         data["time"],
-        -instruction_for_torque,
+        instruction_for_torque,
         label="Instruction",
     )
 
@@ -396,6 +405,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         plt.plot(data["sensorless_estimator_error"], label="Sensorless estimator error")
         plt.plot(data["can_error"], label="Can error")
 
+    # noinspection PyTypeChecker
     print(
         f"{traduce_error(data['error'][-1], ODriveError)}"
         f"{traduce_error(data['axis_error'][-1], ODriveAxisError)}"
@@ -403,6 +413,7 @@ def plot_data(data: dict, plot_errors: bool = False):
         f"{traduce_error(data['encoder_error'][-1], ODriveEncoderError)}"
         f"{traduce_error(data['motor_error'][-1], ODriveMotorError)}"
         f"{traduce_error(data['sensorless_estimator_error'][-1], ODriveSensorlessEstimatorError)}"
+        f"{traduce_error(data['can_error'][-1], ODriveCanError)}"
     )
 
     plt.show()
@@ -434,6 +445,6 @@ def read_from_terminal():
 if __name__ == "__main__":
     script_path = sys.argv[0]
     script_directory = os.path.dirname(os.path.abspath(script_path))
-    control_odrive_directory = os.path.dirname(os.path.dirname(script_directory))
+    control_odrive_directory = os.path.dirname(os.path.dirname(os.path.dirname(script_directory)))
 
-    plot_data(read(control_odrive_directory + "/Test_power_1.bio", 100, 100), plot_errors=True)
+    plot_data(read(control_odrive_directory + "/XP/Sprint_Amandine_FES_End.bio", 100, 100), plot_errors=True)
